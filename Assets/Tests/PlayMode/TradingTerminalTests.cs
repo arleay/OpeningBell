@@ -1,52 +1,32 @@
 using System;
 using System.Collections;
-using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using OpeningBell.Gameplay;
 using OpeningBell.Market;
 using OpeningBell.Trading;
 using OpeningBell.UI;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
 namespace OpeningBell.Tests
 {
-    /// <summary>
-    /// Phase 3 acceptance: trade the simulated market entirely through the terminal UI. Renders the panel
-    /// into a 1920×1080 texture so layout matches a real screen and a screenshot can be reviewed.
-    /// </summary>
-    public class TradingTerminalTests
+    /// <summary>Phase 3 acceptance: trade the simulated market entirely through the terminal UI.</summary>
+    public class TradingTerminalTests : SceneTestBase
     {
-        private PanelSettings _panelSettings;
-        private RenderTexture _target;
-
-        [TearDown]
-        public void TearDown()
-        {
-            // PanelSettings is an asset: undo the in-memory change so it never leaks into the project.
-            if (_panelSettings != null) _panelSettings.targetTexture = null;
-            if (_target != null) _target.Release();
-        }
-
         [UnityTest]
         public IEnumerator Developer_CanTradeThroughTheTerminal()
         {
-            yield return SceneManager.LoadSceneAsync("Main");
-            var game = UnityEngine.Object.FindAnyObjectByType<GameBootstrap>();
-            var terminal = UnityEngine.Object.FindAnyObjectByType<TradingTerminal>();
-            Assert.NotNull(game, "GameBootstrap in scene");
-            Assert.NotNull(terminal, "TradingTerminal in scene");
-
-            _panelSettings = terminal.GetComponent<UIDocument>().panelSettings;
-            _target = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32);
-            _panelSettings.targetTexture = _target;
+            yield return LoadMain();
+            var game = Find<GameBootstrap>();
+            var terminal = Find<TradingTerminal>();
+            yield return SitDown(Find<WorkstationController>());
+            RenderTerminalOffscreen(terminal);
             yield return null;
             yield return null;
 
             VisualElement root = terminal.Root;
-            Assert.NotNull(root, "terminal built");
             var submit = root.Q<Button>("submit-order");
             var status = root.Q<Label>("order-status");
 
@@ -57,14 +37,11 @@ namespace OpeningBell.Tests
 
             // Fast-forward into the regular session, then freeze time so quotes are stable.
             game.SpeedMultiplier = 2000f;
-            float deadline = Time.realtimeSinceStartup + 60f;
-            while (game.Clock.Now.TimeOfDay < new TimeSpan(9, 45, 0) && Time.realtimeSinceStartup < deadline)
-                yield return null;
+            yield return WaitUntil(() => game.Clock.Now.TimeOfDay >= new TimeSpan(9, 45, 0), 60f, "9:45");
             game.SpeedMultiplier = 1f;
             game.IsPaused = true;
             Assert.AreEqual(MarketSession.Regular, game.Market.Session, "reached the regular session");
 
-            // Select APEX from the watchlist.
             Click(root.Q("watch-APEX"));
             Assert.AreEqual("APEX", terminal.Context.SelectedTicker);
             Assert.AreEqual("APEX", root.Q<Label>("quote-ticker").text);
@@ -98,7 +75,7 @@ namespace OpeningBell.Tests
             terminal.RefreshAll();
             yield return null;
             yield return null;
-            SaveScreenshot("terminal-trading.png");
+            SaveTerminalScreenshot("terminal-trading.png");
 
             // Cancel the resting order from the Orders tab.
             Press(root.Q<Button>("tab-orders"));
@@ -124,43 +101,6 @@ namespace OpeningBell.Tests
             Assert.IsNull(root.Q("pos-APEX"), "position row removed");
             Assert.AreEqual(game.Account.Equity - game.Account.NetDeposits,
                 game.Account.RealizedPnL + game.Account.UnrealizedPnL - game.Account.TotalCommissions);
-        }
-
-        /// <summary>Activates a Button the way keyboard/gamepad submit does.</summary>
-        private static void Press(Button button)
-        {
-            Assert.NotNull(button, "button exists");
-            Assert.IsTrue(button.enabledInHierarchy, $"{button.name} is enabled");
-            using (var e = NavigationSubmitEvent.GetPooled())
-            {
-                e.target = button;
-                button.SendEvent(e);
-            }
-        }
-
-        private static void Click(VisualElement element)
-        {
-            Assert.NotNull(element, "element exists");
-            using (var e = ClickEvent.GetPooled())
-            {
-                e.target = element;
-                element.SendEvent(e);
-            }
-        }
-
-        private void SaveScreenshot(string fileName)
-        {
-            var previous = RenderTexture.active;
-            RenderTexture.active = _target;
-            var texture = new Texture2D(_target.width, _target.height, TextureFormat.RGBA32, false);
-            texture.ReadPixels(new Rect(0, 0, _target.width, _target.height), 0, 0);
-            texture.Apply();
-            RenderTexture.active = previous;
-
-            string dir = Path.Combine(Application.dataPath, "..", "TestResults");
-            Directory.CreateDirectory(dir);
-            File.WriteAllBytes(Path.Combine(dir, fileName), texture.EncodeToPNG());
-            UnityEngine.Object.Destroy(texture);
         }
     }
 }

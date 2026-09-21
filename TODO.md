@@ -6,11 +6,11 @@
 - [x] Phase 2: account, ledger, positions, portfolio, market/limit orders, execution, commissions. Tests
 - [x] Phase 3: UI Toolkit trading terminal. Watchlist, quote, chart (candles, volume, VWAP, avg cost, fill markers, crosshair, zoom/pan, 5 timeframes), order ticket, positions/orders/fills with close and cancel, account bar, pause/speed. PlayMode acceptance test trades through the UI
 
-## Next: Phase 4 (First-person apartment)
-- [ ] URP package plus pipeline asset (not installed yet); decide Input System vs legacy Input Manager (legacy is active now)
-- [ ] FPS controller, small apartment (primitives), desk, chair, computer
-- [ ] Sit interaction leads to workstation mode (the terminal becomes interactive); stand up returns to FPS
-- [ ] Gate `TradingTerminal` behind workstation mode (currently always on screen)
+- [x] Phase 4: URP, Input System, FPS controller, primitive apartment (desk, chair, monitor, bed, kitchenette), raycast interaction with HUD prompt, workstation sit/stand with camera glide, terminal on the in-world monitor while standing, walking vs seated time scale. PlayMode acceptance test with simulated input
+
+## Next: Phase 5 (News)
+- [ ] News definitions (ScriptableObjects), scheduled plus random news, market impact via `PriceEngine` (activity boost plus fair-value jump), News app in the terminal
+- [ ] Onboarding scenario: 8:15 AM APEX distribution-agreement headline (spec §46)
 
 ## Later phases (do not start early)
 - Phase 5: news catalysts. Hook in via the activity level (vol/volume) plus fair-value jumps in `PriceEngine`
@@ -28,3 +28,6 @@
 - UI polish (Phase 8): fill markers can sit under candle bodies; no price-flash on ticks; no trading hotkeys yet; the index isn't chartable
 - The Close button outside regular hours posts a limit at the bid. It may not fill if the bid drops
 - UI refresh allocates strings every 0.1s. Fine now; profile in Phase 8
+- Apartment is placeholder primitives: no door, light switches or appliance interactions yet (spec §5 lists them; add when a phase needs them). The desk lamp shade floats (no stand)
+- Active input handling is "Both". Test switching to Input System only (UI Toolkit runtime input) before release
+- Escape while seated always stands up. A pause/settings menu will need its own key or a stack

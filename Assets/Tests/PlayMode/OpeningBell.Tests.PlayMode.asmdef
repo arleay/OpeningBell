@@ -8,7 +8,9 @@
         "OpeningBell.Market",
         "OpeningBell.Trading",
         "OpeningBell.Runtime",
-        "OpeningBell.UI"
+        "OpeningBell.UI",
+        "OpeningBell.Gameplay",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

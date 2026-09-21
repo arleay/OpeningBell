@@ -15,16 +15,44 @@ namespace OpeningBell.UI
         [SerializeField] private StyleSheet styleSheet;
         [Tooltip("Real seconds between UI refreshes. The market ticks independently.")]
         [SerializeField, Min(0.02f)] private float refreshInterval = 0.1f;
+        [Tooltip("Resolution of the in-world monitor texture.")]
+        [SerializeField] private Vector2Int worldResolution = new Vector2Int(1920, 1080);
 
         private readonly List<TerminalPanel> _panels = new List<TerminalPanel>();
+        private UIDocument _document;
         private float _sinceRefresh;
 
         public VisualElement Root { get; private set; }
         public TerminalContext Context { get; private set; }
 
+        /// <summary>What the in-world monitor displays while the terminal is not on screen.</summary>
+        public RenderTexture WorldTexture { get; private set; }
+
+        /// <summary>True: full-screen and interactive. False: rendered only into WorldTexture.</summary>
+        public bool IsOnScreen => _document.panelSettings.targetTexture == null;
+
+        private void Awake()
+        {
+            _document = GetComponent<UIDocument>();
+            // Runtime copy: switching targetTexture must never modify the shared PanelSettings asset.
+            _document.panelSettings = Instantiate(_document.panelSettings);
+            WorldTexture = new RenderTexture(worldResolution.x, worldResolution.y, 0, RenderTextureFormat.ARGB32) { name = "TerminalScreen" };
+        }
+
+        private void OnDestroy()
+        {
+            if (WorldTexture != null) WorldTexture.Release();
+        }
+
+        public void ShowOnScreen(bool onScreen)
+        {
+            _document.panelSettings.targetTexture = onScreen ? null : WorldTexture;
+            if (!onScreen) Root?.focusController?.focusedElement?.Blur();
+        }
+
         private void Start()
         {
-            Root = GetComponent<UIDocument>().rootVisualElement;
+            Root = _document.rootVisualElement;
             Root.styleSheets.Add(styleSheet);
             Root.AddToClassList("terminal");
             Context = new TerminalContext(game);

@@ -24,8 +24,10 @@ namespace OpeningBell
         [SerializeField] private int startMinuteOfDay = 6 * 60;
         [SerializeField] private double startingCash = 10000;
 
-        [Tooltip("In-game seconds per real second while any market session is open.")]
+        [Tooltip("In-game seconds per real second while seated at the workstation during market sessions.")]
         [SerializeField] private float tradingTimeScale = 10f;
+        [Tooltip("In-game seconds per real second while away from the desk during market sessions.")]
+        [SerializeField] private float walkingTimeScale = 30f;
         [Tooltip("In-game seconds per real second while the market is closed.")]
         [SerializeField] private float closedTimeScale = 120f;
         [Tooltip("Caps one frame's real delta so a hitch cannot skip a large chunk of market time.")]
@@ -44,6 +46,9 @@ namespace OpeningBell
             get => Clock.IsPaused;
             set => Clock.IsPaused = value;
         }
+
+        /// <summary>Seated trading slows time; walking around lets it pass faster (spec §7).</summary>
+        public bool IsAtWorkstation { get; set; }
 
         private void Awake()
         {
@@ -66,7 +71,9 @@ namespace OpeningBell
 
         private void Update()
         {
-            Clock.TimeScale = (Market.Session == MarketSession.Closed ? closedTimeScale : tradingTimeScale) * SpeedMultiplier;
+            float baseScale = Market.Session == MarketSession.Closed ? closedTimeScale
+                : IsAtWorkstation ? tradingTimeScale : walkingTimeScale;
+            Clock.TimeScale = baseScale * SpeedMultiplier;
             Clock.Advance(Mathf.Min(Time.unscaledDeltaTime, maxFrameSeconds));
             Market.AdvanceTo(Clock.Now);
         }

@@ -11,6 +11,7 @@ Unity 6000.6.2f1. Vision/requirements: `PROJECT_SPEC.md`.
 | `OpeningBell.Trading` | `Scripts/Trading` | none | orders, execution, positions, ledger, account |
 | `OpeningBell.Runtime` | `Scripts/Runtime` | yes | ScriptableObjects, `GameBootstrap` (composition root) |
 | `OpeningBell.UI` | `Scripts/UI` | yes | trading terminal (UI Toolkit) |
+| `OpeningBell.Gameplay` | `Scripts/Gameplay` | yes | input, FPS controller, interaction, workstation, HUD |
 | `OpeningBell.Tests.EditMode` | `Tests/EditMode` | editor | NUnit tests (InternalsVisibleTo on Market/Trading) |
 | `OpeningBell.Tests.PlayMode` | `Tests/PlayMode` | yes | scene-level tests that drive the real UI |
 
@@ -58,6 +59,15 @@ Log price = fair + deviation, per tick:
 - Speed/pause: `GameBootstrap.SpeedMultiplier` × base time scale, and `IsPaused`. Simulation determinism is unaffected, because the market still ticks on its fixed grid.
 - USS gotcha: don't reset Labels with a type selector (`.terminal Label`). It outranks single-class rules; reset `.unity-label` instead.
 
+## World & player (Phase 4)
+
+- **Rendering:** URP (`Assets/Settings/URP-*.asset`), with placeholder primitives and flat-colour URP materials in `Assets/Art/Materials`. Realtime point lights only; baking and shadows come in Phase 8.
+- **Input:** Input System package. All actions are defined in code in `GameInput`, in two maps: `Player` (WASD, mouse look, Shift, E) and `Workstation` (Esc). Active input handling is **Both**, so UI Toolkit keeps its legacy event path; revisit switching to Input-System-only once verified.
+- **Interaction:** `PlayerInteractor` raycasts from the camera, finds an `Interactable` in the hit collider's parents, and raises `FocusChanged` for the HUD. Adding an interactable object is one subclass.
+- **Workstation:** `WorkstationController` states run Standing → SittingDown → Seated → StandingUp. Sitting glides the camera to `SeatView`, then the terminal goes full-screen with a free cursor. Leaving reverses this and places the player at `StandPoint`.
+- **Terminal presentation:** `TradingTerminal` clones its PanelSettings at runtime. While standing it renders into `WorldTexture`, shown on the monitor mesh (so the room shows live markets). While seated, `targetTexture` is null and it's a full-screen interactive overlay. The HUD uses its own screen PanelSettings.
+- **Time:** during market sessions the base scale is `tradingTimeScale` (10) at the desk and `walkingTimeScale` (30) away from it; `closedTimeScale` (120) applies when the market is closed. Speed buttons multiply these.
+
 ## Editor scripting gotcha
 
 Opening or creating a scene in Single mode unloads in-memory assets that nothing references yet, and references assigned from them become null. Load assets **after** opening the scene. `DefaultContentTests.MainScene_HasNoUnassignedReferences` guards this.
@@ -65,4 +75,4 @@ Opening or creating a scene in Single mode unloads in-memory assets that nothing
 ## Testing
 
 `./run-tests.ps1` (close the Editor first) runs EditMode tests headlessly and prints failures. `-Filter` takes a test or class name.
-`./run-tests.ps1 -Platform PlayMode` loads `Main`, trades through the terminal (via UI events) and writes `TestResults/terminal-trading.png` for visual review.
+`./run-tests.ps1 -Platform PlayMode` loads `Main`. It trades through the terminal (via UI events) and walks, sits, trades, stands and leaves using simulated keyboard/mouse devices (Input System `QueueStateEvent`). It writes `TestResults/terminal-trading.png` and `TestResults/apartment-standing.png` for visual review.
