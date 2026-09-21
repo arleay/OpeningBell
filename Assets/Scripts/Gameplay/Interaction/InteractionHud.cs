@@ -104,6 +104,7 @@ namespace OpeningBell.Gameplay
             SetRadius(_toast, 5);
             _root.Add(_toast);
 
+            game.Inbox.Received += email => ShowToast($"New email: {email.Subject}   (computer: MAIL)");
             var c = System.Globalization.CultureInfo.InvariantCulture;
             game.Economy.TransactionPosted += tx =>
             {

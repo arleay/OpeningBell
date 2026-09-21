@@ -81,14 +81,17 @@ namespace OpeningBell.UI
 
             var bank = new BankApp(Context);
             var store = new StoreApp(Context);
+            var mail = new MailApp(Context);
             Root.Add(bank.Root);
             Root.Add(store.Root);
+            Root.Add(mail.Root);
             Root.Add(summary.Root); // overlay: last child draws on top
 
             _always.AddRange(new TerminalPanel[] { accountBar, summary });
             _apps[TerminalApp.Broker] = (body, new TerminalPanel[] { watchlist, news, quote, chart, orderEntry, activity });
             _apps[TerminalApp.Bank] = (bank.Root, new TerminalPanel[] { bank });
             _apps[TerminalApp.Store] = (store.Root, new TerminalPanel[] { store });
+            _apps[TerminalApp.Mail] = (mail.Root, new TerminalPanel[] { mail });
             Context.AppChanged += ShowCurrentApp;
             ShowCurrentApp();
         }

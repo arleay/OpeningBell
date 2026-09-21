@@ -397,6 +397,33 @@
     padding: 7px 0;
 }
 
+.mail-app {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+.mail-row {
+    padding: 6px 8px;
+    border-bottom-width: 1px;
+    border-color: #1d232b;
+}
+
+.mail-row:hover { background-color: #1b222b; }
+.mail-row.selected { background-color: #232d39; }
+.mail-row.unread .news-headline { color: #ffffff; -unity-font-style: bold; }
+.mail-row.unread .mail-sender { color: #e0a93b; }
+.mail-sender { font-size: 11px; margin-right: 8px; -unity-font-style: bold; }
+.mail-subject { font-size: 22px; -unity-font-style: bold; }
+.mail-meta { margin: 4px 0 14px 0; }
+
+.mail-body {
+    white-space: normal;
+    font-size: 14px;
+    color: #d5dbe3;
+}
+
+.terminal .tb.app-tab.attention { color: #e0a93b; border-color: #e0a93b; }
+
 /* ---------- day summary overlay ---------- */
 
 .day-summary {

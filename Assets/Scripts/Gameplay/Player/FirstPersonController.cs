@@ -41,7 +41,7 @@ namespace OpeningBell.Gameplay
         {
             if (!_controlEnabled) return;
 
-            Vector2 look = input.Look.ReadValue<Vector2>() * lookSensitivity;
+            Vector2 look = input.Look.ReadValue<Vector2>() * (lookSensitivity * GameSettings.MouseSensitivity);
             transform.Rotate(0f, look.x, 0f);
             _pitch = Mathf.Clamp(_pitch - look.y, -pitchLimit, pitchLimit);
             cameraPivot.localRotation = Quaternion.Euler(_pitch, 0f, 0f);

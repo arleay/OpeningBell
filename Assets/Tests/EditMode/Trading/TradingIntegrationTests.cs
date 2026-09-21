@@ -135,6 +135,26 @@ namespace OpeningBell.Tests
         }
 
         [Test]
+        public void Performance_FullContentDay_SimulatesQuickly()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<SecurityCatalog>(CatalogPath);
+            var settings = AssetDatabase.LoadAssetAtPath<MarketSettings>(SettingsPath);
+            var library = AssetDatabase.LoadAssetAtPath<NewsLibrary>("Assets/ScriptableObjects/News/NewsLibrary.asset");
+            DateTime monday = TestMarkets.Monday;
+            var sim = new MarketSimulation(settings.Config, catalog.CreateSpecs(), catalog.Index, new SeededRandomService(1),
+                monday.AddHours(3), library.Templates);
+
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            sim.AdvanceTo(monday.AddHours(21));
+            watch.Stop();
+            double perTickUs = watch.Elapsed.TotalMilliseconds * 1000 / sim.TickCount;
+            TestContext.WriteLine($"{sim.TickCount} ticks × {sim.Securities.Count} stocks in {watch.ElapsedMilliseconds} ms " +
+                                  $"({perTickUs:F1} µs per market tick, {sim.News.Count} headlines)");
+            // At 10× speed a live game needs 5 ticks/s; a full-day skip (sleep) must stay well under a second.
+            Assert.Less(watch.ElapsedMilliseconds, 3000);
+        }
+
+        [Test]
         public void DefaultUniverse_IsValid_AndSimulatesAFullDay()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<SecurityCatalog>(CatalogPath);

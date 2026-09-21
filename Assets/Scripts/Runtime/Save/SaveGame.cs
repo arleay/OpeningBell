@@ -24,6 +24,9 @@ namespace OpeningBell
         // Additive since v1: older saves load with HasEconomy = false and start a fresh economy.
         public bool HasEconomy;
         public EconomySaveData Economy = new EconomySaveData();
+
+        public bool HasInbox;
+        public InboxSaveData Inbox = new InboxSaveData();
         public bool HasPlayer;
         public PlayerSaveData Player = new PlayerSaveData();
     }

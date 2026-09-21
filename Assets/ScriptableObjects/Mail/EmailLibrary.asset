@@ -1,0 +1,127 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 170aaa6607b355c469ff03e48d3c1dfc, type: 3}
+  m_Name: EmailLibrary
+  m_EditorClassIdentifier: OpeningBell.Runtime::OpeningBell.EmailLibrary
+  emails:
+  - Id: welcome
+    Sender: PennyBridge Onboarding
+    Subject: Welcome to PennyBridge
+    Body: 'Your account is funded and ready: {brokerage} to trade with.
+
+
+      The basics:
+
+      - Pick a stock in the WATCHLIST to see its quote and chart.
+
+      - Use ORDER ENTRY on the right to buy or sell.
+
+      - Premarket runs 4:00-9:30 AM, the regular session 9:30 AM-4:00 PM, after hours until 8:00 PM.
+
+      - Outside the regular session only limit orders are accepted.
+
+
+      Press Esc to stand up from the desk. Your bank account (BANK tab) pays the bills; move profits there when you need to.
+
+
+      PennyBridge'
+    Trigger: 0
+    DayOffset: 0
+    MinuteOfDay: 0
+    DaysBefore: 3
+  - Id: landlord_welcome
+    Sender: Dale (landlord)
+    Subject: Rent
+    Body: 'Hey, welcome to the building. Rent''s due on the 15th, automatic from your bank account. Right now you''ve got {bank} in there. Don''t make me knock.
+
+
+      - Dale'
+    Trigger: 0
+    DayOffset: 0
+    MinuteOfDay: 0
+    DaysBefore: 3
+  - Id: premarket_movers
+    Sender: PennyBridge Markets Desk
+    Subject: 'Premarket movers: read the news first'
+    Body: 'Stocks move on headlines. Check the NEWS feed: a stock with fresh news shows a gold dot on your watchlist.
+
+
+      Before you trade, one rule of thumb:
+
+      Market orders prioritize execution. Limit orders prioritize price.
+
+
+      Premarket spreads are wide and liquidity is thin. A market order pays whatever the ask is; a limit order waits for your price. Before 9:30 only limit orders are accepted anyway.'
+    Trigger: 1
+    DayOffset: 0
+    MinuteOfDay: 500
+    DaysBefore: 3
+  - Id: opening_bell
+    Sender: PennyBridge Markets Desk
+    Subject: Opening bell in 5 minutes
+    Body: Volume and volatility spike right after the open and fade by midday. The first minutes are the fastest, and the most expensive to get wrong. Consider trading smaller until you have a feel for it.
+    Trigger: 1
+    DayOffset: 0
+    MinuteOfDay: 565
+    DaysBefore: 3
+  - Id: first_fill
+    Sender: PennyBridge Onboarding
+    Subject: Your first fill
+    Body: 'You bought at the ask or sold at the bid. The gap between them is the spread: a cost you pay on every round trip, plus commission.
+
+
+      Your average cost now shows as a blue line on the chart. Watch your P&L in POSITIONS.'
+    Trigger: 2
+    DayOffset: 0
+    MinuteOfDay: 0
+    DaysBefore: 3
+  - Id: first_loss
+    Sender: Marcus
+    Subject: It happens
+    Body: 'Saw you took a loss. Everybody does. The good ones decide where they''re wrong before they get in, and keep the size small enough that being wrong doesn''t hurt much. Doesn''t mean I''m always right either.
+
+
+      - M'
+    Trigger: 3
+    DayOffset: 0
+    MinuteOfDay: 0
+    DaysBefore: 3
+  - Id: first_win
+    Sender: Marcus
+    Subject: Nice one
+    Body: 'First green trade. Enjoy it, and don''t let it make you bigger than your account. The market doesn''t know you just won.
+
+
+      - M'
+    Trigger: 4
+    DayOffset: 0
+    MinuteOfDay: 0
+    DaysBefore: 3
+  - Id: rent_soon
+    Sender: Dale (landlord)
+    Subject: Rent due soon
+    Body: 'Friendly reminder: {rent} rent comes out on {due}. Your bank balance is {bank}. If that''s short, move money over from your brokerage (BANK tab).
+
+
+      - Dale'
+    Trigger: 5
+    DayOffset: 0
+    MinuteOfDay: 0
+    DaysBefore: 3
+  - Id: overdrawn
+    Sender: First Metro Bank
+    Subject: Your account is overdrawn
+    Body: Your checking balance is {bank}. Each bill that bounces adds an overdraft fee. Transfer funds from your brokerage to cover it.
+    Trigger: 6
+    DayOffset: 0
+    MinuteOfDay: 0
+    DaysBefore: 3

@@ -24,6 +24,8 @@ namespace OpeningBell
         [SerializeField] private ScenarioDefinition scenario;
         [Tooltip("Bills, living costs, starting bank balance and store items.")]
         [SerializeField] private EconomySettings economySettings;
+        [Tooltip("Scripted emails: onboarding, reminders, notices.")]
+        [SerializeField] private EmailLibrary emailLibrary;
         [SerializeField] private BrokerRules brokerRules = new BrokerRules();
         [SerializeField] private long seed = 18492;
 
@@ -54,6 +56,11 @@ namespace OpeningBell
         public OrderManager Orders { get; private set; }
         public TradingDayRecorder Days { get; private set; }
         public EconomySystem Economy { get; private set; }
+        public Inbox Inbox { get; private set; }
+        private EmailDirector _emails;
+
+        /// <summary>Set by <see cref="StartNewGame"/> so the reloaded scene ignores the (deleted) save.</summary>
+        private static bool _forceNewGame;
 
         /// <summary>Player-controlled fast-forward on top of the base time scales (learning aid; difficulty may lock it later).</summary>
         public float SpeedMultiplier { get; set; } = 1f;
@@ -78,9 +85,7 @@ namespace OpeningBell
 
             SaveGame save = TryLoadSave();
             ulong worldSeed = unchecked((ulong)(save?.Seed ?? seed));
-            DateTime start = save != null
-                ? new DateTime(save.Clock)
-                : DateTime.ParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture).AddMinutes(startMinuteOfDay);
+            DateTime start = save != null ? new DateTime(save.Clock) : ConfiguredStart();
 
             // Loading = build from the same definitions, then overwrite the runtime state.
             Market = new MarketSimulation(marketSettings.Config, catalog.CreateSpecs(), catalog.Index, new SeededRandomService(worldSeed), start,
@@ -100,6 +105,11 @@ namespace OpeningBell
             bool restoreEconomy = save != null && save.HasEconomy;
             Economy = new EconomySystem(economySettings.Config, economySettings.StoreItems, Account, start, fundBank: !restoreEconomy);
             if (restoreEconomy) Economy.RestoreState(save.Economy);
+
+            Inbox = new Inbox();
+            if (save != null && save.HasInbox) Inbox.RestoreState(save.Inbox);
+            _emails = new EmailDirector(emailLibrary != null ? emailLibrary.Emails : Array.Empty<EmailDefinition>(),
+                Inbox, Account, Orders, Economy, ConfiguredStart().Date);
 
             if (save != null)
             {
@@ -122,6 +132,8 @@ namespace OpeningBell
                 Trading = TradingState.Capture(Account, Orders, Days),
                 HasEconomy = true,
                 Economy = Economy.CaptureState(),
+                HasInbox = true,
+                Inbox = Inbox.CaptureState(),
             };
             if (player != null)
             {
@@ -132,8 +144,25 @@ namespace OpeningBell
             SaveSystem.Write(save, saveSlot);
         }
 
+        /// <summary>Deletes the save and reloads the scene into a fresh game.</summary>
+        public void StartNewGame()
+        {
+            SaveSystem.Delete(saveSlot);
+            _forceNewGame = true;
+            enabled = false; // no quit-time save of the abandoned game
+            UnityEngine.SceneManagement.SceneManager.LoadScene(gameObject.scene.name);
+        }
+
+        private DateTime ConfiguredStart() =>
+            DateTime.ParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture).AddMinutes(startMinuteOfDay);
+
         private SaveGame TryLoadSave()
         {
+            if (_forceNewGame)
+            {
+                _forceNewGame = false;
+                return null;
+            }
             if (!continueFromSave || Environment.GetCommandLineArgs().Contains("-newgame")) return null;
             if (SaveSystem.TryRead(saveSlot, out SaveGame save, out string error))
             {
@@ -171,6 +200,7 @@ namespace OpeningBell
             Clock.JumpTo(target);
             Market.AdvanceTo(Clock.Now);
             Economy.AdvanceTo(Clock.Now);
+            _emails.Update(Clock.Now);
         }
 
         private void Update()
@@ -181,6 +211,7 @@ namespace OpeningBell
             Clock.Advance(Mathf.Min(Time.unscaledDeltaTime, maxFrameSeconds));
             Market.AdvanceTo(Clock.Now);
             Economy.AdvanceTo(Clock.Now);
+            _emails.Update(Clock.Now);
         }
     }
 }

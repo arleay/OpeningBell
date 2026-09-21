@@ -5,7 +5,6 @@ using OpeningBell.Market;
 using OpeningBell.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
@@ -17,35 +16,10 @@ namespace OpeningBell.Tests
     /// </summary>
     public class ApartmentTests : SceneTestBase
     {
-        private Keyboard _keyboard;
-        private Mouse _mouse;
-        private InputSettings.BackgroundBehavior _previousBackground;
-        private InputSettings.EditorInputBehaviorInPlayMode _previousEditorBehavior;
-
-        [SetUp]
-        public void AddDevices()
-        {
-            // Batchmode never has focus; make simulated input reach the game regardless.
-            _previousBackground = InputSystem.settings.backgroundBehavior;
-            _previousEditorBehavior = InputSystem.settings.editorInputBehaviorInPlayMode;
-            InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
-            InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
-            _keyboard = InputSystem.AddDevice<Keyboard>("TestKeyboard");
-            _mouse = InputSystem.AddDevice<Mouse>("TestMouse");
-        }
-
-        [TearDown]
-        public void RemoveDevices()
-        {
-            InputSystem.RemoveDevice(_keyboard);
-            InputSystem.RemoveDevice(_mouse);
-            InputSystem.settings.backgroundBehavior = _previousBackground;
-            InputSystem.settings.editorInputBehaviorInPlayMode = _previousEditorBehavior;
-        }
-
         [UnityTest]
         public IEnumerator Player_WalksToDesk_SitsTrades_StandsAndWalksAway()
         {
+            UseSimulatedInput();
             yield return LoadMain();
             var game = Find<GameBootstrap>();
             var terminal = Find<TradingTerminal>();
@@ -60,18 +34,18 @@ namespace OpeningBell.Tests
             Vector3 start = player.transform.position;
 
             // Look slightly down and walk toward the desk until the chair or computer is in focus.
-            InputSystem.QueueStateEvent(_mouse, new MouseState { delta = new Vector2(0f, -160f) });
+            MoveMouse(new Vector2(0f, -160f));
             yield return null;
-            Hold(Key.W);
+            HoldKeys(Key.W);
             yield return WaitUntil(() => interactor.Current is SeatInteractable, 6f, "workstation in focus");
-            Hold();
+            HoldKeys();
             yield return null;
             Assert.Greater(Vector3.Distance(start, player.transform.position), 0.5f, "player walked");
             StringAssert.StartsWith("[E]", hud.PromptText);
             yield return CaptureCamera(camera, "apartment-standing.png");
 
             // Sit down.
-            yield return Tap(Key.E);
+            yield return TapKey(Key.E);
             yield return WaitUntil(() => workstation.State == WorkstationState.Seated, 5f, "seated");
             Assert.IsTrue(terminal.IsOnScreen, "terminal full-screen while seated");
             Assert.IsTrue(game.IsAtWorkstation);
@@ -91,29 +65,19 @@ namespace OpeningBell.Tests
             terminal.ShowOnScreen(true); // undo the offscreen test target before standing up
 
             // Stand up with Esc, then walk away.
-            yield return Tap(Key.Escape);
+            yield return TapKey(Key.Escape);
             yield return WaitUntil(() => workstation.State == WorkstationState.Standing, 5f, "standing");
             Assert.IsFalse(terminal.IsOnScreen, "terminal back on the monitor");
             Assert.IsFalse(game.IsAtWorkstation);
             Assert.IsTrue(player.ControlEnabled);
 
-            Vector3 stood = player.transform.position;
             // Wait on distance, not wall time: a frame hitch (first-time shader compile) caps deltaTime.
-            Hold(Key.S);
+            Vector3 stood = player.transform.position;
+            HoldKeys(Key.S);
             yield return WaitUntil(() => Vector3.Distance(stood, player.transform.position) > 1f, 5f, "walked away from the desk");
-            Hold();
+            HoldKeys();
             Assert.AreEqual(50, game.Account.Portfolio.QuantityOf("APEX"), "position persists away from the desk");
             Assert.AreNotEqual(MarketSession.Closed, game.Market.Session);
-        }
-
-        private void Hold(params Key[] keys) => InputSystem.QueueStateEvent(_keyboard, new KeyboardState(keys));
-
-        private IEnumerator Tap(Key key)
-        {
-            Hold(key);
-            yield return null;
-            Hold();
-            yield return null;
         }
     }
 }

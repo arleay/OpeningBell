@@ -30,6 +30,7 @@ namespace OpeningBell.UI
         private static readonly Color AvgColor = new Color32(90, 156, 245, 255);
         private static readonly Color LastColor = new Color32(213, 219, 227, 110);
         private static readonly Color CrossColor = new Color32(255, 255, 255, 60);
+        private static readonly Color MarkerOutline = new Color32(13, 16, 20, 255);
         private static readonly Color NewsColor = new Color32(224, 169, 59, 255);
         private static readonly Color NewsLineColor = new Color32(224, 169, 59, 45);
 
@@ -405,19 +406,26 @@ namespace OpeningBell.UI
 
         private void PaintMarkers(Painter2D p)
         {
-            const float s = 5f;
             foreach (var (x, y, buy) in _markers)
             {
-                p.fillColor = buy ? UpColor : DownColor;
-                p.BeginPath();
-                // Tip touches the fill price: buys point up from below, sells point down from above.
-                float baseY = buy ? y + s * 1.6f : y - s * 1.6f;
-                p.MoveTo(new Vector2(x, y));
-                p.LineTo(new Vector2(x - s, baseY));
-                p.LineTo(new Vector2(x + s, baseY));
-                p.ClosePath();
-                p.Fill();
+                // Dark outline first so a green buy marker stays visible on a green candle.
+                Triangle(p, x, y, buy, 7.5f, MarkerOutline);
+                Triangle(p, x, y, buy, 5f, buy ? UpColor : DownColor);
             }
+        }
+
+        /// <summary>Tip touches the fill price: buys point up from below, sells point down from above.</summary>
+        private static void Triangle(Painter2D p, float x, float y, bool up, float size, Color color)
+        {
+            float tipY = up ? y - (size - 5f) : y + (size - 5f);
+            float baseY = up ? y + size * 1.6f : y - size * 1.6f;
+            p.fillColor = color;
+            p.BeginPath();
+            p.MoveTo(new Vector2(x, tipY));
+            p.LineTo(new Vector2(x - size, baseY));
+            p.LineTo(new Vector2(x + size, baseY));
+            p.ClosePath();
+            p.Fill();
         }
 
         private void HorizontalLine(Painter2D p, double price, Color color)

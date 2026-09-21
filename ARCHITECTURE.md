@@ -98,6 +98,13 @@ Log price = fair + deviation, per tick:
 - Upgrades are cosmetic for now; their benefits wait for the systems they'd affect (psychology, latency, multi-monitor).
 - Saved via `SaveGame.HasEconomy/Economy` (additive to v1; older saves get a fresh economy).
 
+## Polish layer (Phase 8)
+
+- **Pause menu** (`PauseMenu`, HUD panel): Esc while standing. It pauses the game clock and offers Resume, Save, Settings (mouse sensitivity, master volume in `GameSettings`/PlayerPrefs), New Game (confirmed; `GameBootstrap.StartNewGame` deletes the slot and reloads the scene) and Quit (autosaves). Esc is "back out one level": the Player map opens the menu, the Workstation map stands up, and the Menu map closes the menu.
+- **Mail / onboarding** (`Inbox`, `EmailDirector`, `EmailLibrary` SO): scripted emails keyed so each arrives once. Triggers: game start, time of day, first fill/win/loss, 3 days before each rent date, overdraft. Tokens (`{bank}`, `{rent}`, …) are filled at delivery. Terminal MAIL app with an unread badge; HUD toast on arrival. Saved in `SaveGame.Inbox`.
+- **Audio** (`GameAudio`): cues for the opening/closing bell, fills (throttled), news, bills and mail; ambience from room tone, fridge hum and PC fan (3D). Clips are synthesized placeholders (`ProceduralSounds`, marked TODO). Silent while asleep. Volume comes from `GameSettings`.
+- **Performance baseline:** a full 10-stock trading day with news simulates in about 0.4 s (about 13 µs per tick). Seated frames average about 0.4 ms with no gen0 GCs (batchmode). Guarded by `Performance_FullContentDay_SimulatesQuickly` and `FrameTime_WhileTrading_IsReasonable`.
+
 ## Save / load
 
 - **Goal: exact resume.** Loading builds the simulation from the same definitions (catalog, config, news templates, seed), then overwrites runtime state. A loaded game continues tick-for-tick like the original. `SaveLoadTests.SavedGame_ResumesExactly_ThroughJson` saves mid-session with open orders and a queued scheduled headline, round-trips JSON, runs both two days on, and compares everything.

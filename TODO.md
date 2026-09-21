@@ -16,8 +16,12 @@
 
 - [x] Phase 7: separate bank account, bills plus daily living costs, overdraft fees, brokerage transfers (excluded from trading P&L), store with 6 visible apartment upgrades plus a fiber subscription, Bank/Store apps, HUD bill toasts, saved state. PlayMode test transfers, buys, pays rent and reloads
 
-## Next: Phase 8 (Polish the vertical slice)
-- [ ] Audio (market bell, fills, ambience), lighting pass, animations, tutorial/onboarding emails, settings plus pause/main menu (new game, manual save), performance check, bug fixes
+- [x] Phase 8 (first polish pass): pause menu (save, settings, new game, quit), onboarding via the Mail app (9 scripted emails), placeholder synthesized audio plus ambience, performance baseline and tests, chart marker outline, monitor glow
+
+## Next
+- [ ] **Play the build yourself** (see "How to play" in the report). The vertical slice's prototype checklist (spec §55) is now fully covered
+- [ ] Remaining polish candidates: real audio assets, lighting/bake pass, price-flash animations, main menu screen, trading hotkeys, balance tuning from playtests
+- [ ] Then the next feature milestone (spec order): scanner, trading statistics/journal, psychology, stop orders
 
 ## Later phases (do not start early)
 - Phase 5: news catalysts. Hook in via the activity level (vol/volume) plus fair-value jumps in `PriceEngine`
@@ -32,7 +36,8 @@
 - No regime system yet: `MarketDailyDrift/Volatility` are static config
 - Content tuning: high idiosyncratic vol (e.g. CYRA 6%) makes sector/market moves hard to see in small caps. Revisit when news and regimes exist
 - "Nortek" is a real company name (Nortek Inc.). Consider renaming NRTK's company before release
-- UI polish (Phase 8): fill markers can sit under candle bodies; no price-flash on ticks; no trading hotkeys yet; the index isn't chartable
+- UI polish: no price-flash on ticks; no trading hotkeys yet; the index isn't chartable
+- Polish leftovers: audio is synthesized placeholder; no main/title menu (the game continues or starts from the pause menu); emails time-stamp at delivery (a skipped-past 8:20 email shows the skip time)
 - The Close button outside regular hours posts a limit at the bid. It may not fill if the bid drops
 - UI refresh allocates strings every 0.1s. Fine now; profile in Phase 8
 - Apartment is placeholder primitives: no door, light switches or appliance interactions yet (spec §5 lists them; add when a phase needs them). The desk lamp shade floats (no stand)

@@ -17,6 +17,7 @@ namespace OpeningBell.UI
         Broker,
         Bank,
         Store,
+        Mail,
     }
 
     public sealed class TerminalContext

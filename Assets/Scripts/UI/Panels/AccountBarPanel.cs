@@ -10,7 +10,7 @@ namespace OpeningBell.UI
 
         private readonly Label _clock, _session, _index;
         private static readonly (TerminalApp app, string label)[] Apps =
-            { (TerminalApp.Broker, "BROKER"), (TerminalApp.Bank, "BANK"), (TerminalApp.Store, "STORE") };
+            { (TerminalApp.Broker, "BROKER"), (TerminalApp.Bank, "BANK"), (TerminalApp.Store, "STORE"), (TerminalApp.Mail, "MAIL") };
 
         private readonly Label _equity, _cash, _buyingPower, _dayPnl, _realized, _unrealized, _bank;
         private readonly Button _pause;
@@ -77,6 +77,10 @@ namespace OpeningBell.UI
 
             for (int i = 0; i < Apps.Length; i++)
                 _appButtons[i].EnableInClassList("active", Context.App == Apps[i].app);
+            int unread = Context.Game.Inbox.UnreadCount;
+            Button mail = _appButtons[Apps.Length - 1];
+            Ui.SetText(mail, unread > 0 ? $"MAIL ({unread})" : "MAIL");
+            mail.EnableInClassList("attention", unread > 0);
 
             Ui.SetText(_pause, Context.Game.IsPaused ? "RESUME" : "PAUSE");
             _pause.EnableInClassList("active", Context.Game.IsPaused);

@@ -27,6 +27,49 @@ namespace OpeningBell.Tests
             SaveSystem.DirectoryOverride = _saveDirectory;
         }
 
+        private UnityEngine.InputSystem.Keyboard _keyboard;
+        private UnityEngine.InputSystem.Mouse _mouse;
+        private UnityEngine.InputSystem.InputSettings.BackgroundBehavior _previousBackground;
+        private UnityEngine.InputSystem.InputSettings.EditorInputBehaviorInPlayMode _previousEditorBehavior;
+
+        /// <summary>Adds virtual keyboard/mouse devices whose input reaches the game even without window focus (batchmode).</summary>
+        protected void UseSimulatedInput()
+        {
+            var settings = UnityEngine.InputSystem.InputSystem.settings;
+            _previousBackground = settings.backgroundBehavior;
+            _previousEditorBehavior = settings.editorInputBehaviorInPlayMode;
+            settings.backgroundBehavior = UnityEngine.InputSystem.InputSettings.BackgroundBehavior.IgnoreFocus;
+            settings.editorInputBehaviorInPlayMode = UnityEngine.InputSystem.InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            _keyboard = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Keyboard>("TestKeyboard");
+            _mouse = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Mouse>("TestMouse");
+        }
+
+        protected void HoldKeys(params UnityEngine.InputSystem.Key[] keys) =>
+            UnityEngine.InputSystem.InputSystem.QueueStateEvent(_keyboard, new UnityEngine.InputSystem.LowLevel.KeyboardState(keys));
+
+        protected void MoveMouse(Vector2 delta) =>
+            UnityEngine.InputSystem.InputSystem.QueueStateEvent(_mouse, new UnityEngine.InputSystem.LowLevel.MouseState { delta = delta });
+
+        protected IEnumerator TapKey(UnityEngine.InputSystem.Key key)
+        {
+            HoldKeys(key);
+            yield return null;
+            HoldKeys();
+            yield return null;
+        }
+
+        [TearDown]
+        public void RemoveSimulatedInput()
+        {
+            if (_keyboard == null) return;
+            UnityEngine.InputSystem.InputSystem.RemoveDevice(_keyboard);
+            UnityEngine.InputSystem.InputSystem.RemoveDevice(_mouse);
+            _keyboard = null;
+            var settings = UnityEngine.InputSystem.InputSystem.settings;
+            settings.backgroundBehavior = _previousBackground;
+            settings.editorInputBehaviorInPlayMode = _previousEditorBehavior;
+        }
+
         [TearDown]
         public void RestoreSaveLocation()
         {
