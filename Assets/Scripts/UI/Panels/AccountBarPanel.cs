@@ -9,14 +9,25 @@ namespace OpeningBell.UI
         private static readonly (string label, float multiplier)[] Speeds = { ("1x", 1f), ("5x", 5f), ("30x", 30f), ("120x", 120f) };
 
         private readonly Label _clock, _session, _index;
-        private readonly Label _equity, _cash, _buyingPower, _dayPnl, _realized, _unrealized;
+        private static readonly (TerminalApp app, string label)[] Apps =
+            { (TerminalApp.Broker, "BROKER"), (TerminalApp.Bank, "BANK"), (TerminalApp.Store, "STORE") };
+
+        private readonly Label _equity, _cash, _buyingPower, _dayPnl, _realized, _unrealized, _bank;
         private readonly Button _pause;
         private readonly Button[] _speedButtons = new Button[Speeds.Length];
+        private readonly Button[] _appButtons = new Button[Apps.Length];
 
         public AccountBarPanel(TerminalContext context) : base(context, "account-bar")
         {
             var left = Ui.Box("bar-group", Root);
             Ui.Label("brand", left, context.Orders.Rules.Name.ToUpperInvariant());
+            var apps = Ui.Box("bar-group app-tabs", left);
+            for (int i = 0; i < Apps.Length; i++)
+            {
+                TerminalApp app = Apps[i].app;
+                _appButtons[i] = Ui.Button(Apps[i].label, () => context.ShowApp(app), "app-tab", apps, "app-" + Apps[i].label.ToLowerInvariant());
+            }
+            context.AppChanged += Refresh;
             _clock = Ui.Label("clock", left);
             _session = Ui.Label("session-badge", left);
             _session.name = "session-badge";
@@ -31,6 +42,7 @@ namespace OpeningBell.UI
             _dayPnl = Ui.Stat("DAY P&L", metrics);
             _realized = Ui.Stat("REALIZED (NET)", metrics);
             _unrealized = Ui.Stat("UNREALIZED", metrics);
+            _bank = Ui.Stat("BANK", metrics, "stat bank-stat");
 
             var time = Ui.Box("bar-group time-controls", Root);
             _pause = Ui.Button("PAUSE", TogglePause, "time-btn", time, "time-pause");
@@ -59,6 +71,12 @@ namespace OpeningBell.UI
             SetSigned(_dayPnl, account.DailyPnL);
             SetSigned(_realized, account.RealizedPnL - account.TotalCommissions);
             SetSigned(_unrealized, account.UnrealizedPnL);
+            decimal bank = Context.Economy.Bank.Balance;
+            Ui.SetText(_bank, Fmt.Money(bank));
+            _bank.EnableInClassList("down", bank < 0m);
+
+            for (int i = 0; i < Apps.Length; i++)
+                _appButtons[i].EnableInClassList("active", Context.App == Apps[i].app);
 
             Ui.SetText(_pause, Context.Game.IsPaused ? "RESUME" : "PAUSE");
             _pause.EnableInClassList("active", Context.Game.IsPaused);

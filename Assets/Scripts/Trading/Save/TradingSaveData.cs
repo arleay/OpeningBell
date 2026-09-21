@@ -60,6 +60,7 @@ namespace OpeningBell.Trading
         public int DayNumber, Fills, Winners, Losers;
         public bool IsComplete;
         public string StartEquity, EndEquity, RealizedPnL, Commissions, BestTrade, WorstTrade;
+        public string Transfers, StartNetDeposits; // added after v1 shipped; empty (= 0) in older saves
     }
 
     /// <summary>Captures and restores account, positions, orders, fills and day reports.</summary>
@@ -166,6 +167,7 @@ namespace OpeningBell.Trading
             Date = r.Date.Ticks, DayNumber = r.DayNumber, Fills = r.Fills, Winners = r.Winners, Losers = r.Losers,
             IsComplete = r.IsComplete, StartEquity = S(r.StartEquity), EndEquity = S(r.EndEquity), RealizedPnL = S(r.RealizedPnL),
             Commissions = S(r.Commissions), BestTrade = S(r.BestTrade), WorstTrade = S(r.WorstTrade),
+            Transfers = S(r.Transfers), StartNetDeposits = S(r.StartNetDeposits),
         };
 
         private static TradingDayReport Restore(DayReportSaveData r) => new TradingDayReport
@@ -173,6 +175,7 @@ namespace OpeningBell.Trading
             Date = new DateTime(r.Date), DayNumber = r.DayNumber, Fills = r.Fills, Winners = r.Winners, Losers = r.Losers,
             IsComplete = r.IsComplete, StartEquity = D(r.StartEquity), EndEquity = D(r.EndEquity), RealizedPnL = D(r.RealizedPnL),
             Commissions = D(r.Commissions), BestTrade = D(r.BestTrade), WorstTrade = D(r.WorstTrade),
+            Transfers = D(r.Transfers), StartNetDeposits = D(r.StartNetDeposits),
         };
 
         private static string S(decimal value) => value.ToString(CultureInfo.InvariantCulture);

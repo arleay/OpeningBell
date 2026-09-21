@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Linq;
 using OpeningBell.Core;
+using OpeningBell.Economy;
 using OpeningBell.Market;
 using OpeningBell.Trading;
 using UnityEngine;
@@ -21,6 +22,8 @@ namespace OpeningBell
         [SerializeField] private NewsLibrary newsLibrary;
         [Tooltip("Optional scripted headlines, e.g. the onboarding day.")]
         [SerializeField] private ScenarioDefinition scenario;
+        [Tooltip("Bills, living costs, starting bank balance and store items.")]
+        [SerializeField] private EconomySettings economySettings;
         [SerializeField] private BrokerRules brokerRules = new BrokerRules();
         [SerializeField] private long seed = 18492;
 
@@ -50,6 +53,7 @@ namespace OpeningBell
         public Account Account { get; private set; }
         public OrderManager Orders { get; private set; }
         public TradingDayRecorder Days { get; private set; }
+        public EconomySystem Economy { get; private set; }
 
         /// <summary>Player-controlled fast-forward on top of the base time scales (learning aid; difficulty may lock it later).</summary>
         public float SpeedMultiplier { get; set; } = 1f;
@@ -65,9 +69,9 @@ namespace OpeningBell
 
         private void Awake()
         {
-            if (catalog == null || marketSettings == null)
+            if (catalog == null || marketSettings == null || economySettings == null)
             {
-                Debug.LogError("GameBootstrap: assign the Security Catalog and Market Settings assets.", this);
+                Debug.LogError("GameBootstrap: assign the Security Catalog, Market Settings and Economy Settings assets.", this);
                 enabled = false;
                 return;
             }
@@ -92,6 +96,11 @@ namespace OpeningBell
             Days = new TradingDayRecorder(Market, Account, Orders);
             Seed = worldSeed;
 
+            // A save without economy data (older build) gets a fresh, funded economy from its load date.
+            bool restoreEconomy = save != null && save.HasEconomy;
+            Economy = new EconomySystem(economySettings.Config, economySettings.StoreItems, Account, start, fundBank: !restoreEconomy);
+            if (restoreEconomy) Economy.RestoreState(save.Economy);
+
             if (save != null)
             {
                 TradingState.Restore(save.Trading, Account, Orders, Days);
@@ -111,6 +120,8 @@ namespace OpeningBell
                 Clock = Clock.Now.Ticks,
                 Market = Market.CaptureState(),
                 Trading = TradingState.Capture(Account, Orders, Days),
+                HasEconomy = true,
+                Economy = Economy.CaptureState(),
             };
             if (player != null)
             {
@@ -159,6 +170,7 @@ namespace OpeningBell
         {
             Clock.JumpTo(target);
             Market.AdvanceTo(Clock.Now);
+            Economy.AdvanceTo(Clock.Now);
         }
 
         private void Update()
@@ -168,6 +180,7 @@ namespace OpeningBell
             Clock.TimeScale = baseScale * SpeedMultiplier;
             Clock.Advance(Mathf.Min(Time.unscaledDeltaTime, maxFrameSeconds));
             Market.AdvanceTo(Clock.Now);
+            Economy.AdvanceTo(Clock.Now);
         }
     }
 }

@@ -9,7 +9,8 @@
         "OpeningBell.Trading",
         "OpeningBell.Runtime",
         "OpeningBell.UI",
-        "OpeningBell.Gameplay"
+        "OpeningBell.Gameplay",
+        "OpeningBell.Economy"
     ],
     "includePlatforms": [
         "Editor"

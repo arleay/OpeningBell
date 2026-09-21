@@ -14,16 +14,31 @@ namespace OpeningBell.Gameplay
         [SerializeField] private GameBootstrap game;
 
         private VisualElement _root;
-        private Label _prompt, _clock;
+        private Label _prompt, _clock, _toast;
+        private float _toastUntil;
         private long _clockMinute = -1;
         private string _shownPrompt;
 
         public string PromptText => _prompt.style.display == DisplayStyle.None ? "" : _prompt.text;
         public string ClockText => _clock.text;
+        public string ToastText => _toast.style.display == DisplayStyle.None ? "" : _toast.text;
+
+        /// <summary>Short message at the bottom of the screen; messages arriving together stack (newest last).</summary>
+        public void ShowToast(string message, float seconds = 6f)
+        {
+            bool visible = _toast.style.display == DisplayStyle.Flex && Time.realtimeSinceStartup < _toastUntil;
+            string[] lines = visible ? _toast.text.Split('\n') : System.Array.Empty<string>();
+            int keep = System.Math.Min(lines.Length, 2);
+            _toast.text = (keep > 0 ? string.Join("\n", lines, lines.Length - keep, keep) + "\n" : "") + message;
+            _toast.style.display = DisplayStyle.Flex;
+            _toastUntil = Time.realtimeSinceStartup + seconds;
+        }
 
         private void Update()
         {
             if (_prompt == null) return;
+            if (_toast.style.display == DisplayStyle.Flex && Time.realtimeSinceStartup >= _toastUntil)
+                _toast.style.display = DisplayStyle.None;
             // Prompts can change while in focus (e.g. the bed at 4 PM).
             if (interactor.Current != null && interactor.Current.Prompt != _shownPrompt) OnFocusChanged(interactor.Current);
 
@@ -75,6 +90,27 @@ namespace OpeningBell.Gameplay
             _clock.style.fontSize = 18;
             _clock.style.unityFontStyleAndWeight = FontStyle.Bold;
             _root.Add(_clock);
+
+            _toast = new Label { pickingMode = PickingMode.Ignore, name = "hud-toast" };
+            _toast.style.position = Position.Absolute;
+            _toast.style.bottom = 60;
+            _toast.style.color = Color.white;
+            _toast.style.fontSize = 18;
+            _toast.style.backgroundColor = new Color(0.08f, 0.1f, 0.13f, 0.85f);
+            _toast.style.paddingLeft = _toast.style.paddingRight = 14;
+            _toast.style.paddingTop = _toast.style.paddingBottom = 8;
+            _toast.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _toast.style.display = DisplayStyle.None;
+            SetRadius(_toast, 5);
+            _root.Add(_toast);
+
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            game.Economy.TransactionPosted += tx =>
+            {
+                if (!tx.IsNotable) return;
+                ShowToast($"{tx.Description}  {(tx.Amount < 0 ? "-" : "+")}${System.Math.Abs(tx.Amount).ToString("N2", c)}" +
+                          $"   ·   Bank {(tx.BalanceAfter < 0 ? "-$" : "$")}{System.Math.Abs(tx.BalanceAfter).ToString("N2", c)}");
+            };
 
             interactor.FocusChanged += OnFocusChanged;
             workstation.StateChanged += state =>

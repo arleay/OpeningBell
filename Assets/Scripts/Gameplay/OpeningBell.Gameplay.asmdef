@@ -5,6 +5,7 @@
         "OpeningBell.Core",
         "OpeningBell.Market",
         "OpeningBell.Trading",
+        "OpeningBell.Economy",
         "OpeningBell.Runtime",
         "OpeningBell.UI",
         "Unity.InputSystem"

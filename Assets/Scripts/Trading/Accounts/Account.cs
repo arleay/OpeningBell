@@ -54,6 +54,16 @@ namespace OpeningBell.Trading
             DayStartEquity += amount; // deposits are not trading P&L
         }
 
+        /// <summary>Moves unreserved cash out of the brokerage (e.g. to the bank). Not trading P&L.</summary>
+        public void Withdraw(decimal amount, string memo = null)
+        {
+            if (amount <= 0m) throw new ArgumentOutOfRangeException(nameof(amount), "Withdrawal must be positive.");
+            if (amount > BuyingPower) throw new InvalidOperationException("Withdrawal exceeds cash not reserved for open orders.");
+            Ledger.Post(_market.Now, LedgerEntryType.Withdrawal, -amount, memo: memo);
+            NetDeposits -= amount;
+            DayStartEquity -= amount;
+        }
+
         internal void RestoreTotals(decimal netDeposits, decimal totalCommissions, decimal dayStartEquity)
         {
             NetDeposits = netDeposits;

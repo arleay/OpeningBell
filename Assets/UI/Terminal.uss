@@ -291,6 +291,112 @@
 
 .legend-news { color: #e0a93b; }
 
+/* ---------- app tabs + bank/store apps ---------- */
+
+.app-tabs { margin-right: 18px; }
+.terminal .tb.app-tab { padding: 3px 12px; }
+
+.bank-app {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+.store-app { flex-grow: 1; }
+
+.app-column {
+    width: 440px;
+    margin-right: 8px;
+}
+
+.app-wide {
+    flex-grow: 1;
+    width: auto;
+    margin-right: 0;
+}
+
+.app-card {
+    background-color: #10151b;
+    border-width: 1px;
+    border-color: #232a33;
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+
+.app-grow { flex-grow: 1; }
+
+.bank-balance {
+    font-size: 34px;
+    -unity-font-style: bold;
+    margin: 2px 0 4px 0;
+}
+
+.app-note {
+    white-space: normal;
+    margin-top: 4px;
+}
+
+.app-total {
+    margin-top: 8px;
+    -unity-font-style: bold;
+}
+
+.due-soon Label { color: #e0a93b; }
+
+.store-header {
+    flex-direction: row;
+    align-items: center;
+}
+
+.store-title {
+    margin: 0 14px 0 0;
+    font-size: 14px;
+}
+
+.store-status { margin: 4px 0 8px 0; min-height: 20px; }
+
+.store-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.store-card {
+    width: 300px;
+    min-height: 180px;
+    margin-right: 10px;
+}
+
+.store-card.owned { border-color: #34c77b; }
+
+.store-name {
+    font-size: 16px;
+    -unity-font-style: bold;
+}
+
+.store-category {
+    font-size: 10px;
+    letter-spacing: 1px;
+    margin: 2px 0 6px 0;
+}
+
+.store-description {
+    white-space: normal;
+    color: #aab4c0;
+    flex-grow: 1;
+}
+
+.store-price {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: #e0a93b;
+    margin-top: 8px;
+}
+
+.terminal .tb.store-buy {
+    margin: 8px 0 0 0;
+    padding: 7px 0;
+}
+
 /* ---------- day summary overlay ---------- */
 
 .day-summary {

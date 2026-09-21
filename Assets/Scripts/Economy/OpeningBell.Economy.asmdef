@@ -1,12 +1,9 @@
 {
-    "name": "OpeningBell.UI",
-    "rootNamespace": "OpeningBell.UI",
+    "name": "OpeningBell.Economy",
+    "rootNamespace": "OpeningBell.Economy",
     "references": [
         "OpeningBell.Core",
-        "OpeningBell.Market",
-        "OpeningBell.Trading",
-        "OpeningBell.Economy",
-        "OpeningBell.Runtime"
+        "OpeningBell.Trading"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -16,5 +13,5 @@
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
-    "noEngineReferences": false
+    "noEngineReferences": true
 }

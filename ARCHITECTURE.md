@@ -9,6 +9,7 @@ Unity 6000.6.2f1. Vision/requirements: `PROJECT_SPEC.md`.
 | `OpeningBell.Core` | `Scripts/Core` | none | `SeededRandom`, `SeededRandomService`, `GameClock` |
 | `OpeningBell.Market` | `Scripts/Market` | none | specs, schedule, price engine, simulation, candles |
 | `OpeningBell.Trading` | `Scripts/Trading` | none | orders, execution, positions, ledger, account |
+| `OpeningBell.Economy` | `Scripts/Economy` | none | bank account, bills, living costs, transfers, store |
 | `OpeningBell.Runtime` | `Scripts/Runtime` | yes | ScriptableObjects, `GameBootstrap` (composition root) |
 | `OpeningBell.UI` | `Scripts/UI` | yes | trading terminal (UI Toolkit) |
 | `OpeningBell.Gameplay` | `Scripts/Gameplay` | yes | input, FPS controller, interaction, workstation, HUD |
@@ -86,6 +87,16 @@ Log price = fair + deviation, per tick:
 - `GameBootstrap.SkipTo(t)` jumps the clock and simulates the market through the gap immediately (orders expire, news publishes, reports finish).
 - Sleep (`SleepController`, `BedInteractable`, pure `SleepRules`): possible from 16:00 until 06:00. The sequence is fade out → `SkipTo(next trading day 06:00)` → recap of the latest finished day → wake at `WakePoint`. Weekends are slept through.
 - At the regular close the terminal shows the `DaySummaryPanel` overlay. The HUD shows the day number, time and session. `DaylightCycle` drives the window glow and light from the clock.
+
+## Economy (Phase 7)
+
+- **Two accounts.** The brokerage (`Account`) holds trading capital. The bank (`BankAccount` in `EconomySystem`) pays life: rent, utilities, subscriptions, a daily living cost, and store purchases. Money moves between them via `TransferToBrokerage/FromBrokerage` (instant for now). Only unreserved brokerage cash can leave.
+- **Transfers are not trading P&L.** `Account.Withdraw/Deposit` adjust `DayStartEquity`, and `TradingDayReport.Transfers` is subtracted from `NetPnL` (tested).
+- **Charging:** `EconomySystem.AdvanceTo(now)` charges each calendar day crossed, at midnight: the living cost, then any bills due that day. Bill days are clamped to month length. Results don't depend on how time advances (tested). A bill that leaves the bank negative adds an overdraft fee; this is the "failure without game over" hook.
+- **Data:** `EconomySettings` (SO) holds the starting bank balance ($1,800), living cost, overdraft fee, bills (rent $950 on the 15th, electricity, internet, phone) and store items. Services (fiber) add a monthly bill and can replace a base bill.
+- **Presentation:** Bank and Store apps in the terminal (app tabs in the account bar; only the visible app refreshes). `EquipmentPresenter` swaps basic and upgraded objects per apartment slot and re-targets the terminal texture when the monitor changes. The HUD toasts notable charges.
+- Upgrades are cosmetic for now; their benefits wait for the systems they'd affect (psychology, latency, multi-monitor).
+- Saved via `SaveGame.HasEconomy/Economy` (additive to v1; older saves get a fresh economy).
 
 ## Save / load
 

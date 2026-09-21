@@ -98,11 +98,10 @@ namespace OpeningBell.Tests
             Assert.IsTrue(player.ControlEnabled);
 
             Vector3 stood = player.transform.position;
+            // Wait on distance, not wall time: a frame hitch (first-time shader compile) caps deltaTime.
             Hold(Key.S);
-            float until = Time.realtimeSinceStartup + 0.8f;
-            while (Time.realtimeSinceStartup < until) yield return null;
+            yield return WaitUntil(() => Vector3.Distance(stood, player.transform.position) > 1f, 5f, "walked away from the desk");
             Hold();
-            Assert.Greater(Vector3.Distance(stood, player.transform.position), 1f, "walked away from the desk");
             Assert.AreEqual(50, game.Account.Portfolio.QuantityOf("APEX"), "position persists away from the desk");
             Assert.AreNotEqual(MarketSession.Closed, game.Market.Session);
         }

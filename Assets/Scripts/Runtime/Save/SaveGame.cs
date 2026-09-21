@@ -1,4 +1,5 @@
 using System;
+using OpeningBell.Economy;
 using OpeningBell.Market;
 using OpeningBell.Trading;
 
@@ -19,6 +20,10 @@ namespace OpeningBell
         public long Clock;
         public MarketSaveData Market = new MarketSaveData();
         public TradingSaveData Trading = new TradingSaveData();
+
+        // Additive since v1: older saves load with HasEconomy = false and start a fresh economy.
+        public bool HasEconomy;
+        public EconomySaveData Economy = new EconomySaveData();
         public bool HasPlayer;
         public PlayerSaveData Player = new PlayerSaveData();
     }

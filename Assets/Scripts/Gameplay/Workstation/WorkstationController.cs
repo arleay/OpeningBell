@@ -37,11 +37,18 @@ namespace OpeningBell.Gameplay
 
         private void Start()
         {
+            SetScreen(screen);
+            terminal.ShowOnScreen(false);
+        }
+
+        /// <summary>Points the terminal image at a monitor mesh (called again when the monitor is upgraded).</summary>
+        public void SetScreen(Renderer target)
+        {
+            screen = target;
             // The screen material is black while "off"; Unlit multiplies the texture by its colour.
             Material screenMaterial = screen.material;
             screenMaterial.mainTexture = terminal.WorldTexture;
             screenMaterial.color = Color.white;
-            terminal.ShowOnScreen(false);
         }
 
         private void Update()

@@ -1,0 +1,103 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58b3fdd0d603e9d45acb4680335da3bf, type: 3}
+  m_Name: EconomySettings
+  m_EditorClassIdentifier: OpeningBell.Runtime::OpeningBell.EconomySettings
+  config:
+    StartingBankBalance: 1800
+    DailyLivingCost: 15
+    OverdraftFee: 35
+    Bills:
+    - Id: rent
+      Name: Rent
+      Category: 0
+      Amount: 950
+      DayOfMonth: 15
+    - Id: electricity
+      Name: Electricity
+      Category: 1
+      Amount: 85
+      DayOfMonth: 20
+    - Id: internet_basic
+      Name: Internet (basic DSL)
+      Category: 2
+      Amount: 45
+      DayOfMonth: 10
+    - Id: phone
+      Name: Phone plan
+      Category: 2
+      Amount: 35
+      DayOfMonth: 5
+  storeItems:
+  - Id: ergonomic_chair
+    Name: Ergonomic Chair
+    Description: Adjustable, with lumbar support. Your back will thank you.
+    Category: 0
+    Slot: Chair
+    Price: 320
+    MonthlyCost: 0
+    BillDayOfMonth: 1
+    ReplacesBillId: 
+  - Id: solid_desk
+    Name: Solid Wood Desk
+    Description: Replaces the wobbly folding table.
+    Category: 0
+    Slot: Desk
+    Price: 450
+    MonthlyCost: 0
+    BillDayOfMonth: 1
+    ReplacesBillId: 
+  - Id: monitor_27
+    Name: 27" Monitor
+    Description: Bigger screen, sharper text. Same old PC.
+    Category: 0
+    Slot: Monitor
+    Price: 280
+    MonthlyCost: 0
+    BillDayOfMonth: 1
+    ReplacesBillId: 
+  - Id: queen_bed
+    Name: Queen Bed
+    Description: A real mattress and a headboard.
+    Category: 0
+    Slot: Bed
+    Price: 650
+    MonthlyCost: 0
+    BillDayOfMonth: 1
+    ReplacesBillId: 
+  - Id: espresso
+    Name: Espresso Machine
+    Description: A step up from the drip machine.
+    Category: 0
+    Slot: Coffee
+    Price: 180
+    MonthlyCost: 0
+    BillDayOfMonth: 1
+    ReplacesBillId: 
+  - Id: houseplant
+    Name: Houseplant
+    Description: A little life by the window.
+    Category: 0
+    Slot: Plant
+    Price: 35
+    MonthlyCost: 0
+    BillDayOfMonth: 1
+    ReplacesBillId: 
+  - Id: fiber
+    Name: Fiber Internet
+    Description: Faster, steadier connection. Replaces basic DSL.
+    Category: 1
+    Slot: 
+    Price: 99
+    MonthlyCost: 85
+    BillDayOfMonth: 10
+    ReplacesBillId: internet_basic

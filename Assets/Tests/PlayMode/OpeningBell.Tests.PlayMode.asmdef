@@ -10,6 +10,7 @@
         "OpeningBell.Runtime",
         "OpeningBell.UI",
         "OpeningBell.Gameplay",
+        "OpeningBell.Economy",
         "Unity.InputSystem"
     ],
     "includePlatforms": [],

@@ -18,7 +18,9 @@ namespace OpeningBell.UI
         [Tooltip("Resolution of the in-world monitor texture.")]
         [SerializeField] private Vector2Int worldResolution = new Vector2Int(1920, 1080);
 
-        private readonly List<TerminalPanel> _panels = new List<TerminalPanel>();
+        private readonly List<TerminalPanel> _always = new List<TerminalPanel>();
+        private readonly Dictionary<TerminalApp, (VisualElement root, TerminalPanel[] panels)> _apps =
+            new Dictionary<TerminalApp, (VisualElement, TerminalPanel[])>();
         private UIDocument _document;
         private float _sinceRefresh;
 
@@ -76,9 +78,25 @@ namespace OpeningBell.UI
             center.Add(chart.Root);
             center.Add(activity.Root);
             body.Add(orderEntry.Root);
+
+            var bank = new BankApp(Context);
+            var store = new StoreApp(Context);
+            Root.Add(bank.Root);
+            Root.Add(store.Root);
             Root.Add(summary.Root); // overlay: last child draws on top
 
-            _panels.AddRange(new TerminalPanel[] { accountBar, watchlist, news, quote, chart, orderEntry, activity, summary });
+            _always.AddRange(new TerminalPanel[] { accountBar, summary });
+            _apps[TerminalApp.Broker] = (body, new TerminalPanel[] { watchlist, news, quote, chart, orderEntry, activity });
+            _apps[TerminalApp.Bank] = (bank.Root, new TerminalPanel[] { bank });
+            _apps[TerminalApp.Store] = (store.Root, new TerminalPanel[] { store });
+            Context.AppChanged += ShowCurrentApp;
+            ShowCurrentApp();
+        }
+
+        /// <summary>Only the visible app is laid out and refreshed.</summary>
+        private void ShowCurrentApp()
+        {
+            foreach (var pair in _apps) Ui.Show(pair.Value.root, pair.Key == Context.App);
             RefreshAll();
         }
 
@@ -92,7 +110,9 @@ namespace OpeningBell.UI
 
         public void RefreshAll()
         {
-            foreach (TerminalPanel panel in _panels) panel.Refresh();
+            if (Context == null) return;
+            foreach (TerminalPanel panel in _always) panel.Refresh();
+            foreach (TerminalPanel panel in _apps[Context.App].panels) panel.Refresh();
         }
     }
 }

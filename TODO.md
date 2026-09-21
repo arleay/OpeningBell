@@ -14,9 +14,10 @@
 
 - [x] Save/load: exact-resume saves (market, news, RNG, account, orders, fills, day reports, clock, player position), atomic writes plus backup, version check, autosave on wake and quit, continue on launch. Tests for exact resume through JSON, file safety and restart-in-scene
 
-## Next: Phase 7 (Economy)
-- [ ] Rent, internet, subscriptions (bank/expenses separate from the brokerage account?), purchases, simple equipment upgrades
-- [ ] Extend `SaveGame` with the economy state (bump the version only if an existing field changes meaning)
+- [x] Phase 7: separate bank account, bills plus daily living costs, overdraft fees, brokerage transfers (excluded from trading P&L), store with 6 visible apartment upgrades plus a fiber subscription, Bank/Store apps, HUD bill toasts, saved state. PlayMode test transfers, buys, pays rent and reloads
+
+## Next: Phase 8 (Polish the vertical slice)
+- [ ] Audio (market bell, fills, ambience), lighting pass, animations, tutorial/onboarding emails, settings plus pause/main menu (new game, manual save), performance check, bug fixes
 
 ## Later phases (do not start early)
 - Phase 5: news catalysts. Hook in via the activity level (vol/volume) plus fair-value jumps in `PriceEngine`
@@ -40,4 +41,5 @@
 - With the default seed (18492) the onboarding APEX headline draws a modest +3% move (the expected move is about +10%). Honest randomness; retune severity or the seed if the tutorial needs a clearer reaction
 - Day loop: no weekend gameplay (slept through); no fatigue/sleep-quality effects (psychology system, spec §9); sleeping mid-afternoon after 4 PM skips after-hours trading without asking
 - Save: single slot, no manual save or new-game UI yet (menu in Phase 8). Saving while seated restores the player standing. Older saves have no migration steps yet (none needed at v1)
+- Economy balance: about $1,565/month of costs against $10k trading capital is intentionally tight; tune after playtests. Transfers are instant (real ACH takes days). Store upgrades are cosmetic until psychology, latency and multi-monitor exist. No income besides trading (spec §32's temp work and downsizing are later). Overdraft has no further consequence yet (no eviction)
 - News: no earnings calendar or expectations model yet (spec §21); no news alerts while away from the desk (phone, later); headlines have no body text

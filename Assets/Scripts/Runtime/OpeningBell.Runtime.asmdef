@@ -4,7 +4,8 @@
     "references": [
         "OpeningBell.Core",
         "OpeningBell.Market",
-        "OpeningBell.Trading"
+        "OpeningBell.Trading",
+        "OpeningBell.Economy"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

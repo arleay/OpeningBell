@@ -25,8 +25,13 @@ namespace OpeningBell.Trading
         public decimal BestTrade { get; internal set; }
         public decimal WorstTrade { get; internal set; }
 
-        /// <summary>Equity change over the day (realized, unrealized and commissions). Valid once complete.</summary>
-        public decimal NetPnL => EndEquity - StartEquity;
+        /// <summary>Money moved in (+) or out (−) of the brokerage during the day.</summary>
+        public decimal Transfers { get; internal set; }
+
+        /// <summary>Trading result for the day: equity change excluding transfers. Valid once complete.</summary>
+        public decimal NetPnL => EndEquity - StartEquity - Transfers;
+
+        internal decimal StartNetDeposits;
     }
 
     /// <summary>
@@ -76,6 +81,7 @@ namespace OpeningBell.Trading
                 Date = _market.Now.Date,
                 DayNumber = _completed.Count + 1,
                 StartEquity = _account.Equity,
+                StartNetDeposits = _account.NetDeposits,
             };
         }
 
@@ -83,6 +89,7 @@ namespace OpeningBell.Trading
         {
             TradingDayReport report = Current;
             report.EndEquity = _account.Equity;
+            report.Transfers = _account.NetDeposits - report.StartNetDeposits;
             report.IsComplete = true;
             _completed.Add(report);
             Current = null;
