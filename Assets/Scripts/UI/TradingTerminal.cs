@@ -64,6 +64,7 @@ namespace OpeningBell.UI
             var orderEntry = new OrderEntryPanel(Context);
             var activity = new ActivityPanel(Context, orderEntry.Track);
             var news = new NewsPanel(Context);
+            var summary = new DaySummaryPanel(Context);
 
             Root.Add(accountBar.Root);
             var body = Ui.Box("terminal-body", Root);
@@ -75,8 +76,9 @@ namespace OpeningBell.UI
             center.Add(chart.Root);
             center.Add(activity.Root);
             body.Add(orderEntry.Root);
+            Root.Add(summary.Root); // overlay: last child draws on top
 
-            _panels.AddRange(new TerminalPanel[] { accountBar, watchlist, news, quote, chart, orderEntry, activity });
+            _panels.AddRange(new TerminalPanel[] { accountBar, watchlist, news, quote, chart, orderEntry, activity, summary });
             RefreshAll();
         }
 

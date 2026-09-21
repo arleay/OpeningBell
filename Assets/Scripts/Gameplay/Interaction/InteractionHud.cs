@@ -11,11 +11,34 @@ namespace OpeningBell.Gameplay
         [SerializeField] private PlayerInteractor interactor;
         [SerializeField] private WorkstationController workstation;
         [SerializeField] private GameInput input;
+        [SerializeField] private GameBootstrap game;
 
         private VisualElement _root;
-        private Label _prompt;
+        private Label _prompt, _clock;
+        private long _clockMinute = -1;
+        private string _shownPrompt;
 
         public string PromptText => _prompt.style.display == DisplayStyle.None ? "" : _prompt.text;
+        public string ClockText => _clock.text;
+
+        private void Update()
+        {
+            if (_prompt == null) return;
+            // Prompts can change while in focus (e.g. the bed at 4 PM).
+            if (interactor.Current != null && interactor.Current.Prompt != _shownPrompt) OnFocusChanged(interactor.Current);
+
+            long minute = game.Clock.Now.Ticks / System.TimeSpan.TicksPerMinute;
+            if (minute == _clockMinute) return;
+            _clockMinute = minute;
+            string session = game.Market.Session switch
+            {
+                OpeningBell.Market.MarketSession.Premarket => "PRE-MARKET",
+                OpeningBell.Market.MarketSession.Regular => "MARKET OPEN",
+                OpeningBell.Market.MarketSession.AfterHours => "AFTER HOURS",
+                _ => "MARKET CLOSED",
+            };
+            _clock.text = $"DAY {game.Days.DayNumber}   {game.Clock.Now.ToString("ddd h:mm tt", System.Globalization.CultureInfo.InvariantCulture)}   {session}";
+        }
 
         private void Start()
         {
@@ -44,6 +67,15 @@ namespace OpeningBell.Gameplay
             SetRadius(_prompt, 4);
             _root.Add(_prompt);
 
+            _clock = new Label { pickingMode = PickingMode.Ignore, name = "hud-clock" };
+            _clock.style.position = Position.Absolute;
+            _clock.style.top = 18;
+            _clock.style.right = 24;
+            _clock.style.color = new Color(1f, 1f, 1f, 0.85f);
+            _clock.style.fontSize = 18;
+            _clock.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _root.Add(_clock);
+
             interactor.FocusChanged += OnFocusChanged;
             workstation.StateChanged += state =>
                 _root.style.display = state == WorkstationState.Standing ? DisplayStyle.Flex : DisplayStyle.None;
@@ -53,7 +85,8 @@ namespace OpeningBell.Gameplay
         private void OnFocusChanged(Interactable target)
         {
             _prompt.style.display = target != null ? DisplayStyle.Flex : DisplayStyle.None;
-            if (target != null) _prompt.text = $"[{input.Interact.GetBindingDisplayString()}] {target.Prompt}";
+            _shownPrompt = target?.Prompt;
+            if (target != null) _prompt.text = $"[{input.Interact.GetBindingDisplayString()}] {_shownPrompt}";
         }
 
         private static void SetRadius(VisualElement e, float r) =>

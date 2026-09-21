@@ -10,9 +10,11 @@
 
 - [x] Phase 5: news engine (29 templates covering the spec's catalyst types plus flavour), scheduled plus random news, catalysts (permanent move, overreaction, attention), onboarding 8:15 APEX headline, News panel, watchlist dots, chart markers. Tests for isolation, direction, sector/market scope, determinism and rate
 
-## Next: Phase 6 (Day loop)
-- [ ] Morning → Premarket → Open → Session → Close → Evening → Sleep → Next day (bed interaction; skip the night)
-- [ ] End-of-day summary; carry account and market across days
+- [x] Phase 6: day reports (`TradingDayRecorder`), session summary at the close, bed plus sleep sequence with recap, wake on the next trading morning (weekends skipped), HUD clock/day number, window daylight cycle. PlayMode test plays three consecutive days
+
+## Next
+- [ ] **Save/load** (vertical-slice requirement, spec §41): explicit save models for account, ledger, positions, orders, day reports, clock, plus market state (the RNG state must be serializable for exact resume); autosave on sleep
+- [ ] Phase 7 (Economy): rent, internet, subscriptions, purchases, simple equipment upgrades
 
 ## Later phases (do not start early)
 - Phase 5: news catalysts. Hook in via the activity level (vol/volume) plus fair-value jumps in `PriceEngine`
@@ -34,4 +36,5 @@
 - Active input handling is "Both". Test switching to Input System only (UI Toolkit runtime input) before release
 - Escape while seated always stands up. A pause/settings menu will need its own key or a stack
 - With the default seed (18492) the onboarding APEX headline draws a modest +3% move (the expected move is about +10%). Honest randomness; retune severity or the seed if the tutorial needs a clearer reaction
+- Day loop: no weekend gameplay (slept through); no fatigue/sleep-quality effects (psychology system, spec §9); sleeping mid-afternoon after 4 PM skips after-hours trading without asking
 - News: no earnings calendar or expectations model yet (spec §21); no news alerts while away from the desk (phone, later); headlines have no body text

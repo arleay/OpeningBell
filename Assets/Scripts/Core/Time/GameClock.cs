@@ -26,5 +26,11 @@ namespace OpeningBell.Core
             if (IsPaused || realSeconds <= 0 || TimeScale <= 0) return;
             Now = Now.AddTicks((long)(realSeconds * TimeScale * TimeSpan.TicksPerSecond));
         }
+
+        /// <summary>Skips forward (sleeping, debug). Time never runs backwards: simulations cannot rewind.</summary>
+        public void JumpTo(DateTime time)
+        {
+            if (time > Now) Now = time;
+        }
     }
 }

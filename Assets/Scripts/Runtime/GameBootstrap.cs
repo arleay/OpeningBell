@@ -41,6 +41,7 @@ namespace OpeningBell
         public MarketSimulation Market { get; private set; }
         public Account Account { get; private set; }
         public OrderManager Orders { get; private set; }
+        public TradingDayRecorder Days { get; private set; }
 
         /// <summary>Player-controlled fast-forward on top of the base time scales (learning aid; difficulty may lock it later).</summary>
         public float SpeedMultiplier { get; set; } = 1f;
@@ -73,6 +74,17 @@ namespace OpeningBell
             Account = new Account(Market);
             Account.Deposit((decimal)startingCash, "Starting savings");
             Orders = new OrderManager(Market, Account, brokerRules);
+            Days = new TradingDayRecorder(Market, Account, Orders);
+        }
+
+        /// <summary>
+        /// Jumps game time forward (sleep, debug) and simulates the market through the gap immediately,
+        /// so orders, news and day reports are all settled before anything reads them.
+        /// </summary>
+        public void SkipTo(DateTime target)
+        {
+            Clock.JumpTo(target);
+            Market.AdvanceTo(Clock.Now);
         }
 
         private void Update()

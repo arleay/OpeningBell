@@ -46,7 +46,7 @@ namespace OpeningBell.UI
             var market = Context.Market;
             var account = Context.Account;
 
-            Ui.SetText(_clock, Fmt.Date(Context.Clock.Now) + "  " + Fmt.Clock(Context.Clock.Now));
+            Ui.SetText(_clock, $"DAY {Context.Game.Days.DayNumber}  ·  {Fmt.Date(Context.Clock.Now)}  {Fmt.Clock(Context.Clock.Now)}");
             RefreshSession(market.Session);
 
             MarketIndex index = market.Index;

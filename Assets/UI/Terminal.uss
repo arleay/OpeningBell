@@ -291,6 +291,48 @@
 
 .legend-news { color: #e0a93b; }
 
+/* ---------- day summary overlay ---------- */
+
+.day-summary {
+    position: absolute;
+    left: 50%;
+    top: 22%;
+    width: 560px;
+    margin-left: -280px;
+    padding: 22px 26px;
+    background-color: #161c24;
+    border-color: #e0a93b;
+    border-width: 1px;
+    border-radius: 6px;
+}
+
+.summary-title {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: #e0a93b;
+    letter-spacing: 1px;
+}
+
+.summary-sub { margin: 4px 0 14px 0; }
+
+.summary-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.summary-stat {
+    width: 50%;
+    margin: 6px 0;
+}
+
+.summary-stat .stat-value { font-size: 18px; }
+
+.terminal .tb.summary-continue {
+    margin: 16px 0 0 0;
+    padding: 9px 0;
+    font-size: 14px;
+}
+
 /* ---------- chart ---------- */
 
 .chart-toolbar {

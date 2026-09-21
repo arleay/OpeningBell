@@ -80,6 +80,13 @@ Log price = fair + deviation, per tick:
 - **Terminal presentation:** `TradingTerminal` clones its PanelSettings at runtime. While standing it renders into `WorldTexture`, shown on the monitor mesh (so the room shows live markets). While seated, `targetTexture` is null and it's a full-screen interactive overlay. The HUD uses its own screen PanelSettings.
 - **Time:** during market sessions the base scale is `tradingTimeScale` (10) at the desk and `walkingTimeScale` (30) away from it; `closedTimeScale` (120) applies when the market is closed. Speed buttons multiply these.
 
+## Day loop (Phase 6)
+
+- `TradingDayRecorder` (Trading) opens a `TradingDayReport` when a trading day's first session starts and finishes it when the market closes at 20:00. It tracks start/end equity, gross realized P&L, commissions, fills, winners/losers and best/worst closing fill. Since marks don't move while closed, daily `NetPnL`s sum exactly to the account's change (tested). It's the base for later statistics and the journal.
+- `GameBootstrap.SkipTo(t)` jumps the clock and simulates the market through the gap immediately (orders expire, news publishes, reports finish).
+- Sleep (`SleepController`, `BedInteractable`, pure `SleepRules`): possible from 16:00 until 06:00. The sequence is fade out → `SkipTo(next trading day 06:00)` → recap of the latest finished day → wake at `WakePoint`. Weekends are slept through.
+- At the regular close the terminal shows the `DaySummaryPanel` overlay. The HUD shows the day number, time and session. `DaylightCycle` drives the window glow and light from the clock.
+
 ## Editor scripting gotcha
 
 Opening or creating a scene in Single mode unloads in-memory assets that nothing references yet, and references assigned from them become null. Load assets **after** opening the scene. `DefaultContentTests.MainScene_HasNoUnassignedReferences` guards this.

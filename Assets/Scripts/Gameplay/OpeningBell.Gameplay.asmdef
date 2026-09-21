@@ -2,6 +2,9 @@
     "name": "OpeningBell.Gameplay",
     "rootNamespace": "OpeningBell.Gameplay",
     "references": [
+        "OpeningBell.Core",
+        "OpeningBell.Market",
+        "OpeningBell.Trading",
         "OpeningBell.Runtime",
         "OpeningBell.UI",
         "Unity.InputSystem"
