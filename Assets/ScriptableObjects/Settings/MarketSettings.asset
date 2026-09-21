@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20b26ea75d1842a4d84b7357cd1591d1, type: 3}
+  m_Name: MarketSettings
+  m_EditorClassIdentifier: OpeningBell.Runtime::OpeningBell.MarketSettings
+  config:
+    TickSeconds: 2
+    PremarketOpenMinute: 240
+    RegularOpenMinute: 570
+    RegularCloseMinute: 960
+    AfterHoursCloseMinute: 1200
+    MarketDailyDrift: 0.0003
+    MarketDailyVolatility: 0.009
+    SectorDailyVolatility: 0.007
+    TransientNoiseRatio: 0.7
+    MomentumHalfLifeMinutes: 5
+    ActivityReversionPerDay: 3
+    ActivityVolOfVol: 1.2
+    OvernightVolatilityRatio: 0.5
+    OvernightDeviationCarry: 0.5
+    RegularVolFloor: 0.6
+    RegularVolEdge: 1.8
+    RegularVolumeFloor: 0.45
+    RegularVolumeEdge: 2.1
+    OpenBurstVol: 0.8
+    OpenBurstVolume: 1.5
+    OpenBurstMinutes: 8
+    PremarketVol: 0.35
+    PremarketVolume: 0.04
+    AfterHoursVol: 0.3
+    AfterHoursVolume: 0.03
+    ExtendedSpreadMultiplier: 3
+    DepthFractionOfAdv: 0.0004
+    DepthNoise: 0.5
+    VolumeNoise: 0.6
+    MaxCandlesPerSeries: 5000

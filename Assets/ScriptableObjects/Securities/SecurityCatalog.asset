@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40eaca98fe49ca645a43bf6360564d2e, type: 3}
+  m_Name: SecurityCatalog
+  m_EditorClassIdentifier: OpeningBell.Runtime::OpeningBell.SecurityCatalog
+  index:
+    Ticker: CMPX
+    Name: Composite Index
+    BaseLevel: 4800
+  securities:
+  - {fileID: 11400000, guid: b7125e985ec4dab428c3db83c3bb9768, type: 2}
+  - {fileID: 11400000, guid: c15d829a742802144ab7114d6e46f5f2, type: 2}
+  - {fileID: 11400000, guid: c4fd584b9952a704a8261aea7f608115, type: 2}
+  - {fileID: 11400000, guid: dcd7c2c80690a0647b0c5bb7b7bfa165, type: 2}
+  - {fileID: 11400000, guid: a7495a92a0574b84f8a64f34a4aee584, type: 2}
+  - {fileID: 11400000, guid: 9b37034f210bcb84ebbee621042794ab, type: 2}
+  - {fileID: 11400000, guid: 53f81283210c46648afa448e54d1958d, type: 2}
+  - {fileID: 11400000, guid: 110e2d7aa8ea00a4ab8b051a4e228e09, type: 2}
+  - {fileID: 11400000, guid: 8a9de4bdb5b4dd44698051e682eab20b, type: 2}
+  - {fileID: 11400000, guid: d2e814cf5af6d594683f2bad02cfeeb3, type: 2}

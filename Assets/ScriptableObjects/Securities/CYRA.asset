@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33b0e5e5a892b124fb20651af2255c5e, type: 3}
+  m_Name: CYRA
+  m_EditorClassIdentifier: OpeningBell.Runtime::OpeningBell.SecurityDefinition
+  spec:
+    Ticker: CYRA
+    CompanyName: Cyra Pharmaceuticals
+    Sector: 1
+    BasePrice: 4.12
+    DailyVolatility: 0.06
+    AverageDailyVolume: 3000000
+    SharesOutstanding: 95000000
+    FloatShares: 60000000
+    BaseSpreadBps: 25
+    MarketBeta: 0.9
+    SectorBeta: 0.8
+    MomentumCoefficient: 0.2
+    MeanReversionPerDay: 22

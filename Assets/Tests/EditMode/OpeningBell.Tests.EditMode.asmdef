@@ -1,0 +1,27 @@
+{
+    "name": "OpeningBell.Tests.EditMode",
+    "rootNamespace": "OpeningBell.Tests",
+    "references": [
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "OpeningBell.Core",
+        "OpeningBell.Market",
+        "OpeningBell.Trading",
+        "OpeningBell.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

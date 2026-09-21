@@ -1,0 +1,17 @@
+{
+    "name": "OpeningBell.Trading",
+    "rootNamespace": "OpeningBell.Trading",
+    "references": [
+        "OpeningBell.Core",
+        "OpeningBell.Market"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

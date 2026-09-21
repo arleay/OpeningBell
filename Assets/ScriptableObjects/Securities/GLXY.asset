@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33b0e5e5a892b124fb20651af2255c5e, type: 3}
+  m_Name: GLXY
+  m_EditorClassIdentifier: OpeningBell.Runtime::OpeningBell.SecurityDefinition
+  spec:
+    Ticker: GLXY
+    CompanyName: Galaxy Aerospace
+    Sector: 4
+    BasePrice: 12.85
+    DailyVolatility: 0.04
+    AverageDailyVolume: 5500000
+    SharesOutstanding: 220000000
+    FloatShares: 160000000
+    BaseSpreadBps: 8
+    MarketBeta: 1.5
+    SectorBeta: 1
+    MomentumCoefficient: 0.15
+    MeanReversionPerDay: 18
