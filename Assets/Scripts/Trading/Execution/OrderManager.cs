@@ -101,18 +101,15 @@ namespace OpeningBell.Trading
 
             if (order.Side == OrderSide.Buy)
             {
-                order.ReservePrice = order.Type == OrderType.Limit
-                    ? order.LimitPrice
-                    : PriceTick.RoundUp(quote.Ask * (1m + (decimal)_rules.MarketBuyReservePercent / 100m), PriceTick.For(quote.Ask));
-                decimal notional = order.Quantity * order.ReservePrice;
-                decimal required = notional + _rules.CommissionFor(order.Quantity, notional);
+                order.ReservePrice = ReservePrice(order.Type, order.LimitPrice, quote);
+                decimal required = RequiredCash(order.Quantity, order.ReservePrice);
                 if (required > _account.BuyingPower)
                     return string.Format(CultureInfo.InvariantCulture,
                         "Insufficient buying power: needs ${0:N2}, available ${1:N2}.", required, _account.BuyingPower);
             }
             else
             {
-                long available = _account.Portfolio.QuantityOf(order.Ticker) - OpenSellQuantity(order.Ticker);
+                long available = AvailableToSell(order.Ticker);
                 if (order.Quantity > available)
                     return available <= 0
                         ? "No shares available to sell. Short selling is not available."
@@ -192,13 +189,44 @@ namespace OpeningBell.Trading
             _account.SetReservation(order.Id, amount);
         }
 
-        private long OpenSellQuantity(string ticker)
+        /// <summary>Shares held that are not already committed to open sell orders.</summary>
+        public long AvailableToSell(string ticker)
         {
-            long total = 0;
+            long committed = 0;
             foreach (var o in _open)
                 if (o.Side == OrderSide.Sell && o.Ticker == ticker)
-                    total += o.RemainingQuantity;
-            return total;
+                    committed += o.RemainingQuantity;
+            return Math.Max(0, _account.Portfolio.QuantityOf(ticker) - committed);
+        }
+
+        /// <summary>Largest buy that would pass the buying-power check right now (same reserve rule as validation).</summary>
+        public long MaxBuyQuantity(string ticker, OrderType type, decimal limitPrice)
+        {
+            if (!_market.TryGetQuote(ticker, out Quote quote)) return 0;
+            decimal price = ReservePrice(type, limitPrice, quote);
+            if (price <= 0m) return 0;
+
+            // Required cash rises monotonically with quantity; binary search below the no-commission upper bound.
+            decimal buyingPower = _account.BuyingPower;
+            long lo = 0, hi = Math.Max(0L, (long)Math.Floor(buyingPower / price));
+            while (lo < hi)
+            {
+                long mid = lo + (hi - lo + 1) / 2;
+                if (RequiredCash(mid, price) <= buyingPower) lo = mid;
+                else hi = mid - 1;
+            }
+            return lo;
+        }
+
+        private decimal ReservePrice(OrderType type, decimal limitPrice, in Quote quote) =>
+            type == OrderType.Limit
+                ? limitPrice
+                : PriceTick.RoundUp(quote.Ask * (1m + (decimal)_rules.MarketBuyReservePercent / 100m), PriceTick.For(quote.Ask));
+
+        private decimal RequiredCash(long quantity, decimal price)
+        {
+            decimal notional = quantity * price;
+            return notional + _rules.CommissionFor(quantity, notional);
         }
 
         private void Close(Order order, OrderStatus status, string reason)

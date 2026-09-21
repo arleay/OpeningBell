@@ -42,7 +42,7 @@ namespace OpeningBell.Market
                     _completed.RemoveRange(0, _completed.Count - _maxCompleted);
             }
 
-            _current = new Candle(bucketStart, price, price, price, price, volume);
+            _current = new Candle(bucketStart, price, price, price, price, volume, price * volume);
             HasCurrent = true;
         }
     }

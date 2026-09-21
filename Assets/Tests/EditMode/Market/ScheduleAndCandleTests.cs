@@ -48,6 +48,7 @@ namespace OpeningBell.Tests
             CandleSeries m1 = agg.Get(Timeframe.Minute1);
             Assert.AreEqual(2, m1.Count);
             AssertCandle(m1[0], Open, 10.00m, 10.50m, 9.80m, 9.80m, 175);
+            Assert.AreEqual(1000m + 525m + 245m, m1[0].Notional);
             AssertCandle(m1[1], Open.AddMinutes(1), 10.10m, 10.10m, 10.10m, 10.10m, 10);
 
             CandleSeries m5 = agg.Get(Timeframe.Minute5);

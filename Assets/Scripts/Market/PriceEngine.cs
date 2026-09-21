@@ -167,6 +167,7 @@ namespace OpeningBell.Market
                 }
 
                 sec.DayVolume += shares;
+                sec.DayNotional += last * shares;
                 sec.Candles.Record(time, last, shares, regular);
             }
             else

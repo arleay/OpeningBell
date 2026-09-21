@@ -64,6 +64,13 @@ namespace OpeningBell.Tests
                 foreach (Timeframe tf in new[] { Timeframe.Minute1, Timeframe.Minute5, Timeframe.Minute15, Timeframe.Hour1 })
                     Assert.AreEqual(sec.DayVolume, SumVolume(sec.Candles.Get(tf)), $"{sec.Ticker} {tf}");
 
+                // Day VWAP equals the candle-derived VWAP and sits inside the day's range.
+                CandleSeries m1 = sec.Candles.Get(Timeframe.Minute1);
+                decimal notional = 0m;
+                for (int i = 0; i < m1.Count; i++) notional += m1[i].Notional;
+                Assert.AreEqual(notional / sec.DayVolume, sec.Vwap);
+                Assert.That(sec.Vwap, Is.InRange(sec.DayLow, sec.DayHigh));
+
                 CandleSeries daily = sec.Candles.Get(Timeframe.Day1);
                 Assert.AreEqual(1, daily.Count);
                 Assert.AreEqual(Monday, daily[0].Start);

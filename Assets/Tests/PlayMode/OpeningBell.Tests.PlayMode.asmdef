@@ -1,5 +1,5 @@
 {
-    "name": "OpeningBell.Tests.EditMode",
+    "name": "OpeningBell.Tests.PlayMode",
     "rootNamespace": "OpeningBell.Tests",
     "references": [
         "UnityEngine.TestRunner",
@@ -10,9 +10,7 @@
         "OpeningBell.Runtime",
         "OpeningBell.UI"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,

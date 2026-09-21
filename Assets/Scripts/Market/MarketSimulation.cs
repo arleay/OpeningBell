@@ -127,6 +127,7 @@ namespace OpeningBell.Market
             {
                 sec.PreviousClose = sec.RegularClose;
                 sec.DayVolume = 0;
+                sec.DayNotional = 0;
                 sec.DayHigh = 0;
                 sec.DayLow = 0;
             }

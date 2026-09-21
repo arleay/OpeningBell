@@ -221,6 +221,29 @@ namespace OpeningBell.Tests
         }
 
         [Test]
+        public void MaxBuyQuantity_IsExactlyTheLargestAcceptedOrder()
+        {
+            Build(new BrokerRules()); // real commissions, 5% market reserve
+            long maxMarket = _orders.MaxBuyQuantity("TST", OrderType.Market, 0m);
+            long maxLimit = _orders.MaxBuyQuantity("TST", OrderType.Limit, 9.50m);
+
+            Assert.AreEqual(OrderStatus.Rejected, _orders.SubmitMarket("TST", OrderSide.Buy, maxMarket + 1).Status);
+            Assert.AreEqual(OrderStatus.Rejected, _orders.SubmitLimit("TST", OrderSide.Buy, maxLimit + 1, 9.50m).Status);
+            Assert.AreEqual(OrderStatus.Working, _orders.SubmitLimit("TST", OrderSide.Buy, maxLimit, 9.50m).Status);
+            Assert.AreEqual(0, _orders.MaxBuyQuantity("TST", OrderType.Limit, 9.50m), "all buying power is now reserved");
+            Assert.Greater(maxMarket, 0);
+        }
+
+        [Test]
+        public void AvailableToSell_ExcludesSharesCommittedToOpenSells()
+        {
+            _orders.SubmitMarket("TST", OrderSide.Buy, 100);
+            _orders.SubmitLimit("TST", OrderSide.Sell, 60, 11m);
+            Assert.AreEqual(40, _orders.AvailableToSell("TST"));
+            Assert.AreEqual(0, _orders.AvailableToSell("NOPE"));
+        }
+
+        [Test]
         public void Cancel_ReleasesReservation()
         {
             Order order = _orders.SubmitLimit("TST", OrderSide.Buy, 100, 9.00m);

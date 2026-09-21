@@ -36,8 +36,24 @@ namespace OpeningBell
         public Account Account { get; private set; }
         public OrderManager Orders { get; private set; }
 
+        /// <summary>Player-controlled fast-forward on top of the base time scales (learning aid; difficulty may lock it later).</summary>
+        public float SpeedMultiplier { get; set; } = 1f;
+
+        public bool IsPaused
+        {
+            get => Clock.IsPaused;
+            set => Clock.IsPaused = value;
+        }
+
         private void Awake()
         {
+            if (catalog == null || marketSettings == null)
+            {
+                Debug.LogError("GameBootstrap: assign the Security Catalog and Market Settings assets.", this);
+                enabled = false;
+                return;
+            }
+
             DateTime start = DateTime.ParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture).AddMinutes(startMinuteOfDay);
             var random = new SeededRandomService(unchecked((ulong)seed));
 
@@ -50,7 +66,7 @@ namespace OpeningBell
 
         private void Update()
         {
-            Clock.TimeScale = Market.Session == MarketSession.Closed ? closedTimeScale : tradingTimeScale;
+            Clock.TimeScale = (Market.Session == MarketSession.Closed ? closedTimeScale : tradingTimeScale) * SpeedMultiplier;
             Clock.Advance(Mathf.Min(Time.unscaledDeltaTime, maxFrameSeconds));
             Market.AdvanceTo(Clock.Now);
         }

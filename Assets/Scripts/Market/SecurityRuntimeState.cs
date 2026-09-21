@@ -20,6 +20,9 @@ namespace OpeningBell.Market
         public decimal DayLow { get; internal set; }
         public long DayVolume { get; internal set; }
 
+        /// <summary>Volume-weighted average price of today's prints, extended hours included. 0 before the first print.</summary>
+        public decimal Vwap => DayVolume == 0 ? 0m : DayNotional / DayVolume;
+
         public decimal Change => Last - PreviousClose;
         public decimal ChangePercent => PreviousClose == 0m ? 0m : Change / PreviousClose * 100m;
 
@@ -32,6 +35,7 @@ namespace OpeningBell.Market
         internal double ActivityLog;
         internal readonly int SectorIndex;
         internal decimal RegularClose;
+        internal decimal DayNotional;
         internal readonly SeededRandom Rng;
 
         internal SecurityRuntimeState(SecuritySpec spec, SeededRandom rng, int maxCandles)

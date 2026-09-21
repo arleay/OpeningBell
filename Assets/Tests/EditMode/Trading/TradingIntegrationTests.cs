@@ -60,6 +60,38 @@ namespace OpeningBell.Tests
     /// <summary>Guards the shipped content assets.</summary>
     public class DefaultContentTests
     {
+        [Test]
+        public void MainScene_HasNoUnassignedReferences()
+        {
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(
+                "Assets/Scenes/Main.unity", UnityEditor.SceneManagement.OpenSceneMode.Additive);
+            try
+            {
+                int checkedComponents = 0;
+                foreach (var go in scene.GetRootGameObjects())
+                foreach (var component in go.GetComponentsInChildren<UnityEngine.MonoBehaviour>(true))
+                {
+                    if (component is UnityEngine.UIElements.UIDocument document)
+                    {
+                        Assert.NotNull(document.panelSettings, $"{go.name} UIDocument has no PanelSettings");
+                        continue;
+                    }
+                    if (component.GetType().Namespace?.StartsWith("OpeningBell") != true) continue;
+                    checkedComponents++;
+                    var so = new SerializedObject(component);
+                    SerializedProperty p = so.GetIterator();
+                    while (p.NextVisible(true))
+                        if (p.propertyType == SerializedPropertyType.ObjectReference && p.name != "m_Script")
+                            Assert.IsTrue(p.objectReferenceValue != null, $"{go.name}.{component.GetType().Name}.{p.propertyPath} is unassigned");
+                }
+                Assert.GreaterOrEqual(checkedComponents, 2, "bootstrap and terminal");
+            }
+            finally
+            {
+                UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
         private const string CatalogPath = "Assets/ScriptableObjects/Securities/SecurityCatalog.asset";
         private const string SettingsPath = "Assets/ScriptableObjects/Settings/MarketSettings.asset";
 

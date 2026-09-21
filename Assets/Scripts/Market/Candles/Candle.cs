@@ -36,7 +36,10 @@ namespace OpeningBell.Market
         public decimal Close { get; }
         public long Volume { get; }
 
-        public Candle(DateTime start, decimal open, decimal high, decimal low, decimal close, long volume)
+        /// <summary>Σ price × shares of the prints in this candle (for VWAP).</summary>
+        public decimal Notional { get; }
+
+        public Candle(DateTime start, decimal open, decimal high, decimal low, decimal close, long volume, decimal notional)
         {
             Start = start;
             Open = open;
@@ -44,9 +47,10 @@ namespace OpeningBell.Market
             Low = low;
             Close = close;
             Volume = volume;
+            Notional = notional;
         }
 
         internal Candle Include(decimal price, long volume) =>
-            new Candle(Start, Open, Math.Max(High, price), Math.Min(Low, price), price, Volume + volume);
+            new Candle(Start, Open, Math.Max(High, price), Math.Min(Low, price), price, Volume + volume, Notional + price * volume);
     }
 }

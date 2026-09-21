@@ -10,7 +10,9 @@ Unity 6000.6.2f1. Vision/requirements: `PROJECT_SPEC.md`.
 | `OpeningBell.Market` | `Scripts/Market` | none | specs, schedule, price engine, simulation, candles |
 | `OpeningBell.Trading` | `Scripts/Trading` | none | orders, execution, positions, ledger, account |
 | `OpeningBell.Runtime` | `Scripts/Runtime` | yes | ScriptableObjects, `GameBootstrap` (composition root) |
+| `OpeningBell.UI` | `Scripts/UI` | yes | trading terminal (UI Toolkit) |
 | `OpeningBell.Tests.EditMode` | `Tests/EditMode` | editor | NUnit tests (InternalsVisibleTo on Market/Trading) |
+| `OpeningBell.Tests.PlayMode` | `Tests/PlayMode` | yes | scene-level tests that drive the real UI |
 
 Core, Market and Trading use `noEngineReferences`, so they cannot touch UnityEngine by construction. Unity code only displays, collects input and drives time.
 
@@ -47,6 +49,20 @@ Log price = fair + deviation, per tick:
 - Limit fills: a new marketable order walks the book (price improvement possible). A resting order fills at its limit when the market trades through it. A resting order *inside* the spread fills from opposing aggressive flow. An order joining the bid/ask waits (no queue model, conservative).
 - Commission is computed on the order's cumulative fills (per-share, minimum, % cap), so partial fills never overpay the minimum.
 
+## UI (trading terminal)
+
+- **UI Toolkit, built in code** (no UXML). Styling lives in `Assets/UI/Terminal.uss` and the panel config in `Assets/UI/TerminalPanelSettings.asset` (scales from a 1920×1080 reference).
+- `TradingTerminal` composes panels (account bar, watchlist, quote, chart, order entry, activity). Each `TerminalPanel` owns its root element and talks to others only through `TerminalContext` (services plus selected ticker). An in-world monitor can later host any subset of panels with its own `UIDocument`/`PanelSettings` (`targetTexture`).
+- Panels refresh at a fixed UI rate (0.1s real), not per frame. The chart repaints only when `TickCount` changes or on input.
+- Chart: Painter2D geometry with pooled absolute Labels for text. Layout is computed in `Rebuild()` and only read while painting. Pure math (`ChartViewport`: visible range, nice steps, VWAP, candle lookup) is unit-tested.
+- Speed/pause: `GameBootstrap.SpeedMultiplier` × base time scale, and `IsPaused`. Simulation determinism is unaffected, because the market still ticks on its fixed grid.
+- USS gotcha: don't reset Labels with a type selector (`.terminal Label`). It outranks single-class rules; reset `.unity-label` instead.
+
+## Editor scripting gotcha
+
+Opening or creating a scene in Single mode unloads in-memory assets that nothing references yet, and references assigned from them become null. Load assets **after** opening the scene. `DefaultContentTests.MainScene_HasNoUnassignedReferences` guards this.
+
 ## Testing
 
 `./run-tests.ps1` (close the Editor first) runs EditMode tests headlessly and prints failures. `-Filter` takes a test or class name.
+`./run-tests.ps1 -Platform PlayMode` loads `Main`, trades through the terminal (via UI events) and writes `TestResults/terminal-trading.png` for visual review.
