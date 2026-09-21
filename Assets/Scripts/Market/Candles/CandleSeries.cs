@@ -24,6 +24,29 @@ namespace OpeningBell.Market
             _maxCompleted = maxCompleted;
         }
 
+        /// <summary>Replaces history; the last candle becomes the forming one (it was when saved).</summary>
+        internal void Restore(IReadOnlyList<Candle> candles)
+        {
+            _completed.Clear();
+            HasCurrent = candles.Count > 0;
+            for (int i = 0; i < candles.Count - 1; i++) _completed.Add(candles[i]);
+            if (HasCurrent) _current = candles[candles.Count - 1];
+        }
+
+        /// <summary>Folds a finer candle into this timeframe. Equivalent to recording each of its prints in order.</summary>
+        internal void Merge(DateTime bucketStart, Candle finer)
+        {
+            if (HasCurrent && bucketStart == _current.Start)
+            {
+                _current = new Candle(_current.Start, _current.Open, Math.Max(_current.High, finer.High), Math.Min(_current.Low, finer.Low),
+                    finer.Close, _current.Volume + finer.Volume, _current.Notional + finer.Notional);
+                return;
+            }
+            if (HasCurrent) _completed.Add(_current);
+            _current = new Candle(bucketStart, finer.Open, finer.High, finer.Low, finer.Close, finer.Volume, finer.Notional);
+            HasCurrent = true;
+        }
+
         internal void Record(DateTime bucketStart, decimal price, long volume)
         {
             if (HasCurrent && bucketStart == _current.Start)

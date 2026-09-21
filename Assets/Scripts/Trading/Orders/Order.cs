@@ -69,6 +69,22 @@ namespace OpeningBell.Trading
             UpdatedAt = submittedAt;
         }
 
+        internal void Restore(OrderStatus status, string reason, DateTime updatedAt, long filledQuantity,
+            decimal filledNotional, decimal commission, bool isResting, decimal reservePrice)
+        {
+            Status = status;
+            StatusReason = reason;
+            UpdatedAt = updatedAt;
+            FilledQuantity = filledQuantity;
+            FilledNotional = filledNotional;
+            Commission = commission;
+            IsResting = isResting;
+            ReservePrice = reservePrice;
+        }
+
+        /// <summary>Re-links a saved fill for display; totals were restored separately.</summary>
+        internal void AttachFill(Fill fill) => _fills.Add(fill);
+
         internal void AddFill(Fill fill)
         {
             _fills.Add(fill);

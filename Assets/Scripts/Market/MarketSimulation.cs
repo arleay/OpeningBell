@@ -9,7 +9,7 @@ namespace OpeningBell.Market
     /// produces identical results no matter how AdvanceTo calls are chunked (framerate, time scale, skips).
     /// Closed periods are skipped without ticking.
     /// </summary>
-    public sealed class MarketSimulation : IMarketData
+    public sealed partial class MarketSimulation : IMarketData
     {
         private readonly List<SecurityRuntimeState> _securities = new List<SecurityRuntimeState>();
         private readonly Dictionary<string, SecurityRuntimeState> _byTicker = new Dictionary<string, SecurityRuntimeState>(StringComparer.Ordinal);

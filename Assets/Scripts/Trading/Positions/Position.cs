@@ -39,6 +39,13 @@ namespace OpeningBell.Trading
             Ticker = ticker;
         }
 
+        internal void Restore(long quantity, decimal costBasis, decimal realizedPnL)
+        {
+            Quantity = quantity;
+            CostBasis = costBasis;
+            RealizedPnL = realizedPnL;
+        }
+
         /// <summary>Applies a fill (positive quantity buys, negative sells) and returns the realized P&L.</summary>
         internal decimal ApplyFill(long signedQuantity, decimal price)
         {

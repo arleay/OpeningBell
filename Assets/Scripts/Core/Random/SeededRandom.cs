@@ -2,6 +2,15 @@ using System;
 
 namespace OpeningBell.Core
 {
+    /// <summary>Full generator state for saving. Stored as signed longs/bits so any serializer round-trips it exactly.</summary>
+    [Serializable]
+    public struct RandomState
+    {
+        public long S0, S1, S2, S3;
+        public long SpareGaussianBits;
+        public bool HasSpareGaussian;
+    }
+
     /// <summary>
     /// Deterministic xoshiro256** generator. Simulation code must use this instead of
     /// System.Random / UnityEngine.Random, whose sequences are not guaranteed stable across runtimes.
@@ -68,6 +77,26 @@ namespace OpeningBell.Core
             _spareGaussian = v * scale;
             _hasSpareGaussian = true;
             return u * scale;
+        }
+
+        public RandomState CaptureState() => new RandomState
+        {
+            S0 = unchecked((long)_s0),
+            S1 = unchecked((long)_s1),
+            S2 = unchecked((long)_s2),
+            S3 = unchecked((long)_s3),
+            SpareGaussianBits = BitConverter.DoubleToInt64Bits(_spareGaussian),
+            HasSpareGaussian = _hasSpareGaussian,
+        };
+
+        public void RestoreState(RandomState state)
+        {
+            _s0 = unchecked((ulong)state.S0);
+            _s1 = unchecked((ulong)state.S1);
+            _s2 = unchecked((ulong)state.S2);
+            _s3 = unchecked((ulong)state.S3);
+            _spareGaussian = BitConverter.Int64BitsToDouble(state.SpareGaussianBits);
+            _hasSpareGaussian = state.HasSpareGaussian;
         }
 
         internal static ulong SplitMix64(ref ulong x)

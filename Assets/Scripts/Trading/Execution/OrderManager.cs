@@ -42,6 +42,27 @@ namespace OpeningBell.Trading
             _market.SessionChanged += OnSessionChanged;
         }
 
+        internal long NextOrderId => _nextOrderId;
+        internal long NextFillId => _nextFillId;
+
+        /// <summary>Loads saved orders/fills and re-reserves cash for open buys.</summary>
+        internal void Restore(long nextOrderId, long nextFillId, List<Order> orders, List<Fill> fills)
+        {
+            _nextOrderId = nextOrderId;
+            _nextFillId = nextFillId;
+            _orders.Clear();
+            _open.Clear();
+            _fills.Clear();
+            _orders.AddRange(orders);
+            _fills.AddRange(fills);
+            foreach (Order o in orders)
+            {
+                if (!o.IsOpen) continue;
+                _open.Add(o);
+                UpdateReservation(o);
+            }
+        }
+
         public Order SubmitMarket(string ticker, OrderSide side, long quantity) =>
             Submit(ticker, side, OrderType.Market, quantity, 0m);
 

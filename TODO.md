@@ -12,9 +12,11 @@
 
 - [x] Phase 6: day reports (`TradingDayRecorder`), session summary at the close, bed plus sleep sequence with recap, wake on the next trading morning (weekends skipped), HUD clock/day number, window daylight cycle. PlayMode test plays three consecutive days
 
-## Next
-- [ ] **Save/load** (vertical-slice requirement, spec §41): explicit save models for account, ledger, positions, orders, day reports, clock, plus market state (the RNG state must be serializable for exact resume); autosave on sleep
-- [ ] Phase 7 (Economy): rent, internet, subscriptions, purchases, simple equipment upgrades
+- [x] Save/load: exact-resume saves (market, news, RNG, account, orders, fills, day reports, clock, player position), atomic writes plus backup, version check, autosave on wake and quit, continue on launch. Tests for exact resume through JSON, file safety and restart-in-scene
+
+## Next: Phase 7 (Economy)
+- [ ] Rent, internet, subscriptions (bank/expenses separate from the brokerage account?), purchases, simple equipment upgrades
+- [ ] Extend `SaveGame` with the economy state (bump the version only if an existing field changes meaning)
 
 ## Later phases (do not start early)
 - Phase 5: news catalysts. Hook in via the activity level (vol/volume) plus fair-value jumps in `PriceEngine`
@@ -37,4 +39,5 @@
 - Escape while seated always stands up. A pause/settings menu will need its own key or a stack
 - With the default seed (18492) the onboarding APEX headline draws a modest +3% move (the expected move is about +10%). Honest randomness; retune severity or the seed if the tutorial needs a clearer reaction
 - Day loop: no weekend gameplay (slept through); no fatigue/sleep-quality effects (psychology system, spec §9); sleeping mid-afternoon after 4 PM skips after-hours trading without asking
+- Save: single slot, no manual save or new-game UI yet (menu in Phase 8). Saving while seated restores the player standing. Older saves have no migration steps yet (none needed at v1)
 - News: no earnings calendar or expectations model yet (spec §21); no news alerts while away from the desk (phone, later); headlines have no body text

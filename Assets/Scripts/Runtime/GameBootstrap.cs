@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using OpeningBell.Core;
 using OpeningBell.Market;
 using OpeningBell.Trading;
@@ -37,6 +38,13 @@ namespace OpeningBell
         [Tooltip("Caps one frame's real delta so a hitch cannot skip a large chunk of market time.")]
         [SerializeField] private float maxFrameSeconds = 0.25f;
 
+        [Header("Save")]
+        [SerializeField] private string saveSlot = "slot1";
+        [Tooltip("Continue from the save slot if one exists (the -newgame command-line flag overrides this).")]
+        [SerializeField] private bool continueFromSave = true;
+        [Tooltip("Body whose position is saved/restored (needs to stay in the Runtime layer, so just a Transform).")]
+        [SerializeField] private Transform player;
+
         public GameClock Clock { get; private set; }
         public MarketSimulation Market { get; private set; }
         public Account Account { get; private set; }
@@ -64,18 +72,84 @@ namespace OpeningBell
                 return;
             }
 
-            DateTime start = DateTime.ParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture).AddMinutes(startMinuteOfDay);
-            var random = new SeededRandomService(unchecked((ulong)seed));
+            SaveGame save = TryLoadSave();
+            ulong worldSeed = unchecked((ulong)(save?.Seed ?? seed));
+            DateTime start = save != null
+                ? new DateTime(save.Clock)
+                : DateTime.ParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture).AddMinutes(startMinuteOfDay);
 
-            Market = new MarketSimulation(marketSettings.Config, catalog.CreateSpecs(), catalog.Index, random, start,
+            // Loading = build from the same definitions, then overwrite the runtime state.
+            Market = new MarketSimulation(marketSettings.Config, catalog.CreateSpecs(), catalog.Index, new SeededRandomService(worldSeed), start,
                 newsLibrary != null ? newsLibrary.Templates : null,
                 scenario != null ? scenario.ScheduledNews : null);
-            Clock = new GameClock(Market.Now, tradingTimeScale);
+            if (save != null) Market.RestoreState(save.Market);
+
+            Clock = new GameClock(start, tradingTimeScale);
             Account = new Account(Market);
-            Account.Deposit((decimal)startingCash, "Starting savings");
             Orders = new OrderManager(Market, Account, brokerRules);
+            // New game: deposit before the day recorder opens day 1, so savings aren't counted as profit.
+            if (save == null) Account.Deposit((decimal)startingCash, "Starting savings");
             Days = new TradingDayRecorder(Market, Account, Orders);
+            Seed = worldSeed;
+
+            if (save != null)
+            {
+                TradingState.Restore(save.Trading, Account, Orders, Days);
+                if (save.HasPlayer) PlacePlayer(save.Player);
+                Debug.Log($"Loaded save '{saveSlot}' (day {Days.DayNumber}, {Clock.Now:ddd MMM d HH:mm}).");
+            }
         }
+
+        public ulong Seed { get; private set; }
+
+        /// <summary>Writes the save slot. Called on waking (end of day) and on quit.</summary>
+        public void Save()
+        {
+            var save = new SaveGame
+            {
+                Seed = unchecked((long)Seed),
+                Clock = Clock.Now.Ticks,
+                Market = Market.CaptureState(),
+                Trading = TradingState.Capture(Account, Orders, Days),
+            };
+            if (player != null)
+            {
+                Vector3 p = player.position;
+                save.HasPlayer = true;
+                save.Player = new PlayerSaveData { X = p.x, Y = p.y, Z = p.z, Yaw = player.eulerAngles.y };
+            }
+            SaveSystem.Write(save, saveSlot);
+        }
+
+        private SaveGame TryLoadSave()
+        {
+            if (!continueFromSave || Environment.GetCommandLineArgs().Contains("-newgame")) return null;
+            if (SaveSystem.TryRead(saveSlot, out SaveGame save, out string error))
+            {
+                if (error != null) Debug.LogWarning(error);
+                return save;
+            }
+            if (error != null) Debug.LogError($"Could not load save '{saveSlot}': {error}. Starting a new game.");
+            return null;
+        }
+
+        private void PlacePlayer(PlayerSaveData p)
+        {
+            if (player == null) return;
+            // A CharacterController overrides direct moves while enabled.
+            var body = player.GetComponent<CharacterController>();
+            if (body != null) body.enabled = false;
+            player.SetPositionAndRotation(new Vector3(p.X, p.Y, p.Z), Quaternion.Euler(0f, p.Yaw, 0f));
+            if (body != null) body.enabled = true;
+        }
+
+        private void OnApplicationQuit()
+        {
+            if (enabled && Market != null) Save();
+        }
+
+        [ContextMenu("Delete Save (start fresh next run)")]
+        private void DeleteSave() => SaveSystem.Delete(saveSlot);
 
         /// <summary>
         /// Jumps game time forward (sleep, debug) and simulates the market through the gap immediately,

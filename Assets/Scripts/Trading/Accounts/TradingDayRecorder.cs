@@ -56,6 +56,13 @@ namespace OpeningBell.Trading
             if (market.Session != MarketSession.Closed) Begin();
         }
 
+        internal void Restore(List<TradingDayReport> completed, TradingDayReport current)
+        {
+            _completed.Clear();
+            _completed.AddRange(completed);
+            Current = current;
+        }
+
         private void OnSessionChanged(MarketSession previous, MarketSession current)
         {
             if (previous == MarketSession.Closed && current != MarketSession.Closed) Begin();

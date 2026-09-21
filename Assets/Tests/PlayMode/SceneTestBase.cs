@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using OpeningBell;
 using NUnit.Framework;
 using OpeningBell.Gameplay;
 using OpeningBell.UI;
@@ -16,6 +17,24 @@ namespace OpeningBell.Tests
     {
         private PanelSettings _terminalPanel;
         private RenderTexture _terminalTarget;
+        private string _saveDirectory;
+
+        /// <summary>Every scene test starts a new game and never touches the player's real save slots.</summary>
+        [SetUp]
+        public void IsolateSaves()
+        {
+            _saveDirectory = Path.Combine(Path.GetTempPath(), "OpeningBellTests", Guid.NewGuid().ToString("N"));
+            SaveSystem.DirectoryOverride = _saveDirectory;
+        }
+
+        [TearDown]
+        public void RestoreSaveLocation()
+        {
+            // Disabled bootstraps skip their quit-time autosave, which would otherwise hit the real slot later.
+            foreach (var game in Object.FindObjectsByType<GameBootstrap>(FindObjectsSortMode.None)) game.enabled = false;
+            SaveSystem.DirectoryOverride = null;
+            if (Directory.Exists(_saveDirectory)) Directory.Delete(_saveDirectory, true);
+        }
 
         [TearDown]
         public void ReleaseTerminalTarget()

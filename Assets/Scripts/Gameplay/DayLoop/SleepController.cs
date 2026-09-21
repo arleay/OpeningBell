@@ -46,6 +46,7 @@ namespace OpeningBell.Gameplay
 
         private void Start()
         {
+            _recappedDays = game.Days.Completed.Count; // a loaded game has already recapped its past days
             VisualElement root = GetComponent<UIDocument>().rootVisualElement;
             root.pickingMode = PickingMode.Ignore;
             root.style.flexGrow = 1;
@@ -90,6 +91,7 @@ namespace OpeningBell.Gameplay
             ShowRecap(days.Count > _recappedDays ? days[days.Count - 1] : null, wake);
             _recappedDays = days.Count;
             player.PlaceAt(wakePoint.position, wakePoint.eulerAngles.y);
+            game.Save(); // autosave: end of day
 
             float until = Time.realtimeSinceStartup + recapSeconds;
             while (Time.realtimeSinceStartup < until) yield return null;

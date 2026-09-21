@@ -54,6 +54,13 @@ namespace OpeningBell.Trading
             DayStartEquity += amount; // deposits are not trading P&L
         }
 
+        internal void RestoreTotals(decimal netDeposits, decimal totalCommissions, decimal dayStartEquity)
+        {
+            NetDeposits = netDeposits;
+            TotalCommissions = totalCommissions;
+            DayStartEquity = dayStartEquity;
+        }
+
         internal decimal ApplyFill(Fill fill)
         {
             bool buy = fill.Side == OrderSide.Buy;

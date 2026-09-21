@@ -50,6 +50,13 @@ namespace OpeningBell.Trading
         public IReadOnlyList<LedgerEntry> Entries => _entries;
         public decimal Balance { get; private set; }
 
+        internal void Restore(List<LedgerEntry> entries)
+        {
+            _entries.Clear();
+            _entries.AddRange(entries);
+            Balance = entries.Count > 0 ? entries[entries.Count - 1].BalanceAfter : 0m;
+        }
+
         internal LedgerEntry Post(DateTime time, LedgerEntryType type, decimal amount,
             string ticker = null, long orderId = 0, long fillId = 0, string memo = null)
         {

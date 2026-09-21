@@ -3676,6 +3676,9 @@ MonoBehaviour:
   walkingTimeScale: 30
   closedTimeScale: 120
   maxFrameSeconds: 0.25
+  saveSlot: slot1
+  continueFromSave: 1
+  player: {fileID: 1184913829}
 --- !u!4 &1290879045
 Transform:
   m_ObjectHideFlags: 0

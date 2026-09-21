@@ -34,6 +34,14 @@ namespace OpeningBell.Market
         private readonly double _newsActivityDecay;
         private double _marketActivityLog;
 
+        internal double MarketActivityLog
+        {
+            get => _marketActivityLog;
+            set => _marketActivityLog = value;
+        }
+
+        internal SeededRandom MarketRng => _marketRng;
+
         public PriceEngine(MarketConfig config, MarketSchedule schedule, SeededRandom marketRng)
         {
             _config = config;

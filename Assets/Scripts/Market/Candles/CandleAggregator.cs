@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace OpeningBell.Market
 {
@@ -27,6 +28,19 @@ namespace OpeningBell.Market
                 var tf = (Timeframe)i;
                 if (tf == Timeframe.Day1 && !regularSession) continue;
                 _series[i].Record(BucketStart(time, tf), price, volume);
+            }
+        }
+
+        /// <summary>Restores 1-minute and daily history and rebuilds 5m/15m/1h from the 1-minute candles.</summary>
+        internal void Restore(IReadOnlyList<Candle> minutes, IReadOnlyList<Candle> days)
+        {
+            Get(Timeframe.Minute1).Restore(minutes);
+            Get(Timeframe.Day1).Restore(days);
+            foreach (Timeframe tf in new[] { Timeframe.Minute5, Timeframe.Minute15, Timeframe.Hour1 })
+            {
+                CandleSeries series = Get(tf);
+                series.Restore(Array.Empty<Candle>());
+                foreach (Candle m in minutes) series.Merge(BucketStart(m.Start, tf), m);
             }
         }
 

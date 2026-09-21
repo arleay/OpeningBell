@@ -87,6 +87,16 @@ Log price = fair + deviation, per tick:
 - Sleep (`SleepController`, `BedInteractable`, pure `SleepRules`): possible from 16:00 until 06:00. The sequence is fade out → `SkipTo(next trading day 06:00)` → recap of the latest finished day → wake at `WakePoint`. Weekends are slept through.
 - At the regular close the terminal shows the `DaySummaryPanel` overlay. The HUD shows the day number, time and session. `DaylightCycle` drives the window glow and light from the clock.
 
+## Save / load
+
+- **Goal: exact resume.** Loading builds the simulation from the same definitions (catalog, config, news templates, seed), then overwrites runtime state. A loaded game continues tick-for-tick like the original. `SaveLoadTests.SavedGame_ResumesExactly_ThroughJson` saves mid-session with open orders and a queued scheduled headline, round-trips JSON, runs both two days on, and compares everything.
+- **DTOs, not scene objects:** `MarketSimulation.CaptureState/RestoreState` (Market), `TradingState.Capture/Restore` (Trading), and the root `SaveGame` (Runtime; adds seed, clock, player position). Each domain restores its own internals through `internal` hooks.
+- **Encoding (JsonUtility-safe and lossless):** money as invariant decimal strings; prices and notionals as fixed-point ×10⁴ longs (they live on a 0.0001 grid, which is asserted); engine doubles as raw IEEE bits; RNG state (`RandomState`) as longs; times as ticks.
+- **Size caps:** daily candles in full; 1-minute candles for the last 2000 bars; 5m/15m/1h rebuilt from 1-minute on load (lossless). The last 300 headlines, 200 orders (plus any open), and 500 fills. About 1 MB with 10 stocks.
+- **Definition drift:** saved securities missing from the catalog are dropped. New listings keep fresh state. Queued news with unknown templates is dropped.
+- **Files (`SaveSystem`):** `persistentDataPath/saves/<slot>.json`. Writes go to a temp file and then `File.Replace`, keeping a `.bak`. A corrupt slot falls back to its backup. Newer-version saves are refused, with the upgrade step documented at the parse site. Bump `SaveGame.CurrentVersion` on breaking changes.
+- **When:** autosave on waking (end of day) and on quit. The game continues the slot on launch; `-newgame` or the bootstrap's "Delete Save" context menu starts fresh. PlayMode tests redirect `SaveSystem.DirectoryOverride` to a temp folder and disable bootstraps on teardown, so test runs never touch real saves.
+
 ## Editor scripting gotcha
 
 Opening or creating a scene in Single mode unloads in-memory assets that nothing references yet, and references assigned from them become null. Load assets **after** opening the scene. `DefaultContentTests.MainScene_HasNoUnassignedReferences` guards this.

@@ -248,6 +248,57 @@ namespace OpeningBell.Market
             return null;
         }
 
+        internal NewsSaveData Capture(int maxFeed)
+        {
+            var data = new NewsSaveData { Rng = _rng.CaptureState(), NextId = _nextId, Sequence = _sequence };
+            foreach (Planned p in _queue)
+            {
+                data.Queue.Add(new PlannedNewsSaveData
+                {
+                    Time = p.Time.Ticks, Sequence = p.Sequence, TemplateId = p.Template.Id,
+                    Ticker = p.Target?.Ticker ?? "", Sector = (int)p.Sector, SeverityBits = SaveCodec.Bits(p.Severity),
+                });
+            }
+            for (int i = Math.Max(0, _feed.Count - maxFeed); i < _feed.Count; i++)
+            {
+                NewsItem n = _feed[i];
+                var tickers = new string[n.Tickers.Count];
+                for (int t = 0; t < tickers.Length; t++) tickers[t] = n.Tickers[t];
+                data.Feed.Add(new NewsItemSaveData
+                {
+                    Id = n.Id, Time = n.Time.Ticks, Headline = n.Headline, Type = (int)n.Type, Scope = (int)n.Scope,
+                    Tickers = tickers, SeverityBits = SaveCodec.Bits(n.Severity), MoveBits = SaveCodec.Bits(n.RealizedMove),
+                });
+            }
+            return data;
+        }
+
+        /// <summary>Planned items whose template or target no longer exists are dropped.</summary>
+        internal void Restore(NewsSaveData data)
+        {
+            _rng.RestoreState(data.Rng);
+            _nextId = data.NextId;
+            _sequence = data.Sequence;
+
+            _queue.Clear();
+            foreach (PlannedNewsSaveData q in data.Queue)
+            {
+                if (!_templates.TryGetValue(q.TemplateId, out NewsTemplate template)) continue;
+                SecurityRuntimeState target = string.IsNullOrEmpty(q.Ticker) ? null : Find(q.Ticker);
+                if (template.Scope == NewsScope.Security && target == null) continue;
+                _queue.Add(new Planned
+                {
+                    Time = new DateTime(q.Time), Sequence = q.Sequence, Template = template, Target = target,
+                    Sector = (Sector)q.Sector, Severity = SaveCodec.Double(q.SeverityBits),
+                });
+            }
+
+            _feed.Clear();
+            foreach (NewsItemSaveData f in data.Feed)
+                _feed.Add(new NewsItem(f.Id, new DateTime(f.Time), f.Headline, (CatalystType)f.Type, (NewsScope)f.Scope,
+                    f.Tickers ?? Array.Empty<string>(), SaveCodec.Double(f.SeverityBits), SaveCodec.Double(f.MoveBits)));
+        }
+
         private static string Format(string headline, string company, string ticker, Sector sector) =>
             headline.Replace("{company}", company).Replace("{ticker}", ticker).Replace("{sector}", sector.ToString());
     }
