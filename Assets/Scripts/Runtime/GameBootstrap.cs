@@ -16,6 +16,10 @@ namespace OpeningBell
     {
         [SerializeField] private SecurityCatalog catalog;
         [SerializeField] private MarketSettings marketSettings;
+        [Tooltip("Optional. Without it the market runs with no news.")]
+        [SerializeField] private NewsLibrary newsLibrary;
+        [Tooltip("Optional scripted headlines, e.g. the onboarding day.")]
+        [SerializeField] private ScenarioDefinition scenario;
         [SerializeField] private BrokerRules brokerRules = new BrokerRules();
         [SerializeField] private long seed = 18492;
 
@@ -62,7 +66,9 @@ namespace OpeningBell
             DateTime start = DateTime.ParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture).AddMinutes(startMinuteOfDay);
             var random = new SeededRandomService(unchecked((ulong)seed));
 
-            Market = new MarketSimulation(marketSettings.Config, catalog.CreateSpecs(), catalog.Index, random, start);
+            Market = new MarketSimulation(marketSettings.Config, catalog.CreateSpecs(), catalog.Index, random, start,
+                newsLibrary != null ? newsLibrary.Templates : null,
+                scenario != null ? scenario.ScheduledNews : null);
             Clock = new GameClock(Market.Now, tradingTimeScale);
             Account = new Account(Market);
             Account.Deposit((decimal)startingCash, "Starting savings");

@@ -63,17 +63,20 @@ namespace OpeningBell.UI
             var chart = new ChartPanel(Context);
             var orderEntry = new OrderEntryPanel(Context);
             var activity = new ActivityPanel(Context, orderEntry.Track);
+            var news = new NewsPanel(Context);
 
             Root.Add(accountBar.Root);
             var body = Ui.Box("terminal-body", Root);
-            body.Add(watchlist.Root);
+            var left = Ui.Box("left-column", body);
+            left.Add(watchlist.Root);
+            left.Add(news.Root);
             var center = Ui.Box("center-column", body);
             center.Add(quote.Root);
             center.Add(chart.Root);
             center.Add(activity.Root);
             body.Add(orderEntry.Root);
 
-            _panels.AddRange(new TerminalPanel[] { accountBar, watchlist, quote, chart, orderEntry, activity });
+            _panels.AddRange(new TerminalPanel[] { accountBar, watchlist, news, quote, chart, orderEntry, activity });
             RefreshAll();
         }
 

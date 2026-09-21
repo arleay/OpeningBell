@@ -30,6 +30,8 @@ namespace OpeningBell.Market
         private readonly double _activityVariance;
         private readonly double _volumeNormalizer;
         private readonly double _volNormalizer;
+        private readonly double _newsDelivery;
+        private readonly double _newsActivityDecay;
         private double _marketActivityLog;
 
         public PriceEngine(MarketConfig config, MarketSchedule schedule, SeededRandom marketRng)
@@ -51,6 +53,24 @@ namespace OpeningBell.Market
             _volumeNormalizer = Math.Exp(_activityVariance);
             // Scale so "daily" volatility means close-to-close, including extended hours and the overnight gap.
             _volNormalizer = 1 / Math.Sqrt(DailyVarianceMultiplier(config, schedule));
+            _newsDelivery = 1 - Math.Exp(-_dt / (config.NewsDeliveryMinutes * 60));
+            _newsActivityDecay = Math.Exp(-_dt * Math.Log(2) / (config.NewsActivityHalfLifeMinutes * 60));
+        }
+
+        /// <summary>Queues a news catalyst for the next tick (see NewsEngine for how the moves are drawn).</summary>
+        public void ApplyNews(SecurityRuntimeState sec, double fairShift, double overreaction, double severity, double attentionScale)
+        {
+            sec.NewsImpulseFair += fairShift * _config.NewsImmediateFraction;
+            sec.PendingNewsLog += fairShift * (1 - _config.NewsImmediateFraction);
+            sec.NewsImpulseDeviation += overreaction;
+            double boost = Math.Log(1 + severity * attentionScale * _config.NewsActivityBoost);
+            sec.NewsActivityLog = Math.Max(sec.NewsActivityLog, boost);
+        }
+
+        public void ApplyIndexNews(MarketIndex index, double move)
+        {
+            index.NewsImpulse += move * _config.NewsImmediateFraction;
+            index.PendingNewsLog += move * (1 - _config.NewsImmediateFraction);
         }
 
         /// <summary>Variance of one full trading day relative to a flat regular session: ∫ profile² dt + overnight².</summary>
@@ -102,7 +122,10 @@ namespace OpeningBell.Market
             for (int i = 0; i < securities.Count; i++)
                 TickSecurity(securities[i], time, profile, regular, marketReturn, marketActivity);
 
-            index.LogLevel += marketReturn;
+            double indexNews = index.NewsImpulse + index.PendingNewsLog * _newsDelivery;
+            index.PendingNewsLog -= index.PendingNewsLog * _newsDelivery;
+            index.NewsImpulse = 0;
+            index.LogLevel += marketReturn + indexNews;
             index.Level = Math.Round((decimal)Math.Exp(index.LogLevel), 2);
             index.Candles.Record(time, index.Level, 0, regular);
         }
@@ -113,8 +136,18 @@ namespace OpeningBell.Market
             SecuritySpec spec = sec.Spec;
             SeededRandom rng = sec.Rng;
 
+            // News: consume impulses, deliver part of the pending move, decay attention. All exactly zero/one without news.
+            double delivered = sec.PendingNewsLog * _newsDelivery;
+            sec.PendingNewsLog -= delivered;
+            double newsFair = sec.NewsImpulseFair + delivered;
+            double newsDeviation = sec.NewsImpulseDeviation;
+            sec.NewsImpulseFair = 0;
+            sec.NewsImpulseDeviation = 0;
+            sec.NewsActivityLog *= _newsActivityDecay;
+            double attention = Math.Exp(sec.NewsActivityLog);
+
             sec.ActivityLog = sec.ActivityLog * _activityDecay + _activityShock * rng.NextGaussian();
-            double activity = Math.Exp(sec.ActivityLog - _activityVariance);
+            double activity = Math.Exp(sec.ActivityLog - _activityVariance) * Math.Sqrt(attention);
             double volMultiplier = profile.Volatility * activity;
             double sigma = spec.DailyVolatility * _volNormalizer * volMultiplier * _sqrtDtDays;
 
@@ -122,10 +155,11 @@ namespace OpeningBell.Market
             double zNoise = rng.NextGaussian();
             double oldLog = sec.FairLog + sec.DeviationLog;
 
-            sec.FairLog += spec.MarketBeta * marketReturn + spec.SectorBeta * _sectorReturns[sec.SectorIndex] + sigma * zFair;
+            sec.FairLog += spec.MarketBeta * marketReturn + spec.SectorBeta * _sectorReturns[sec.SectorIndex] + sigma * zFair + newsFair;
             sec.DeviationLog = sec.DeviationLog * Math.Exp(-spec.MeanReversionPerDay * _dtDays)
                                + spec.MomentumCoefficient * sec.Momentum * _dt
-                               + sigma * _config.TransientNoiseRatio * zNoise;
+                               + sigma * _config.TransientNoiseRatio * zNoise
+                               + newsDeviation;
 
             double newLog = sec.FairLog + sec.DeviationLog;
             if (newLog < MinLogPrice)
@@ -140,8 +174,9 @@ namespace OpeningBell.Market
             // Volume follows the time-of-day profile, both activity levels, and how surprising this move was.
             double k = _config.TransientNoiseRatio;
             double surprise = Math.Abs(zFair + k * zNoise) / Math.Sqrt(1 + k * k) / MeanAbsNormal;
-            double expectedShares = spec.AverageDailyVolume * _dtDays * profile.Volume * activity * marketActivity * _volumeNormalizer
-                                    * (0.5 + 0.5 * surprise) * LogNormal(rng, _config.VolumeNoise);
+            // activity already carries √attention; the second √attention gives volume the full news boost.
+            double expectedShares = spec.AverageDailyVolume * _dtDays * profile.Volume * activity * Math.Sqrt(attention)
+                                    * marketActivity * _volumeNormalizer * (0.5 + 0.5 * surprise) * LogNormal(rng, _config.VolumeNoise);
             long shares = (long)Math.Round(expectedShares);
 
             ComputeQuote(sec, Math.Exp(newLog), SpreadScale(regular, profile, activity), profile,
@@ -190,6 +225,12 @@ namespace OpeningBell.Market
             foreach (var sec in securities)
             {
                 SecuritySpec spec = sec.Spec;
+                // Undelivered news is fully priced in by the next morning; attention fades overnight.
+                sec.FairLog += sec.NewsImpulseFair + sec.PendingNewsLog;
+                sec.DeviationLog += sec.NewsImpulseDeviation;
+                sec.NewsImpulseFair = sec.PendingNewsLog = sec.NewsImpulseDeviation = 0;
+                sec.NewsActivityLog *= 0.4;
+
                 sec.FairLog += spec.MarketBeta * marketGap + spec.SectorBeta * _sectorReturns[sec.SectorIndex]
                                + spec.DailyVolatility * scale * sec.Rng.NextGaussian();
                 sec.DeviationLog *= _config.OvernightDeviationCarry;
@@ -197,7 +238,8 @@ namespace OpeningBell.Market
                 SetQuoteWithoutTrade(sec, profile, false, time);
             }
 
-            index.LogLevel += marketGap;
+            index.LogLevel += marketGap + index.NewsImpulse + index.PendingNewsLog;
+            index.NewsImpulse = index.PendingNewsLog = 0;
             index.Level = Math.Round((decimal)Math.Exp(index.LogLevel), 2);
         }
 

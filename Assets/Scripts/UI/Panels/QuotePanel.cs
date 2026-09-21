@@ -7,7 +7,7 @@ namespace OpeningBell.UI
     public sealed class QuotePanel : TerminalPanel
     {
         private readonly Label _ticker, _company, _last, _change;
-        private readonly Label _bid, _ask, _spread, _volume, _vwap, _range, _prevClose, _float, _marketCap, _avgVolume;
+        private readonly Label _bid, _ask, _spread, _volume, _vwap, _range, _prevClose, _float, _marketCap, _avgVolume, _latestNews;
 
         public QuotePanel(TerminalContext context) : base(context, "quote")
         {
@@ -30,6 +30,8 @@ namespace OpeningBell.UI
             _float = Ui.Stat("FLOAT", stats);
             _marketCap = Ui.Stat("MKT CAP", stats);
             _avgVolume = Ui.Stat("AVG VOL", stats);
+            _latestNews = Ui.Label("quote-news", Root);
+            _latestNews.name = "quote-news";
 
             context.SelectionChanged += Refresh;
         }
@@ -56,6 +58,17 @@ namespace OpeningBell.UI
             Ui.SetText(_float, Fmt.Volume(spec.FloatShares));
             Ui.SetText(_marketCap, "$" + Fmt.Volume((long)(s.Last * spec.SharesOutstanding)));
             Ui.SetText(_avgVolume, Fmt.Volume(spec.AverageDailyVolume));
+
+            NewsItem latest = LatestNews(s.Ticker);
+            Ui.SetText(_latestNews, latest == null ? "No recent news." : $"{Fmt.Minutes(latest.Time)}  {latest.Headline}");
+        }
+
+        private NewsItem LatestNews(string ticker)
+        {
+            var feed = Context.Market.News;
+            for (int i = feed.Count - 1; i >= 0; i--)
+                if (feed[i].Mentions(ticker)) return feed[i];
+            return null;
         }
     }
 }

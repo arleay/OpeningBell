@@ -8,9 +8,11 @@
 
 - [x] Phase 4: URP, Input System, FPS controller, primitive apartment (desk, chair, monitor, bed, kitchenette), raycast interaction with HUD prompt, workstation sit/stand with camera glide, terminal on the in-world monitor while standing, walking vs seated time scale. PlayMode acceptance test with simulated input
 
-## Next: Phase 5 (News)
-- [ ] News definitions (ScriptableObjects), scheduled plus random news, market impact via `PriceEngine` (activity boost plus fair-value jump), News app in the terminal
-- [ ] Onboarding scenario: 8:15 AM APEX distribution-agreement headline (spec §46)
+- [x] Phase 5: news engine (29 templates covering the spec's catalyst types plus flavour), scheduled plus random news, catalysts (permanent move, overreaction, attention), onboarding 8:15 APEX headline, News panel, watchlist dots, chart markers. Tests for isolation, direction, sector/market scope, determinism and rate
+
+## Next: Phase 6 (Day loop)
+- [ ] Morning → Premarket → Open → Session → Close → Evening → Sleep → Next day (bed interaction; skip the night)
+- [ ] End-of-day summary; carry account and market across days
 
 ## Later phases (do not start early)
 - Phase 5: news catalysts. Hook in via the activity level (vol/volume) plus fair-value jumps in `PriceEngine`
@@ -31,3 +33,5 @@
 - Apartment is placeholder primitives: no door, light switches or appliance interactions yet (spec §5 lists them; add when a phase needs them). The desk lamp shade floats (no stand)
 - Active input handling is "Both". Test switching to Input System only (UI Toolkit runtime input) before release
 - Escape while seated always stands up. A pause/settings menu will need its own key or a stack
+- With the default seed (18492) the onboarding APEX headline draws a modest +3% move (the expected move is about +10%). Honest randomness; retune severity or the seed if the tutorial needs a clearer reaction
+- News: no earnings calendar or expectations model yet (spec §21); no news alerts while away from the desk (phone, later); headlines have no body text

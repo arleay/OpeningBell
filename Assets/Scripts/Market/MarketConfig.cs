@@ -54,6 +54,22 @@ namespace OpeningBell.Market
 
         public int MaxCandlesPerSeries = 5000;
 
+        // News (only active when the simulation is given templates).
+        public double SecurityNewsPerDay = 5;
+        public double SectorNewsPerDay = 0.5;
+        public double MarketNewsPerDay = 0.3;
+
+        /// <summary>Move at severity 1, in multiples of the target's daily volatility.</summary>
+        public double NewsImpactDailyVols = 4;
+
+        /// <summary>Share of the permanent move that lands instantly; the rest arrives over NewsDeliveryMinutes.</summary>
+        public double NewsImmediateFraction = 0.35;
+        public double NewsDeliveryMinutes = 15;
+
+        /// <summary>Extra volume at severity 1 (volume × (1 + boost·severity), volatility × its square root).</summary>
+        public double NewsActivityBoost = 3;
+        public double NewsActivityHalfLifeMinutes = 120;
+
         public MarketConfig Clone() => (MarketConfig)MemberwiseClone();
 
         public void Validate()
@@ -67,6 +83,8 @@ namespace OpeningBell.Market
             if (ActivityReversionPerDay <= 0) throw new ArgumentException("ActivityReversionPerDay must be positive.");
             if (MomentumHalfLifeMinutes <= 0) throw new ArgumentException("MomentumHalfLifeMinutes must be positive.");
             if (MaxCandlesPerSeries < 10) throw new ArgumentException("MaxCandlesPerSeries is too small.");
+            if (NewsDeliveryMinutes <= 0 || NewsActivityHalfLifeMinutes <= 0)
+                throw new ArgumentException("News delivery time and attention half-life must be positive.");
         }
     }
 }

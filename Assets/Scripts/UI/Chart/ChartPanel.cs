@@ -33,6 +33,7 @@ namespace OpeningBell.UI
             Ui.Box("spacer", toolbar);
             Ui.Label("legend legend-vwap", toolbar, "VWAP");
             Ui.Label("legend legend-avg", toolbar, "AVG COST");
+            Ui.Label("legend legend-news", toolbar, "NEWS");
             Ui.Label("legend muted", toolbar, "wheel: zoom · drag: pan · double-click: live");
 
             _view = new ChartView();
@@ -50,7 +51,7 @@ namespace OpeningBell.UI
             }
 
             Position position = Context.Account.Portfolio.Find(s.Ticker);
-            _view.SetOverlays(position != null && position.IsOpen ? position.AveragePrice : 0m, Context.Orders.Fills);
+            _view.SetOverlays(position != null && position.IsOpen ? position.AveragePrice : 0m, Context.Orders.Fills, Context.Market.News);
 
             if (Context.Market.TickCount != _knownTick)
             {

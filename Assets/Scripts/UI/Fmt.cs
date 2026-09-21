@@ -35,6 +35,8 @@ namespace OpeningBell.UI
 
         public static string Clock(DateTime time) => time.ToString("HH:mm:ss", C);
 
+        public static string Minutes(DateTime time) => time.ToString("HH:mm", C);
+
         public static string Date(DateTime time) => time.ToString("ddd MMM d", C);
 
         private static string Sign(decimal value) => value > 0m ? "+" : value < 0m ? "-" : "";

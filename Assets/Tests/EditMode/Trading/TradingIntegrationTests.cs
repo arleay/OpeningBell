@@ -96,6 +96,45 @@ namespace OpeningBell.Tests
         private const string SettingsPath = "Assets/ScriptableObjects/Settings/MarketSettings.asset";
 
         [Test]
+        public void OnboardingScenario_ApexHeadlineDrivesTheOpen()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<SecurityCatalog>(CatalogPath);
+            var settings = AssetDatabase.LoadAssetAtPath<MarketSettings>(SettingsPath);
+            var library = AssetDatabase.LoadAssetAtPath<NewsLibrary>("Assets/ScriptableObjects/News/NewsLibrary.asset");
+            var scenario = AssetDatabase.LoadAssetAtPath<ScenarioDefinition>("Assets/ScriptableObjects/News/OnboardingScenario.asset");
+            Assert.NotNull(library);
+            Assert.NotNull(scenario);
+            foreach (NewsTemplate t in library.Templates) t.Validate();
+            Assert.GreaterOrEqual(library.Templates.Select(t => t.Type).Distinct().Count(), 15, "covers the spec's catalyst types");
+
+            // Isolate the scripted headline: no random news in either run.
+            MarketConfig config = settings.Config.Clone();
+            config.SecurityNewsPerDay = config.SectorNewsPerDay = config.MarketNewsPerDay = 0;
+            DateTime monday = TestMarkets.Monday;
+            MarketSimulation Run(bool withScenario)
+            {
+                var sim = new MarketSimulation(config, catalog.CreateSpecs(), catalog.Index, new SeededRandomService(18492),
+                    monday.AddHours(6), library.Templates, withScenario ? scenario.ScheduledNews : null);
+                sim.AdvanceTo(monday.AddHours(10));
+                return sim;
+            }
+
+            MarketSimulation control = Run(false), onboarding = Run(true);
+            NewsItem headline = onboarding.News.Single();
+            Assert.AreEqual(monday.AddHours(8).AddMinutes(15), headline.Time);
+            StringAssert.Contains("distribution agreement", headline.Headline);
+            CollectionAssert.AreEqual(new[] { "APEX" }, headline.Tickers);
+
+            onboarding.TryGetSecurity("APEX", out var apex);
+            control.TryGetSecurity("APEX", out var apexControl);
+            long OpenVolume(SecurityRuntimeState s) => s.Candles.Get(Timeframe.Minute1).Completed
+                .Where(c => c.Start.TimeOfDay >= new TimeSpan(9, 30, 0)).Sum(c => c.Volume);
+            TestContext.WriteLine($"drawn move {headline.RealizedMove:P2}; APEX {apexControl.Last} → {apex.Last} with news; " +
+                                  $"open volume {OpenVolume(apexControl)} → {OpenVolume(apex)}");
+            Assert.Greater(OpenVolume(apex), OpenVolume(apexControl) * 2, "APEX is highly active at the open");
+        }
+
+        [Test]
         public void DefaultUniverse_IsValid_AndSimulatesAFullDay()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<SecurityCatalog>(CatalogPath);

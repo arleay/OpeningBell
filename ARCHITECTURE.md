@@ -34,6 +34,18 @@ Log price = fair + deviation, per tick:
 - Prints happen at the ask on up-ticks and at the bid on down-ticks (natural bid/ask bounce). Candles are built from prints. Daily candles use regular-session prints only.
 - Market index = cumulative market factor.
 
+## News (`NewsEngine`, Phase 5)
+
+- Data: `NewsTemplate`s in `NewsLibrary` (SO), scripted `ScheduledNews` in a `ScenarioDefinition` (SO; `OnboardingScenario` has the 8:15 APEX headline). Without templates the market runs news-free, which the calibration tests rely on.
+- Planning: scheduled items at construction; random items per trading day (Poisson counts per scope; timing premarket-heavy). The engine has its own `news` RNG stream, so news never alters untouched securities (tested).
+- Each headline becomes a catalyst via `PriceEngine.ApplyNews`:
+  - **Permanent move:** `bias × severity × NewsImpactDailyVols × dailyVol × U(0.4, 1.3) + uncertainty × magnitude × z`. The draw is hidden from the player and can go against the headline. 35% lands at once and the rest over ~15 minutes.
+  - **Overreaction:** a random fraction of the move added to the mean-reverting deviation (pop-and-fade or slow grind).
+  - **Attention:** a log boost to volume (and √ of it to volatility and spread) with a 2-hour half-life.
+  - **Delivery:** catalysts are impulses consumed by the next tick, so they are part of that tick's return. Leftovers are priced in at the next day's overnight gap.
+- Sector news hits sector members by sector beta. Market news moves the index and every stock by market beta.
+- UI: News panel (click a headline to select its stock), a watchlist dot for stocks with news today, the latest headline in the quote panel, and headline markers on the chart.
+
 ## Money & accounting
 
 - `decimal` everywhere. Prices sit on a tick grid ($0.01, or $0.0001 below $1), so trade notionals are exact.

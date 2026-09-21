@@ -82,6 +82,20 @@ namespace OpeningBell.UI
             }
         }
 
+        /// <summary>First candle whose bucket starts at or after the bucket containing <paramref name="time"/>, or -1.</summary>
+        public static int FirstCandleAtOrAfter(CandleSeries series, Timeframe timeframe, DateTime time)
+        {
+            DateTime bucket = CandleAggregator.BucketStart(time, timeframe);
+            int lo = 0, hi = series.Count;
+            while (lo < hi)
+            {
+                int mid = (lo + hi) / 2;
+                if (series[mid].Start < bucket) lo = mid + 1;
+                else hi = mid;
+            }
+            return lo < series.Count ? lo : -1;
+        }
+
         /// <summary>Index of the candle whose bucket contains <paramref name="time"/>, or -1.</summary>
         public static int FindCandle(CandleSeries series, Timeframe timeframe, DateTime time)
         {

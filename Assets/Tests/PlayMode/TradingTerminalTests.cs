@@ -42,9 +42,16 @@ namespace OpeningBell.Tests
             game.IsPaused = true;
             Assert.AreEqual(MarketSession.Regular, game.Market.Session, "reached the regular session");
 
-            Click(root.Q("watch-APEX"));
+            // The 8:15 onboarding headline is in the feed; clicking it selects APEX.
+            terminal.RefreshAll();
+            yield return null;
+            Label headline = root.Q("news-list").Query<Label>(className: "news-headline").ToList()
+                .FirstOrDefault(l => l.text.Contains("distribution agreement"));
+            Assert.NotNull(headline, "APEX headline shown in the news feed");
+            Click(headline.parent);
             Assert.AreEqual("APEX", terminal.Context.SelectedTicker);
             Assert.AreEqual("APEX", root.Q<Label>("quote-ticker").text);
+            StringAssert.Contains("distribution agreement", root.Q<Label>("quote-news").text);
 
             // Market buy 100.
             game.Market.TryGetQuote("APEX", out Quote entry);

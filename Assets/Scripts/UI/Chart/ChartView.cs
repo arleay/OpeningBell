@@ -30,11 +30,14 @@ namespace OpeningBell.UI
         private static readonly Color AvgColor = new Color32(90, 156, 245, 255);
         private static readonly Color LastColor = new Color32(213, 219, 227, 110);
         private static readonly Color CrossColor = new Color32(255, 255, 255, 60);
+        private static readonly Color NewsColor = new Color32(224, 169, 59, 255);
+        private static readonly Color NewsLineColor = new Color32(224, 169, 59, 45);
 
         private readonly ChartViewport _viewport = new ChartViewport();
         private readonly double[] _vwap = new double[ChartViewport.MaxVisible];
         private readonly List<float> _gridYs = new List<float>();
         private readonly List<(float x, float y, bool buy)> _markers = new List<(float, float, bool)>();
+        private readonly List<float> _newsXs = new List<float>();
         private readonly List<Label> _priceLabels = new List<Label>();
         private readonly List<Label> _timeLabels = new List<Label>();
         private readonly Label _lastTag, _avgTag, _crossTag, _readout, _empty;
@@ -45,6 +48,7 @@ namespace OpeningBell.UI
         private int _knownCount;
         private decimal _avgCost;
         private IReadOnlyList<Fill> _fills;
+        private IReadOnlyList<NewsItem> _news;
 
         private Vector2? _pointer;
         private bool _dragging;
@@ -92,10 +96,11 @@ namespace OpeningBell.UI
             Rebuild();
         }
 
-        public void SetOverlays(decimal averageCost, IReadOnlyList<Fill> fills)
+        public void SetOverlays(decimal averageCost, IReadOnlyList<Fill> fills, IReadOnlyList<NewsItem> news)
         {
             _avgCost = averageCost;
             _fills = fills;
+            _news = news;
         }
 
         /// <summary>Call when new market data may have arrived.</summary>
@@ -215,6 +220,17 @@ namespace OpeningBell.UI
 
         private void LayoutMarkers()
         {
+            _newsXs.Clear();
+            if (_news != null)
+            {
+                foreach (NewsItem item in _news)
+                {
+                    if (!item.Mentions(_ticker)) continue;
+                    int index = ChartViewport.FirstCandleAtOrAfter(_series, _timeframe, item.Time);
+                    if (index >= _first && index < _first + _count) _newsXs.Add(X(index));
+                }
+            }
+
             _markers.Clear();
             if (_fills == null) return;
             foreach (Fill fill in _fills)
@@ -266,6 +282,7 @@ namespace OpeningBell.UI
             }
             p.Stroke();
 
+            PaintNews(p);
             PaintVolume(p, true);
             PaintVolume(p, false);
             PaintCandles(p, true);
@@ -355,6 +372,35 @@ namespace OpeningBell.UI
                 drawing = true;
             }
             p.Stroke();
+        }
+
+        /// <summary>Faint vertical line plus a diamond at the top of the plot where each headline landed.</summary>
+        private void PaintNews(Painter2D p)
+        {
+            if (_newsXs.Count == 0) return;
+            p.strokeColor = NewsLineColor;
+            p.lineWidth = 1f;
+            p.BeginPath();
+            foreach (float x in _newsXs)
+            {
+                p.MoveTo(new Vector2(x, _plot.yMin));
+                p.LineTo(new Vector2(x, _volumePane.yMax));
+            }
+            p.Stroke();
+
+            const float s = 5f;
+            p.fillColor = NewsColor;
+            p.BeginPath();
+            foreach (float x in _newsXs)
+            {
+                float y = _plot.yMin + s;
+                p.MoveTo(new Vector2(x, y - s));
+                p.LineTo(new Vector2(x + s, y));
+                p.LineTo(new Vector2(x, y + s));
+                p.LineTo(new Vector2(x - s, y));
+                p.ClosePath();
+            }
+            p.Fill();
         }
 
         private void PaintMarkers(Painter2D p)

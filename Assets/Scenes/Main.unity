@@ -3420,6 +3420,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: OpeningBell.Runtime::OpeningBell.GameBootstrap
   catalog: {fileID: 11400000, guid: 898ab88cd71575745a2a1e74fb5595e6, type: 2}
   marketSettings: {fileID: 11400000, guid: 1cedc0014afafef47acfd953aa3a6c9c, type: 2}
+  newsLibrary: {fileID: 11400000, guid: 2e76e6d1c0463664eb6acc45b8ebbd9f, type: 2}
+  scenario: {fileID: 11400000, guid: becca02ff12e3074fbd52daac2f63a72, type: 2}
   brokerRules:
     Name: PennyBridge
     CommissionPerShare: 0.005

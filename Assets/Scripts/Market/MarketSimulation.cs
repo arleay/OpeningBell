@@ -31,11 +31,21 @@ namespace OpeningBell.Market
         public IReadOnlyList<SecurityRuntimeState> Securities => _securities;
         public MarketIndex Index { get; }
 
+        /// <summary>Published headlines, oldest first. Empty when the simulation was built without news templates.</summary>
+        public IReadOnlyList<NewsItem> News => _news != null ? _news.Feed : (IReadOnlyList<NewsItem>)Array.Empty<NewsItem>();
+
         public event Action Ticked;
         public event Action<MarketSession, MarketSession> SessionChanged;
+        public event Action<NewsItem> NewsPublished;
 
+        private readonly NewsEngine _news;
+        private readonly Action<NewsItem> _raiseNews;
+
+        /// <param name="newsTemplates">Optional. Without templates there is no news at all (pure factor model).</param>
+        /// <param name="scheduledNews">Optional scripted headlines (scenario/tutorial).</param>
         public MarketSimulation(MarketConfig config, IReadOnlyList<SecuritySpec> specs, IndexSpec indexSpec,
-            SeededRandomService random, DateTime start)
+            SeededRandomService random, DateTime start,
+            IReadOnlyList<NewsTemplate> newsTemplates = null, IReadOnlyList<ScheduledNews> scheduledNews = null)
         {
             // Private copy: editing a settings asset mid-run must not change a running (deterministic) simulation.
             config = config.Clone();
@@ -65,6 +75,12 @@ namespace OpeningBell.Market
 
             Index = new MarketIndex(indexSpec.Clone(), config.MaxCandlesPerSeries);
             _engine.Initialize(Index);
+
+            if (newsTemplates != null && newsTemplates.Count > 0)
+            {
+                _news = new NewsEngine(config, Schedule, random.CreateStream("news"), newsTemplates, scheduledNews, _securities, Now);
+                _raiseNews = item => NewsPublished?.Invoke(item);
+            }
         }
 
         public bool TryGetSecurity(string ticker, out SecurityRuntimeState security) =>
@@ -98,6 +114,7 @@ namespace OpeningBell.Market
                 DateTime end = Now + _tick;
                 if (end > target) return;
 
+                _news?.PublishDue(Now, _engine, Index, _raiseNews);
                 _engine.Tick(Now, Session, _securities, Index);
                 TickCount++;
                 Now = end;
@@ -133,6 +150,7 @@ namespace OpeningBell.Market
             }
             Index.PreviousClose = Index.RegularClose;
             _engine.ApplyOvernightGap(_securities, Index, Now);
+            _news?.PlanRandomDay(Now.Date, Now);
         }
     }
 }

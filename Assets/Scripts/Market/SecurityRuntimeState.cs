@@ -36,6 +36,11 @@ namespace OpeningBell.Market
         internal readonly int SectorIndex;
         internal decimal RegularClose;
         internal decimal DayNotional;
+        // News catalysts, consumed by the next tick so the move is part of that tick's return (momentum/volume see it).
+        internal double NewsImpulseFair;       // immediate permanent part
+        internal double NewsImpulseDeviation;  // transient over/under-reaction
+        internal double PendingNewsLog;        // permanent part still being delivered
+        internal double NewsActivityLog;       // decaying attention boost (log multiplier)
         internal readonly SeededRandom Rng;
 
         internal SecurityRuntimeState(SecuritySpec spec, SeededRandom rng, int maxCandles)
@@ -58,6 +63,8 @@ namespace OpeningBell.Market
         public CandleAggregator Candles { get; }
 
         internal double LogLevel;
+        internal double NewsImpulse;
+        internal double PendingNewsLog;
         internal decimal RegularClose;
 
         internal MarketIndex(IndexSpec spec, int maxCandles)
