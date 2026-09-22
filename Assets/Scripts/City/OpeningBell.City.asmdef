@@ -1,0 +1,22 @@
+{
+    "name": "OpeningBell.City",
+    "rootNamespace": "OpeningBell.City",
+    "references": [
+        "OpeningBell.Core",
+        "OpeningBell.Market",
+        "OpeningBell.Trading",
+        "OpeningBell.Economy",
+        "OpeningBell.Runtime",
+        "OpeningBell.UI",
+        "OpeningBell.Gameplay"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

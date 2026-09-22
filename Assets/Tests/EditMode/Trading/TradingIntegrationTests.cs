@@ -81,7 +81,7 @@ namespace OpeningBell.Tests
                     var so = new SerializedObject(component);
                     SerializedProperty p = so.GetIterator();
                     while (p.NextVisible(true))
-                        if (p.propertyType == SerializedPropertyType.ObjectReference && p.name != "m_Script")
+                        if (p.propertyType == SerializedPropertyType.ObjectReference && p.name != "m_Script" && !IsOptional(component.GetType(), p))
                             Assert.IsTrue(p.objectReferenceValue != null, $"{go.name}.{component.GetType().Name}.{p.propertyPath} is unassigned");
                 }
                 Assert.GreaterOrEqual(checkedComponents, 2, "bootstrap and terminal");
@@ -92,7 +92,19 @@ namespace OpeningBell.Tests
             }
         }
 
-        private const string CatalogPath = "Assets/ScriptableObjects/Securities/SecurityCatalog.asset";
+        private static bool IsOptional(System.Type type, SerializedProperty p)
+        {
+            if (p.depth != 0) return false;
+            for (System.Type t = type; t != null; t = t.BaseType)
+            {
+                var field = t.GetField(p.name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public |
+                                               System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly);
+                if (field != null) return field.IsDefined(typeof(OptionalAttribute), false);
+            }
+            return false;
+        }
+
+        private const string CatalogPath ="Assets/ScriptableObjects/Securities/SecurityCatalog.asset";
         private const string SettingsPath = "Assets/ScriptableObjects/Settings/MarketSettings.asset";
 
         [Test]

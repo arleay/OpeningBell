@@ -1,6 +1,6 @@
 # Opening Bell (working title)
 
-First-person day-trading life sim in Unity 6000.6.2f1. Source of truth: `PROJECT_SPEC.md` (read only relevant sections). Decisions: `ARCHITECTURE.md`. Status: `TODO.md`.
+First-person day-trading life sim in Unity 6000.6.2f1. Source of truth: `PROJECT_SPEC.md` (core game) and `WORLD_SPEC.md` (city, vehicles, property; Phases 9–17). Read only relevant sections. Decisions: `ARCHITECTURE.md`. Status: `TODO.md`.
 
 ## Rules
 - Stay inside the current phase (see TODO.md). No placeholder code for future systems.

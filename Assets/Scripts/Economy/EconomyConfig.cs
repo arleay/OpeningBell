@@ -9,12 +9,15 @@ namespace OpeningBell.Economy
         Housing,
         Utilities,
         Subscription,
+        Lease,
     }
 
     public enum StoreCategory
     {
         Equipment,
         Service,
+        /// <summary>A rented space (e.g. an office). Its monthly cost is charged as rent.</summary>
+        Lease,
     }
 
     /// <summary>Life costs and the starting bank balance. Amounts are doubles for the inspector; converted to decimal on use.</summary>

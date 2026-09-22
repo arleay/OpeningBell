@@ -10,7 +10,8 @@
         "OpeningBell.Runtime",
         "OpeningBell.UI",
         "OpeningBell.Gameplay",
-        "OpeningBell.Economy"
+        "OpeningBell.Economy",
+        "OpeningBell.City"
     ],
     "includePlatforms": [
         "Editor"

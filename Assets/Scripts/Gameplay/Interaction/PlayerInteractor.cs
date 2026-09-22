@@ -14,13 +14,25 @@ namespace OpeningBell.Gameplay
         public Interactable Current { get; private set; }
         public event Action<Interactable> FocusChanged;
 
+        private readonly RaycastHit[] _hits = new RaycastHit[8];
+
         private void Update()
         {
             Interactable found = null;
             Transform view = viewCamera.transform;
-            if (Physics.Raycast(view.position, view.forward, out RaycastHit hit, reach, mask, QueryTriggerInteraction.Collide))
+            // Nearest hit that isn't the player's own body (the camera can sit inside the controller's skin).
+            int count = Physics.RaycastNonAlloc(view.position, view.forward, _hits, reach, mask, QueryTriggerInteraction.Collide);
+            float nearest = float.MaxValue;
+            Collider first = null;
+            for (int i = 0; i < count; i++)
             {
-                found = hit.collider.GetComponentInParent<Interactable>();
+                if (_hits[i].collider.transform.IsChildOf(transform.root) || _hits[i].distance >= nearest) continue;
+                nearest = _hits[i].distance;
+                first = _hits[i].collider;
+            }
+            if (first != null)
+            {
+                found = first.GetComponentInParent<Interactable>();
                 if (found != null && !found.CanInteract) found = null;
             }
 

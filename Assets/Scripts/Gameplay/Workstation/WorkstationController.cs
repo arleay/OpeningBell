@@ -35,18 +35,30 @@ namespace OpeningBell.Gameplay
         public WorkstationState State { get; private set; } = WorkstationState.Standing;
         public event Action<WorkstationState> StateChanged;
 
+        /// <summary>Where the player is (or last was) seated; null = the home desk.</summary>
+        public Desk CurrentDesk { get; private set; }
+
+        private Transform SeatView => CurrentDesk != null ? CurrentDesk.SeatView : seatView;
+        private Transform StandPoint => CurrentDesk != null ? CurrentDesk.StandPoint : standPoint;
+
         private void Start()
         {
             SetScreen(screen);
             terminal.ShowOnScreen(false);
         }
 
-        /// <summary>Points the terminal image at a monitor mesh (called again when the monitor is upgraded).</summary>
+        /// <summary>Points the home desk's terminal image at a monitor mesh (called again when the monitor is upgraded).</summary>
         public void SetScreen(Renderer target)
         {
             screen = target;
+            ShowTerminalOn(target);
+        }
+
+        /// <summary>Any monitor can show the terminal: they all sample the same render texture.</summary>
+        public void ShowTerminalOn(Renderer target)
+        {
             // The screen material is black while "off"; Unlit multiplies the texture by its colour.
-            Material screenMaterial = screen.material;
+            Material screenMaterial = target.material;
             screenMaterial.mainTexture = terminal.WorldTexture;
             screenMaterial.color = Color.white;
         }
@@ -56,9 +68,12 @@ namespace OpeningBell.Gameplay
             if (State == WorkstationState.Seated && input.Leave.WasPressedThisFrame()) StandUp();
         }
 
-        public void SitDown()
+        /// <summary>Sits at <paramref name="desk"/>, or at the home desk when null.</summary>
+        public void SitDown(Desk desk = null)
         {
-            if (State == WorkstationState.Standing) StartCoroutine(SitRoutine());
+            if (State != WorkstationState.Standing) return;
+            CurrentDesk = desk;
+            StartCoroutine(SitRoutine());
         }
 
         public void StandUp()
@@ -76,8 +91,9 @@ namespace OpeningBell.Gameplay
             Transform cam = viewCamera.transform;
             Vector3 fromPos = cam.position;
             Quaternion fromRot = cam.rotation;
+            Transform view = SeatView;
             yield return Glide(k => cam.SetPositionAndRotation(
-                Vector3.Lerp(fromPos, seatView.position, k), Quaternion.Slerp(fromRot, seatView.rotation, k)));
+                Vector3.Lerp(fromPos, view.position, k), Quaternion.Slerp(fromRot, view.rotation, k)));
 
             terminal.ShowOnScreen(true);
             game.IsAtWorkstation = true;
@@ -93,8 +109,8 @@ namespace OpeningBell.Gameplay
             // Move the body first, then pin the camera back at the seat view so the move is invisible,
             // and glide it home to the head.
             Transform cam = viewCamera.transform;
-            player.PlaceAt(standPoint.position, standPoint.eulerAngles.y);
-            cam.SetPositionAndRotation(seatView.position, seatView.rotation);
+            player.PlaceAt(StandPoint.position, StandPoint.eulerAngles.y);
+            cam.SetPositionAndRotation(SeatView.position, SeatView.rotation);
             Vector3 fromPos = cam.localPosition;
             Quaternion fromRot = cam.localRotation;
             yield return Glide(k =>

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using OpeningBell.Economy;
 using UnityEngine.UIElements;
 
@@ -31,7 +32,12 @@ namespace OpeningBell.UI
             {
                 var card = new Card { Item = item, Root = Ui.Box("app-card store-card", grid) };
                 Ui.Label("store-name", card.Root, item.Name);
-                Ui.Label("muted store-category", card.Root, item.Category == StoreCategory.Service ? "SERVICE" : "EQUIPMENT");
+                Ui.Label("muted store-category", card.Root, item.Category switch
+                {
+                    StoreCategory.Service => "SERVICE",
+                    StoreCategory.Lease => "LEASE",
+                    _ => "EQUIPMENT",
+                });
                 Ui.Label("store-description", card.Root, item.Description);
                 Ui.Label("store-price", card.Root, PriceText(item));
                 card.Note = Ui.Label("muted app-note", card.Root);
@@ -49,7 +55,8 @@ namespace OpeningBell.UI
             {
                 bool owned = Context.Economy.Owns(card.Item.Id);
                 decimal price = (decimal)card.Item.Price;
-                Ui.SetText(card.Buy, owned ? "OWNED" : "BUY");
+                bool lease = card.Item.Category == StoreCategory.Lease;
+                Ui.SetText(card.Buy, owned ? (lease ? "LEASED" : "OWNED") : (lease ? "SIGN LEASE" : "BUY"));
                 card.Buy.SetEnabled(!owned && balance >= price);
                 card.Root.EnableInClassList("owned", owned);
                 Ui.SetText(card.Note, owned || balance >= price ? "" : $"Need {Fmt.Money(price - balance)} more in the bank.");
@@ -59,7 +66,9 @@ namespace OpeningBell.UI
         private void Buy(string itemId)
         {
             string error = Context.Economy.Buy(itemId, Context.Clock.Now);
-            Ui.SetText(_status, error ?? "Purchased. It's already in your apartment.");
+            bool lease = error == null && Context.Economy.Catalog.Any(i => i.Id == itemId && i.Category == StoreCategory.Lease);
+            Ui.SetText(_status, error ?? (lease ? "Lease signed. Your key card works at the building from now on."
+                : "Purchased. It's already in your apartment."));
             _status.EnableInClassList("error", error != null);
             _status.EnableInClassList("ok", error == null);
             Refresh();

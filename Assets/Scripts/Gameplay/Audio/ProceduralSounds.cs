@@ -28,6 +28,10 @@ namespace OpeningBell.Gameplay
         public static AudioClip Mail() => Make("mail", 0.6f, t =>
             (Sine(784f, t) + 0.5f * Sine(1175f, t)) * Decay(t, 0.2f) * 0.3f);
 
+        /// <summary>Elevator arrival: a soft high-low ding.</summary>
+        public static AudioClip Chime() => Make("chime", 1.2f, t =>
+            (t < 0.35f ? Sine(1318f, t) * Decay(t, 0.25f) : Sine(1046f, t) * Decay(t - 0.35f, 0.3f)) * 0.35f);
+
         /// <summary>Fridge compressor: mains hum with harmonics. Loops seamlessly (whole number of cycles).</summary>
         public static AudioClip FridgeHum() => Make("fridge-hum", 1f, t =>
             0.5f * Sine(60f, t) + 0.25f * Sine(120f, t) + 0.12f * Sine(180f, t));

@@ -101,3 +101,14 @@ MonoBehaviour:
     MonthlyCost: 85
     BillDayOfMonth: 10
     ReplacesBillId: internet_basic
+  - Id: office_suite_204
+    Name: 'Office Lease: Suite 204'
+    Description: Starter office on floor 2 of the Calder Building, downtown at Maple
+      St & Exchange St (walk east along Maple). Desk and workstation included; key
+      card works around the clock. First month now, then monthly on the 1st.
+    Category: 2
+    Slot: 
+    Price: 650
+    MonthlyCost: 650
+    BillDayOfMonth: 1
+    ReplacesBillId: 

@@ -143,6 +143,16 @@ namespace OpeningBell.Economy
             return null;
         }
 
+        /// <summary>Everyday card purchase (coffee, snacks). Declined rather than overdrawn. Error message, or null.</summary>
+        public string Spend(decimal amount, string description, DateTime now)
+        {
+            amount = Money.RoundCents(amount);
+            if (amount <= 0m) return "Nothing to pay.";
+            if (Bank.Balance < amount) return $"Card declined: {Dollars(Math.Max(0m, Bank.Balance))} in the bank.";
+            Post(now, TransactionKind.Purchase, -amount, description);
+            return null;
+        }
+
         /// <summary>Returns an error message, or null on success.</summary>
         public string TransferToBrokerage(decimal amount, DateTime now)
         {
@@ -168,7 +178,7 @@ namespace OpeningBell.Economy
 
         private void ChargeBill(DateTime day, ActiveBill bill)
         {
-            TransactionKind kind = bill.Category == BillCategory.Housing ? TransactionKind.Rent
+            TransactionKind kind = bill.Category == BillCategory.Housing || bill.Category == BillCategory.Lease ? TransactionKind.Rent
                 : bill.Category == BillCategory.Subscription ? TransactionKind.Subscription
                 : TransactionKind.Bill;
             Post(day, kind, -bill.Amount, bill.Name);
@@ -196,7 +206,8 @@ namespace OpeningBell.Economy
 
             foreach (StoreItem item in _catalog)
                 if (_owned.Contains(item.Id) && item.MonthlyCost > 0)
-                    _activeBills.Add(new ActiveBill(item.Id, item.Name, BillCategory.Subscription,
+                    _activeBills.Add(new ActiveBill(item.Id, item.Name,
+                        item.Category == StoreCategory.Lease ? BillCategory.Lease : BillCategory.Subscription,
                         Money.RoundCents((decimal)item.MonthlyCost), item.BillDayOfMonth));
         }
 

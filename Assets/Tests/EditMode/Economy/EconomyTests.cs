@@ -38,7 +38,32 @@ namespace OpeningBell.Tests
         {
             new StoreItem { Id = "chair", Name = "Chair", Category = StoreCategory.Equipment, Slot = "Chair", Price = 100 },
             new StoreItem { Id = "fiber", Name = "Fiber", Category = StoreCategory.Service, Price = 50, MonthlyCost = 30, BillDayOfMonth = 12, ReplacesBillId = "net" },
+            new StoreItem { Id = "office", Name = "Office", Category = StoreCategory.Lease, Price = 200, MonthlyCost = 200, BillDayOfMonth = 9 },
         };
+
+        [Test]
+        public void Lease_IsChargedAsRent_ButIsNotTheApartmentRent()
+        {
+            World w = Build();
+            Assert.IsNull(w.Economy.Buy("office", Monday.AddHours(7)));
+            Assert.AreEqual(BillCategory.Lease, w.Economy.ActiveBills.Single(b => b.Id == "office").Category);
+
+            w.Economy.AdvanceTo(Monday.AddDays(2).AddHours(12)); // through Wed Jan 9
+            BankTransaction lease = w.Economy.Bank.Transactions.Single(t => t.Description == "Office" && t.Kind == TransactionKind.Rent);
+            Assert.AreEqual(-200m, lease.Amount);
+            Assert.IsTrue(lease.IsNotable);
+        }
+
+        [Test]
+        public void Spend_DeclinesInsteadOfOverdrawing()
+        {
+            World w = Build(Config(bank: 5));
+            Assert.IsNull(w.Economy.Spend(4.5m, "Coffee", Monday.AddHours(7)));
+            Assert.AreEqual(0.5m, w.Economy.Bank.Balance);
+            StringAssert.StartsWith("Card declined", w.Economy.Spend(4.5m, "Coffee", Monday.AddHours(8)));
+            Assert.AreEqual(0.5m, w.Economy.Bank.Balance);
+            Assert.AreEqual(TransactionKind.Purchase, w.Economy.Bank.Transactions.Last().Kind);
+        }
 
         private static World Build(EconomyConfig config = null, bool fundBank = true)
         {

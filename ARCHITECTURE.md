@@ -1,6 +1,6 @@
 # Architecture
 
-Unity 6000.6.2f1. Vision/requirements: `PROJECT_SPEC.md`.
+Unity 6000.6.2f1. Vision/requirements: `PROJECT_SPEC.md` (core game) and `WORLD_SPEC.md` (city, vehicles, property; Phases 9–17).
 
 ## Assemblies (dependency direction →)
 
@@ -13,6 +13,7 @@ Unity 6000.6.2f1. Vision/requirements: `PROJECT_SPEC.md`.
 | `OpeningBell.Runtime` | `Scripts/Runtime` | yes | ScriptableObjects, `GameBootstrap` (composition root) |
 | `OpeningBell.UI` | `Scripts/UI` | yes | trading terminal (UI Toolkit) |
 | `OpeningBell.Gameplay` | `Scripts/Gameplay` | yes | input, FPS controller, interaction, workstation, HUD |
+| `OpeningBell.City` | `Scripts/City` | yes | generated city (Phase 9): layout, builders, doors, elevator, NPCs, traffic, pedestrians |
 | `OpeningBell.Tests.EditMode` | `Tests/EditMode` | editor | NUnit tests (InternalsVisibleTo on Market/Trading) |
 | `OpeningBell.Tests.PlayMode` | `Tests/PlayMode` | yes | scene-level tests that drive the real UI |
 
@@ -105,6 +106,23 @@ Log price = fair + deviation, per tick:
 - **Audio** (`GameAudio`): cues for the opening/closing bell, fills (throttled), news, bills and mail; ambience from room tone, fridge hum and PC fan (3D). Clips are synthesized placeholders (`ProceduralSounds`, marked TODO). Silent while asleep. Volume comes from `GameSettings`.
 - **Performance baseline:** a full 10-stock trading day with news simulates in about 0.4 s (about 13 µs per tick). Seated frames average about 0.4 ms with no gen0 GCs (batchmode). Guarded by `Performance_FullContentDay_SimulatesQuickly` and `FrameTime_WhileTrading_IsReasonable`.
 
+## City (Phase 9, `WORLD_SPEC.md`)
+
+- **Generated at load, not authored.** `CityBuilder` (scene object "City") builds everything in `Awake` from `CityPlan` (streets, blocks, shells, special buildings as numbers in code), so the layout is reviewable and identical every run. The apartment room stays scene-authored at the origin; the city wraps around it. Static geometry is statically batched; doors, signals and NPCs live under a separate dynamic root.
+- **Layout:** a ring road with two cross streets (Maple, Grove, Cedar, First, Exchange, Harbor), three core blocks (residential, commercial, downtown) and an outer ring of buildings that closes the world (invisible walls at `CityPlan.World`, skyline boxes in the fog beyond). Roads sit at y −0.15, sidewalks and floors at 0, so blocks form real curbs. About 2 minutes' walk end to end; later districts extend it.
+- **Materials:** five template assets in `Art/Materials/City` (lit, lit+emission, glass, unlit, sign) are cloned per colour (`Palette`), so their shader variants ship in builds. Facades use procedural window-grid textures (`FacadeTextures`, marked TODO(art)) with per-building UVs (one cell per ~3 m bay × ~3.2 m floor); their emission lights ~40% of windows at night. Signs are `TextMesh` with a custom depth-tested unlit shader (`OpeningBell/SignText`), since the font's default shader draws through walls. URP strips `_EMISSION` from a material whose emission colour is black, so the template keeps a white one.
+- **Buildings:** `ApartmentBuilding` (hallway, front door, neighbour's unit), `CalderBuilding` (glass lobby, receptionist, mailboxes, directory, restroom, elevator, stairs, floor-2 corridor, Suite 204 with a desk), `Shops` (Half Past Nine coffee, Corner Mart), `ShellBuilder` (outside-only volumes with a front door that pedestrians use).
+- **Office lease:** a `StoreCategory.Lease` store item (`office_suite_204`) whose monthly cost bills as rent (`BillCategory.Lease`, `TransactionKind.Rent`) and doesn't trigger the apartment-rent email. Key-card rules read `Economy.Owns`: suite door, floor-2 button, stair door, after-hours lobby.
+- **Workstations:** `WorkstationController` handles any `Desk` (seat view, stand point, monitor). Every monitor samples the same terminal render texture. Null = the home desk.
+- **Elevator:** `ElevatorLogic` (pure: requests, door timing, travel time) plus `Elevator` (visuals, chime, hum). Each floor has its own identical car interior stacked in the shaft; on arrival the player is moved by the floor height. Nothing moves and nothing can be fallen through (spec §8's controlled transition).
+- **Traffic (`TrafficSimulation`, `RoadNetwork`):** kinematic cars on one-lane-each-way roads (right-hand traffic). Junction movements are Bezier curves; movements closer than 2.4 m conflict. A car decides at its stop line: lights (2-phase cycle in world seconds), stop signs on T-junction stems, right of way by movement priority (gap acceptance), don't-block-the-box, and nobody on the crosswalks it's about to cross. Deciding reserves the movement, so two cars can't commit to conflicting paths. A car that committed on green re-checks if it can still stop. Car following, and stopping for people, use path lookahead. Headless tests: no overlaps (separating-axis test), no stop-line crossings on red, no gridlock over 20 minutes.
+- **Pedestrians (`SidewalkGraph`, `PedestrianSimulation`):** one loop per block along the sidewalk centre line, crosswalks at every junction approach, spurs to doors and benches. People walk door to door or door to bench, keep right, wait for the walk signal (lights) or a 17 m gap (elsewhere), sit, and step around the player. They're removed at their destination door.
+- **Populations** follow the game clock (rush hours busy, nights quiet). Cars spawn and despawn only out of the camera frustum and more than 40 m away; pooled bodies are created far below the world, since a collider appearing at the origin (inside the apartment) shoves the player.
+- **Staff NPCs (`StaffNpc`):** shift plus break (`WorkSchedule`/`Hours`), walk to a back door when off duty (snap if the player is more than 30 m away), fidget at the station, greet once per visit, lines on [E] Talk. Shop counters (`ShopCounter`) need staff present; card purchases use `EconomySystem.Spend` (declined, never overdrawn).
+- **Daylight:** `DaylightCycle` now also drives the sun (arc east → south → west), ambient light, fog, and `NightFactor` for lamps and windows. The apartment window still uses its own gradient.
+- **Not saved on purpose:** doors, elevator state, NPC and traffic positions (all time-derived or transient). The player position (anywhere in the city), the lease and purchases are saved as before.
+- **Perf (batchmode):** street view with 18 cars and 21 people is about 1.1 ms per frame on the CPU.
+
 ## Save / load
 
 - **Goal: exact resume.** Loading builds the simulation from the same definitions (catalog, config, news templates, seed), then overwrites runtime state. A loaded game continues tick-for-tick like the original. `SaveLoadTests.SavedGame_ResumesExactly_ThroughJson` saves mid-session with open orders and a queued scheduled headline, round-trips JSON, runs both two days on, and compares everything.
@@ -123,3 +141,4 @@ Opening or creating a scene in Single mode unloads in-memory assets that nothing
 
 `./run-tests.ps1` (close the Editor first) runs EditMode tests headlessly and prints failures. `-Filter` takes a test or class name.
 `./run-tests.ps1 -Platform PlayMode` loads `Main`. It trades through the terminal (via UI events) and walks, sits, trades, stands and leaves using simulated keyboard/mouse devices (Input System `QueueStateEvent`). It writes `TestResults/terminal-trading.png` and `TestResults/apartment-standing.png` for visual review.
+`CityPlayTests` walks the Phase 9 commute with the real CharacterController: apartment, street, crossings, lobby, elevator, office trade, stairs, coffee, home, save. It writes `TestResults/city-*.png` (street, downtown, lobby, office, coffee shop, night).

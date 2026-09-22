@@ -32,12 +32,14 @@ namespace OpeningBell.Tests
             Assert.AreEqual(WorkstationState.Standing, workstation.State);
             Assert.IsFalse(terminal.IsOnScreen, "terminal is on the in-world monitor while standing");
             Vector3 start = player.transform.position;
+            Assert.Less(Vector3.Distance(start, new Vector3(0.8f, start.y, -1.6f)), 0.05f, "nothing shoves the player at load");
 
             // Look slightly down and walk toward the desk until the chair or computer is in focus.
             MoveMouse(new Vector2(0f, -160f));
             yield return null;
             HoldKeys(Key.W);
-            yield return WaitUntil(() => interactor.Current is SeatInteractable, 6f, "workstation in focus");
+            // Generous: the first frames compile the city's shaders, and hitches cap deltaTime.
+            yield return WaitUntil(() => interactor.Current is SeatInteractable, 20f, "workstation in focus");
             HoldKeys();
             yield return null;
             Assert.Greater(Vector3.Distance(start, player.transform.position), 0.5f, "player walked");

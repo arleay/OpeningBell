@@ -14,14 +14,23 @@ namespace OpeningBell.Gameplay
         [SerializeField] private GameBootstrap game;
 
         private VisualElement _root;
-        private Label _prompt, _clock, _toast;
-        private float _toastUntil;
+        private Label _prompt, _clock, _toast, _subtitle;
+        private float _toastUntil, _subtitleUntil;
         private long _clockMinute = -1;
         private string _shownPrompt;
 
         public string PromptText => _prompt.style.display == DisplayStyle.None ? "" : _prompt.text;
         public string ClockText => _clock.text;
         public string ToastText => _toast.style.display == DisplayStyle.None ? "" : _toast.text;
+        public string SubtitleText => _subtitle.style.display == DisplayStyle.None ? "" : _subtitle.text;
+
+        /// <summary>Spoken line from someone nearby (receptionist, shop staff). Replaces the previous line.</summary>
+        public void ShowSubtitle(string speaker, string line, float seconds = 4.5f)
+        {
+            _subtitle.text = $"<b>{speaker}:</b> {line}";
+            _subtitle.style.display = DisplayStyle.Flex;
+            _subtitleUntil = Time.realtimeSinceStartup + seconds;
+        }
 
         /// <summary>Short message at the bottom of the screen; messages arriving together stack (newest last).</summary>
         public void ShowToast(string message, float seconds = 6f)
@@ -39,6 +48,8 @@ namespace OpeningBell.Gameplay
             if (_prompt == null) return;
             if (_toast.style.display == DisplayStyle.Flex && Time.realtimeSinceStartup >= _toastUntil)
                 _toast.style.display = DisplayStyle.None;
+            if (_subtitle.style.display == DisplayStyle.Flex && Time.realtimeSinceStartup >= _subtitleUntil)
+                _subtitle.style.display = DisplayStyle.None;
             // Prompts can change while in focus (e.g. the bed at 4 PM).
             if (interactor.Current != null && interactor.Current.Prompt != _shownPrompt) OnFocusChanged(interactor.Current);
 
@@ -103,6 +114,19 @@ namespace OpeningBell.Gameplay
             _toast.style.display = DisplayStyle.None;
             SetRadius(_toast, 5);
             _root.Add(_toast);
+
+            _subtitle = new Label { pickingMode = PickingMode.Ignore, name = "hud-subtitle", enableRichText = true };
+            _subtitle.style.position = Position.Absolute;
+            _subtitle.style.bottom = 150;
+            _subtitle.style.maxWidth = Length.Percent(60);
+            _subtitle.style.whiteSpace = WhiteSpace.Normal;
+            _subtitle.style.color = new Color(0.95f, 0.93f, 0.86f);
+            _subtitle.style.fontSize = 19;
+            _subtitle.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _subtitle.style.unityTextOutlineColor = new Color(0f, 0f, 0f, 0.9f);
+            _subtitle.style.unityTextOutlineWidth = 0.6f;
+            _subtitle.style.display = DisplayStyle.None;
+            _root.Add(_subtitle);
 
             game.Inbox.Received += email => ShowToast($"New email: {email.Subject}   (computer: MAIL)");
             var c = System.Globalization.CultureInfo.InvariantCulture;
