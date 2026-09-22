@@ -14,15 +14,26 @@ namespace OpeningBell.Gameplay
         [SerializeField] private GameBootstrap game;
 
         private VisualElement _root;
-        private Label _prompt, _clock, _toast, _subtitle;
+        private Label _prompt, _clock, _toast, _subtitle, _details, _status;
         private float _toastUntil, _subtitleUntil;
         private long _clockMinute = -1;
-        private string _shownPrompt;
+        private string _shownPrompt, _shownDetails;
 
         public string PromptText => _prompt.style.display == DisplayStyle.None ? "" : _prompt.text;
         public string ClockText => _clock.text;
         public string ToastText => _toast.style.display == DisplayStyle.None ? "" : _toast.text;
         public string SubtitleText => _subtitle.style.display == DisplayStyle.None ? "" : _subtitle.text;
+        public string DetailsText => _details.style.display == DisplayStyle.None ? "" : _details.text;
+        public string StatusText => _status.style.display == DisplayStyle.None ? "" : _status.text;
+
+        /// <summary>Persistent line at the bottom left (speed and battery while riding). Null hides it.</summary>
+        public void SetStatus(string text)
+        {
+            if (_status == null) return;
+            bool show = !string.IsNullOrEmpty(text);
+            _status.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
+            if (show && _status.text != text) _status.text = text;
+        }
 
         /// <summary>Spoken line from someone nearby (receptionist, shop staff). Replaces the previous line.</summary>
         public void ShowSubtitle(string speaker, string line, float seconds = 4.5f)
@@ -51,7 +62,8 @@ namespace OpeningBell.Gameplay
             if (_subtitle.style.display == DisplayStyle.Flex && Time.realtimeSinceStartup >= _subtitleUntil)
                 _subtitle.style.display = DisplayStyle.None;
             // Prompts can change while in focus (e.g. the bed at 4 PM).
-            if (interactor.Current != null && interactor.Current.Prompt != _shownPrompt) OnFocusChanged(interactor.Current);
+            if (interactor.Current != null && (interactor.Current.Prompt != _shownPrompt || interactor.Current.Details != _shownDetails))
+                OnFocusChanged(interactor.Current);
 
             long minute = game.Clock.Now.Ticks / System.TimeSpan.TicksPerMinute;
             if (minute == _clockMinute) return;
@@ -128,6 +140,32 @@ namespace OpeningBell.Gameplay
             _subtitle.style.display = DisplayStyle.None;
             _root.Add(_subtitle);
 
+            _details = new Label { pickingMode = PickingMode.Ignore, name = "hud-details" };
+            _details.style.position = Position.Absolute;
+            _details.style.top = Length.Percent(59);
+            _details.style.maxWidth = 460;
+            _details.style.whiteSpace = WhiteSpace.Normal;
+            _details.style.color = new Color(0.85f, 0.87f, 0.9f);
+            _details.style.fontSize = 14;
+            _details.style.backgroundColor = new Color(0f, 0f, 0f, 0.5f);
+            _details.style.paddingLeft = _details.style.paddingRight = 10;
+            _details.style.paddingTop = _details.style.paddingBottom = 5;
+            _details.style.display = DisplayStyle.None;
+            SetRadius(_details, 4);
+            _root.Add(_details);
+
+            _status = new Label { pickingMode = PickingMode.Ignore, name = "hud-status" };
+            _status.style.position = Position.Absolute;
+            _status.style.left = 24;
+            _status.style.bottom = 22;
+            _status.style.color = new Color(1f, 1f, 1f, 0.9f);
+            _status.style.fontSize = 17;
+            _status.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _status.style.unityTextOutlineColor = new Color(0f, 0f, 0f, 0.8f);
+            _status.style.unityTextOutlineWidth = 0.5f;
+            _status.style.display = DisplayStyle.None;
+            _root.Add(_status);
+
             game.Inbox.Received += email => ShowToast($"New email: {email.Subject}   (computer: MAIL)");
             var c = System.Globalization.CultureInfo.InvariantCulture;
             game.Economy.TransactionPosted += tx =>
@@ -148,6 +186,9 @@ namespace OpeningBell.Gameplay
             _prompt.style.display = target != null ? DisplayStyle.Flex : DisplayStyle.None;
             _shownPrompt = target?.Prompt;
             if (target != null) _prompt.text = $"[{input.Interact.GetBindingDisplayString()}] {_shownPrompt}";
+            _shownDetails = target?.Details;
+            _details.style.display = string.IsNullOrEmpty(_shownDetails) ? DisplayStyle.None : DisplayStyle.Flex;
+            if (_shownDetails != null) _details.text = _shownDetails;
         }
 
         private static void SetRadius(VisualElement e, float r) =>

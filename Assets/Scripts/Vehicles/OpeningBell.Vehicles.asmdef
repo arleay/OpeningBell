@@ -1,12 +1,9 @@
 {
-    "name": "OpeningBell.Runtime",
-    "rootNamespace": "OpeningBell",
+    "name": "OpeningBell.Vehicles",
+    "rootNamespace": "OpeningBell.Vehicles",
     "references": [
         "OpeningBell.Core",
-        "OpeningBell.Market",
-        "OpeningBell.Trading",
-        "OpeningBell.Economy",
-        "OpeningBell.Vehicles"
+        "OpeningBell.Trading"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -16,5 +13,5 @@
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
-    "noEngineReferences": false
+    "noEngineReferences": true
 }

@@ -26,6 +26,8 @@ namespace OpeningBell
         [SerializeField] private EconomySettings economySettings;
         [Tooltip("Scripted emails: onboarding, reminders, notices.")]
         [SerializeField] private EmailLibrary emailLibrary;
+        [Tooltip("Bikes, boards, parts and service prices sold in the city's shops.")]
+        [SerializeField] private VehicleLibrary vehicleLibrary;
         [SerializeField] private BrokerRules brokerRules = new BrokerRules();
         [SerializeField] private long seed = 18492;
 
@@ -57,6 +59,8 @@ namespace OpeningBell
         public TradingDayRecorder Days { get; private set; }
         public EconomySystem Economy { get; private set; }
         public Inbox Inbox { get; private set; }
+        /// <summary>The player's bikes and boards (spec §16: persistent identity).</summary>
+        public global::OpeningBell.Vehicles.Fleet Vehicles { get; private set; }
         private EmailDirector _emails;
 
         /// <summary>Set by <see cref="StartNewGame"/> so the reloaded scene ignores the (deleted) save.</summary>
@@ -111,6 +115,11 @@ namespace OpeningBell
             _emails = new EmailDirector(emailLibrary != null ? emailLibrary.Emails : Array.Empty<EmailDefinition>(),
                 Inbox, Account, Orders, Economy, ConfiguredStart().Date);
 
+            Vehicles = new global::OpeningBell.Vehicles.Fleet(vehicleLibrary != null ? vehicleLibrary.CreateCatalog()
+                : new global::OpeningBell.Vehicles.VehicleCatalog(Array.Empty<global::OpeningBell.Vehicles.VehicleModel>(),
+                    Array.Empty<global::OpeningBell.Vehicles.PartSpec>(), 0m, 0m));
+            if (save != null && save.HasVehicles) Vehicles.RestoreState(save.Vehicles);
+
             if (save != null)
             {
                 TradingState.Restore(save.Trading, Account, Orders, Days);
@@ -134,6 +143,8 @@ namespace OpeningBell
                 Economy = Economy.CaptureState(),
                 HasInbox = true,
                 Inbox = Inbox.CaptureState(),
+                HasVehicles = true,
+                Vehicles = Vehicles.CaptureState(),
             };
             if (player != null)
             {

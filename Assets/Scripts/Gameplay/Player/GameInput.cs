@@ -18,6 +18,12 @@ namespace OpeningBell.Gameplay
         public InputAction Sprint { get; private set; }
         public InputAction Interact { get; private set; }
         public InputAction OpenMenu { get; private set; }
+        /// <summary>Hop on / off the skateboard you're carrying.</summary>
+        public InputAction Ride { get; private set; }
+        /// <summary>First-person / chase camera while riding.</summary>
+        public InputAction CameraToggle { get; private set; }
+        /// <summary>Cycle e-bike assist level.</summary>
+        public InputAction Assist { get; private set; }
         public InputAction Leave { get; private set; }
         public InputAction CloseMenu { get; private set; }
 
@@ -34,6 +40,9 @@ namespace OpeningBell.Gameplay
             Sprint = _player.AddAction("Sprint", InputActionType.Button, "<Keyboard>/leftShift");
             Interact = _player.AddAction("Interact", InputActionType.Button, "<Keyboard>/e");
             OpenMenu = _player.AddAction("Menu", InputActionType.Button, "<Keyboard>/escape");
+            Ride = _player.AddAction("Ride", InputActionType.Button, "<Keyboard>/r");
+            CameraToggle = _player.AddAction("Camera", InputActionType.Button, "<Keyboard>/c");
+            Assist = _player.AddAction("Assist", InputActionType.Button, "<Keyboard>/q");
 
             // Esc means "back out one level": stand up when seated, close the menu when it's open.
             _workstation = new InputActionMap("Workstation");

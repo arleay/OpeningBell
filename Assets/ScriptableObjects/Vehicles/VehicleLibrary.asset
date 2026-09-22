@@ -1,0 +1,342 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f9110979a1a4e71bc4e9b5b5574ecd4, type: 3}
+  m_Name: VehicleLibrary
+  m_EditorClassIdentifier: 
+  models:
+  - Id: skate_street
+    Name: 'Curbside Street Deck'
+    Kind: 0
+    Price: 95
+    Description: 'Classic 8" street board: small hard wheels, tight trucks. Quick on smooth pavement, twitchy on rough.'
+    ColorR: 0.14
+    ColorG: 0.14
+    ColorB: 0.16
+    Spec:
+      Mass: 2.2
+      WheelDiameter: 0.052
+      Wheelbase: 0.36
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1.1
+      TruckLooseness: 0.3
+  - Id: skate_cruiser
+    Name: 'Harbor Cruiser'
+    Kind: 0
+    Price: 120
+    Description: 'Short cruiser with soft 60 mm wheels and loose trucks. Carves, soaks up cracks, gets nervous when fast.'
+    ColorR: 0.18
+    ColorG: 0.55
+    ColorB: 0.55
+    Spec:
+      Mass: 2.4
+      WheelDiameter: 0.06
+      Wheelbase: 0.33
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.74
+      WheelDurometer: 80
+      BearingFactor: 1.05
+      TruckLooseness: 0.6
+  - Id: skate_longboard
+    Name: 'Downhill Longboard'
+    Kind: 0
+    Price: 185
+    Description: 'Long deck, big 70 mm wheels, good bearings. Rolls forever and stays calm at speed; wide turns.'
+    ColorR: 0.62
+    ColorG: 0.46
+    ColorB: 0.28
+    Spec:
+      Mass: 3.6
+      WheelDiameter: 0.07
+      Wheelbase: 0.7
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 1.0
+      WheelDurometer: 78
+      BearingFactor: 1.0
+      TruckLooseness: 0.45
+  - Id: bike_bmx
+    Name: 'Rook BMX'
+    Kind: 1
+    Price: 340
+    Description: '20" wheels, one gear, tiny frame. Snappy and tight-turning, but spins out early.'
+    ColorR: 0.9
+    ColorG: 0.45
+    ColorB: 0.12
+    Spec:
+      Mass: 11
+      WheelDiameter: 0.51
+      Wheelbase: 0.95
+      RollingResistance: 0.008
+      RoughnessPenalty: 1.2
+      DragArea: 0.42
+      BrakeDecel: 5.5
+      MaxLeanDeg: 38
+      MaxSteerDeg: 50
+      LowestGear: 2.78
+      HighestGear: 2.78
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+  - Id: bike_commuter
+    Name: 'Everyday Commuter 3'
+    Kind: 1
+    Price: 460
+    Description: 'Upright steel city bike, 3 gears, fenders. Heavy but tough; fine on any street.'
+    ColorR: 0.16
+    ColorG: 0.22
+    ColorB: 0.42
+    Spec:
+      Mass: 16
+      WheelDiameter: 0.7
+      Wheelbase: 1.08
+      RollingResistance: 0.006
+      RoughnessPenalty: 1.6
+      DragArea: 0.55
+      BrakeDecel: 5.5
+      MaxLeanDeg: 32
+      MaxSteerDeg: 40
+      LowestGear: 1.3
+      HighestGear: 2.7
+      Gears: 3
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+  - Id: bike_mtb
+    Name: 'Ridgeback Trail'
+    Kind: 1
+    Price: 890
+    Description: '29" knobbly tyres, 12 low gears. Climbs anything and doesn''t care about grass; slower on smooth roads.'
+    ColorR: 0.25
+    ColorG: 0.45
+    ColorB: 0.25
+    Spec:
+      Mass: 13.5
+      WheelDiameter: 0.74
+      Wheelbase: 1.18
+      RollingResistance: 0.011
+      RoughnessPenalty: 0.5
+      DragArea: 0.45
+      BrakeDecel: 7
+      MaxLeanDeg: 36
+      MaxSteerDeg: 38
+      LowestGear: 0.63
+      HighestGear: 3.2
+      Gears: 12
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+  - Id: bike_road
+    Name: 'Veloce Sprint'
+    Kind: 1
+    Price: 1290
+    Description: 'Light carbon road bike, 22 gears, slick tyres, tucked position. Fastest on pavement; hates grass.'
+    ColorR: 0.72
+    ColorG: 0.1
+    ColorB: 0.1
+    Spec:
+      Mass: 8.6
+      WheelDiameter: 0.68
+      Wheelbase: 1.0
+      RollingResistance: 0.0042
+      RoughnessPenalty: 3.5
+      DragArea: 0.32
+      BrakeDecel: 6
+      MaxLeanDeg: 38
+      MaxSteerDeg: 36
+      LowestGear: 1.21
+      HighestGear: 4.8
+      Gears: 22
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+  - Id: ebike_commuter
+    Name: 'Volt Commuter'
+    Kind: 2
+    Price: 1650
+    Description: 'Pedal-assist city e-bike: 500 W motor to 20 mph, 500 Wh battery. Hills and headwinds stop mattering.'
+    ColorR: 0.88
+    ColorG: 0.88
+    ColorB: 0.86
+    Spec:
+      Mass: 24
+      WheelDiameter: 0.7
+      Wheelbase: 1.12
+      RollingResistance: 0.006
+      RoughnessPenalty: 1.6
+      DragArea: 0.55
+      BrakeDecel: 6.5
+      MaxLeanDeg: 32
+      MaxSteerDeg: 38
+      LowestGear: 1.1
+      HighestGear: 3.4
+      Gears: 8
+      MotorPower: 500
+      AssistCutoff: 8.9
+      BatteryWh: 500
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+  - Id: ebike_speed
+    Name: 'Volt Speed'
+    Kind: 2
+    Price: 2700
+    Description: 'Class 3 speed e-bike: 750 W to 28 mph, 700 Wh. The quickest way across town short of a car.'
+    ColorR: 0.2
+    ColorG: 0.21
+    ColorB: 0.23
+    Spec:
+      Mass: 23
+      WheelDiameter: 0.7
+      Wheelbase: 1.1
+      RollingResistance: 0.005
+      RoughnessPenalty: 2.2
+      DragArea: 0.5
+      BrakeDecel: 7
+      MaxLeanDeg: 34
+      MaxSteerDeg: 36
+      LowestGear: 1.2
+      HighestGear: 4.2
+      Gears: 10
+      MotorPower: 750
+      AssistCutoff: 12.5
+      BatteryWh: 700
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+  parts:
+  - Id: wheels_soft60
+    Name: 'Soft 60mm wheels (80A)'
+    Fits: 0
+    Slot: 0
+    Price: 38
+    Description: 'Grippier, smoother over cracks and rough asphalt.'
+    WheelDiameter: 0.06
+    WheelDurometer: 80
+    BearingFactor: 0
+    SetsTruckLooseness: 0
+    TruckLooseness: 0
+    BatteryMultiplier: 0
+  - Id: wheels_big70
+    Name: 'Big 70mm wheels (78A)'
+    Fits: 0
+    Slot: 0
+    Price: 48
+    Description: 'Roll the longest and ignore rough ground.'
+    WheelDiameter: 0.07
+    WheelDurometer: 78
+    BearingFactor: 0
+    SetsTruckLooseness: 0
+    TruckLooseness: 0
+    BatteryMultiplier: 0
+  - Id: bearings_precision
+    Name: 'Precision bearings'
+    Fits: 0
+    Slot: 1
+    Price: 32
+    Description: 'Less friction: coast further on every push.'
+    WheelDiameter: 0
+    WheelDurometer: 0
+    BearingFactor: 0.85
+    SetsTruckLooseness: 0
+    TruckLooseness: 0
+    BatteryMultiplier: 0
+  - Id: trucks_loose
+    Name: 'Loose trucks (carve)'
+    Fits: 0
+    Slot: 2
+    Price: 55
+    Description: 'Sharper turns, less stable when fast.'
+    WheelDiameter: 0
+    WheelDurometer: 0
+    BearingFactor: 0
+    SetsTruckLooseness: 1
+    TruckLooseness: 0.85
+    BatteryMultiplier: 0
+  - Id: trucks_tight
+    Name: 'Tight trucks (stable)'
+    Fits: 0
+    Slot: 2
+    Price: 55
+    Description: 'Calm at speed, wider turns.'
+    WheelDiameter: 0
+    WheelDurometer: 0
+    BearingFactor: 0
+    SetsTruckLooseness: 1
+    TruckLooseness: 0.15
+    BatteryMultiplier: 0
+  - Id: battery_extended
+    Name: 'Extended battery (+50%)'
+    Fits: 2
+    Slot: 3
+    Price: 420
+    Description: 'Bigger pack for longer range between charges.'
+    WheelDiameter: 0
+    WheelDurometer: 0
+    BearingFactor: 0
+    SetsTruckLooseness: 0
+    TruckLooseness: 0
+    BatteryMultiplier: 1.5
+  tuneUpPrice: 60
+  newTiresPrice: 45

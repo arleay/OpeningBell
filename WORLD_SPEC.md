@@ -145,7 +145,7 @@ Extends `PROJECT_SPEC.md`. Section numbers (§) follow the original prompt. The 
 - **10 Ground transport:** vehicle framework, car driving, parking, fuel, enter/exit, save.
 - **11 Dealerships:** used and standard dealers, buying, test drives, resale.
 - **12 Mechanics:** repair, maintenance, diagnostics, upgrades, damage.
-- **13 Small mobility:** skateboards, bicycles, e-bikes, dedicated shops.
+- **13 Small mobility:** skateboards, bicycles, e-bikes, dedicated shops. ✅ (done before 10 by choice)
 - **14 Property:** apartments, houses, garages, home upgrades, office upgrades.
 - **15 Advanced vehicles:** motorcycles, performance cars, advanced tuning.
 - **16 Aviation:** helicopters, dealer, hangars, helipads, flight controls.
@@ -166,4 +166,4 @@ Extends `PROJECT_SPEC.md`. Section numbers (§) follow the original prompt. The 
 12. Ride it home.
 13. The world saves correctly.
 
-No helicopters before this works. Items 11–12 need Phase 13 (or 10); the rest are covered by Phase 9.
+No helicopters before this works. All 13 items are covered (Phase 9 plus Phase 13).

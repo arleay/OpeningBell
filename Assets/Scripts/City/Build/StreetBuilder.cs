@@ -29,7 +29,7 @@ namespace OpeningBell.City
             Kit k = c.Kit;
             Rect w = CityPlan.World;
             Transform root = Kit.Group(c.Static, "Streets");
-            k.Span(root, "Roads", new Vector3(w.xMin, CityPlan.RoadY - 1f, w.yMin), new Vector3(w.xMax, CityPlan.RoadY, w.yMax), c.P.Lit(Asphalt, 0.05f));
+            Tag(k.Span(root, "Roads", new Vector3(w.xMin, CityPlan.RoadY - 1f, w.yMin), new Vector3(w.xMax, CityPlan.RoadY, w.yMax), c.P.Lit(Asphalt, 0.05f)), 0.3f);
             // Land beyond the playable area, so fog shows ground instead of void.
             k.Span(root, "Outskirts", new Vector3(-700f, -1.3f, -600f), new Vector3(850f, CityPlan.RoadY - 0.02f, 650f),
                 c.P.Lit(new Color(0.28f, 0.31f, 0.24f)), collider: false);
@@ -40,20 +40,51 @@ namespace OpeningBell.City
             {
                 Transform b = Kit.Group(root, name);
                 const float bottom = -0.9f;
-                k.Span(b, "Sidewalk S", new Vector3(a.xMin, bottom, a.yMin), new Vector3(a.xMax, 0f, a.yMin + sw), walk);
-                k.Span(b, "Sidewalk N", new Vector3(a.xMin, bottom, a.yMax - sw), new Vector3(a.xMax, 0f, a.yMax), walk);
-                k.Span(b, "Sidewalk W", new Vector3(a.xMin, bottom, a.yMin + sw), new Vector3(a.xMin + sw, 0f, a.yMax - sw), walk);
-                k.Span(b, "Sidewalk E", new Vector3(a.xMax - sw, bottom, a.yMin + sw), new Vector3(a.xMax, 0f, a.yMax - sw), walk);
-                k.Span(b, "Ground", new Vector3(a.xMin + sw, bottom, a.yMin + sw), new Vector3(a.xMax - sw, -0.01f, a.yMax - sw), c.P.Lit(ground, 0.04f));
+                Tag(k.Span(b, "Sidewalk S", new Vector3(a.xMin, bottom, a.yMin), new Vector3(a.xMax, 0f, a.yMin + sw), walk), 0.2f);
+                Tag(k.Span(b, "Sidewalk N", new Vector3(a.xMin, bottom, a.yMax - sw), new Vector3(a.xMax, 0f, a.yMax), walk), 0.2f);
+                Tag(k.Span(b, "Sidewalk W", new Vector3(a.xMin, bottom, a.yMin + sw), new Vector3(a.xMin + sw, 0f, a.yMax - sw), walk), 0.2f);
+                Tag(k.Span(b, "Sidewalk E", new Vector3(a.xMax - sw, bottom, a.yMin + sw), new Vector3(a.xMax, 0f, a.yMax - sw), walk), 0.2f);
+                // The residential block is lawn and park; the others are paved.
+                Tag(k.Span(b, "Ground", new Vector3(a.xMin + sw, bottom, a.yMin + sw), new Vector3(a.xMax - sw, -0.01f, a.yMax - sw), c.P.Lit(ground, 0.04f)),
+                    name == "Residential" ? 1f : 0.25f);
             }
 
             Markings(c, root, walks);
+            CurbRamps(c, root, walks);
             Furniture(c, root);
             Junctions(c, walks, signals, walkSignals);
             Boundary(c, root);
         }
 
         private static float Yaw(Vector2 dir) => Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg;
+
+        private static void Tag(GameObject ground, float roughness) => ground.AddComponent<SurfaceTag>().Roughness = roughness;
+
+        /// <summary>
+        /// Ramps from the road up to the kerb at both ends of every crosswalk (spec §9): wheelchairs, bikes and
+        /// skateboards (which can't climb a 15 cm kerb) use them. They sit in the kerb-side metre of the road,
+        /// clear of the lanes.
+        /// </summary>
+        private static void CurbRamps(CityContext c, Transform root, SidewalkGraph walks)
+        {
+            Transform ramps = Kit.Group(root, "Curb ramps");
+            Material concrete = c.P.Lit(new Color(0.6f, 0.59f, 0.56f), 0.08f);
+            const float run = 1.2f, rise = -CityPlan.RoadY, thickness = 0.06f;
+            float angle = Mathf.Atan2(rise, run) * Mathf.Rad2Deg;
+            foreach (SidewalkGraph.Crosswalk cw in walks.Crosswalks)
+            {
+                Vector2 across = RoadNetwork.RightOf(cw.Along);
+                foreach (float side in new[] { -1f, 1f })
+                {
+                    Vector2 toKerb = across * side;
+                    Vector2 mid = cw.Center + toKerb * (CityPlan.RoadHalfWidth - run / 2f);
+                    GameObject ramp = c.Kit.Box(ramps, "Ramp", new Vector3(mid.x, CityPlan.RoadY + rise / 2f - thickness / 2f, mid.y),
+                        new Vector3(CityPlan.SidewalkWidth - 1f, thickness, Mathf.Sqrt(run * run + rise * rise)), concrete);
+                    ramp.transform.localRotation = Quaternion.Euler(-angle, Yaw(toKerb), 0f);
+                    Tag(ramp, 0.2f);
+                }
+            }
+        }
 
         private static Vector3 V(Vector2 p, float y) => new Vector3(p.x, y, p.y);
 
@@ -121,7 +152,8 @@ namespace OpeningBell.City
             (Vector3 P, float Yaw)[] benches =
             {
                 // Yaw 0 = back to the north, facing south.
-                (new Vector3(86f, 0f, -6.1f), 0f), (new Vector3(104f, 0f, -6.1f), 0f), (new Vector3(188f, 0f, -6.1f), 0f),
+                // Clear of the shop doors.
+                (new Vector3(91.8f, 0f, -6.1f), 0f), (new Vector3(96.5f, 0f, -6.1f), 0f), (new Vector3(188f, 0f, -6.1f), 0f),
                 (new Vector3(30f, 0f, -6.1f), 0f), (new Vector3(-34.5f, 0f, 24f), 90f), (new Vector3(-34.5f, 0f, 38f), 90f),
                 (new Vector3(152f, 0f, -20.9f), 180f), (new Vector3(60f, 0f, -20.9f), 180f),
             };
@@ -136,7 +168,7 @@ namespace OpeningBell.City
                 // Sit spot: on the seat, facing out of the bench.
                 c.Place(p, PlaceKind.Bench, "bench");
             }
-            foreach (Vector3 p in new[] { new Vector3(80.5f, 0f, -6.2f), new Vector3(110f, 0f, -6.2f) })
+            foreach (Vector3 p in new[] { new Vector3(80.5f, 0f, -6.2f), new Vector3(114f, 0f, -6.2f) })
             {
                 Transform rack = Kit.Group(f, "Bike rack", p);
                 for (int i = 0; i < 4; i++)

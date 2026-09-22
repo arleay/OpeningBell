@@ -29,6 +29,8 @@ namespace OpeningBell
         public InboxSaveData Inbox = new InboxSaveData();
         public bool HasPlayer;
         public PlayerSaveData Player = new PlayerSaveData();
+        public bool HasVehicles;
+        public global::OpeningBell.Vehicles.FleetSaveData Vehicles = new global::OpeningBell.Vehicles.FleetSaveData();
     }
 
     [Serializable]

@@ -31,6 +31,8 @@ namespace OpeningBell.City
         public TrafficView Traffic { get; private set; }
         public PedestrianView Pedestrians { get; private set; }
         public Desk OfficeDesk { get; private set; }
+        public FleetView Fleet { get; private set; }
+        public RideController Rider { get; private set; }
         public RoadNetwork Roads => _c.Roads;
 
         private void Awake()
@@ -55,6 +57,7 @@ namespace OpeningBell.City
             CalderBuilding.Build(_c, out Desk desk);
             OfficeDesk = desk;
             Shops.Build(_c);
+            MobilityShops.Build(_c);
 
             // Places (doors, benches) are registered by the builders above; the street pass adds benches too,
             // so gather everything first, then build the walk graph the markings and signals need.
@@ -78,6 +81,13 @@ namespace OpeningBell.City
                 into.Add(new Vector2(p.x, p.z));
                 foreach (PedestrianSimulation.Walker w in peds.Walkers) into.Add(w.Position);
             });
+
+            // Owned bikes and boards: parked ones in the world, riding on the player.
+            Fleet = new GameObject("Fleet").AddComponent<FleetView>();
+            Fleet.transform.SetParent(transform, false);
+            Rider = player.gameObject.AddComponent<RideController>();
+            Rider.Configure(game, player, player.GetComponentInChildren<PlayerInteractor>() ?? FindAnyObjectByType<PlayerInteractor>(), hud, _c.Kit, Fleet);
+            Fleet.Configure(game, _c.Kit, Rider);
         }
 
         private void Update()

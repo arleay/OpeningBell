@@ -21,6 +21,14 @@ namespace OpeningBell.Gameplay
         private bool _controlEnabled = true;
 
         public Transform CameraPivot => cameraPivot;
+        public GameInput Input => input;
+        public float LookSensitivity => lookSensitivity * GameSettings.MouseSensitivity;
+
+        /// <summary>
+        /// Something else (a bike, a board) is moving the body and handling look. The cursor stays locked,
+        /// unlike <see cref="ControlEnabled"/> = false, which frees it for UI.
+        /// </summary>
+        public bool Suspended { get; set; }
 
         /// <summary>Off while seated: no movement or look, cursor released for the terminal.</summary>
         public bool ControlEnabled
@@ -39,7 +47,7 @@ namespace OpeningBell.Gameplay
 
         private void Update()
         {
-            if (!_controlEnabled) return;
+            if (!_controlEnabled || Suspended) return;
 
             Vector2 look = input.Look.ReadValue<Vector2>() * (lookSensitivity * GameSettings.MouseSensitivity);
             transform.Rotate(0f, look.x, 0f);

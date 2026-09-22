@@ -8,7 +8,10 @@ using OpeningBell.Economy;
 using OpeningBell.Gameplay;
 using OpeningBell.Market;
 using OpeningBell.UI;
+using OpeningBell.Vehicles;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
@@ -195,6 +198,162 @@ namespace OpeningBell.Tests
             CollectionAssert.Contains(save.Economy.Owned, CityContext.OfficeLeaseId);
             Assert.IsTrue(save.Economy.Transactions.Any(t => t.Description == "Coffee"));
             Assert.Greater(game.Clock.Now.TimeOfDay.TotalHours, 8.0, "the commute took game time");
+        }
+
+        /// <summary>
+        /// Rides toward <paramref name="target"/> with the real keyboard: W to go (S to brake near the end), A/D
+        /// to steer at a point a few metres along the line from the start. Stops within about a metre.
+        /// </summary>
+        private IEnumerator RideTo(Vector3 target, string what, float timeout = 60f)
+        {
+            RideController rider = _city.Rider;
+            Vector3 from = _player.transform.position;
+            Vector3 line = target - from;
+            line.y = 0f;
+            float start = Time.realtimeSinceStartup, lastProgress = start;
+            float best = float.MaxValue;
+            while (true)
+            {
+                Assert.IsTrue(rider.IsRiding, $"still riding ({what})");
+                Vector3 p = _player.transform.position;
+                Vector3 to = target - p;
+                to.y = 0f;
+                float remaining = to.magnitude;
+                if (remaining < 1.2f)
+                {
+                    while (rider.State.Speed > 0.3f)
+                    {
+                        HoldKeys(Key.S);
+                        yield return null;
+                    }
+                    HoldKeys();
+                    yield break;
+                }
+                // Pure pursuit on the line from the start keeps us on the middle of the sidewalk.
+                float t = Mathf.Clamp01(Vector3.Dot(p - from, line) / line.sqrMagnitude);
+                Vector3 aim = from + line * Mathf.Min(1f, t + 4f / line.magnitude) - p;
+                float error = Vector3.SignedAngle(_player.transform.forward, new Vector3(aim.x, 0f, aim.z), Vector3.up);
+                var keys = new List<Key>();
+                bool slowDown = rider.State.Speed > Mathf.Max(1.5f, remaining * 0.9f);
+                keys.Add(slowDown ? Key.S : Key.W);
+                if (error > 3f) keys.Add(Key.D);
+                else if (error < -3f) keys.Add(Key.A);
+                HoldKeys(keys.ToArray());
+                float now = Time.realtimeSinceStartup;
+                if (remaining < best - 0.5f)
+                {
+                    best = remaining;
+                    lastProgress = now;
+                }
+                if (now - lastProgress > 10f || now - start > timeout)
+                    Assert.Fail($"Stuck riding to {what}: at {p}, target {target}, speed {rider.State.Speed:F2}, move {_player.Input.Move.ReadValue<Vector2>()}, " +
+                                $"grade {rider.Ground.Grade:F2}, rough {rider.Ground.Roughness:F2}, heading {rider.State.Heading * Mathf.Rad2Deg:F0}, hit {rider.LastHit}");
+                yield return null;
+            }
+        }
+
+        /// <summary>Stop at the kerb, wait for a gap in traffic, ride across.</summary>
+        private IEnumerator RideAcross(Vector3 kerb, Vector3 other)
+        {
+            yield return RideTo(kerb, "the kerb");
+            Vector2 mid = new Vector2((kerb.x + other.x) / 2f, (kerb.z + other.z) / 2f);
+            yield return WaitUntil(() => !_city.Traffic.Simulation.AnyCarNear(mid, 16f), 40f, "a gap in traffic");
+            yield return RideTo(other, "across the street");
+        }
+
+        [UnityTest]
+        public IEnumerator Skateboard_BoughtAtTheSkateShop_RiddenHome_AndSaved()
+        {
+            UseSimulatedInput();
+            yield return Setup(10.25);
+            GameBootstrap game = Find<GameBootstrap>();
+
+            // 10. Walk to Curbside Skate and buy a board.
+            yield return Route("apartment", P(-1.8f, -1.9f), At("apartment_door_hall"), At("apartment_front_in"), At("apartment_front_out"), P(6f, -7.25f));
+            yield return Cross(P(48f, -7.25f), P(62f, -7.25f));
+            yield return Route("to the skate shop", P(86.25f, -7.25f), At("skate_front_out"), P(86.25f, -3.5f), At("skate_table"));
+            ForSaleDisplay cruiser = UnityEngine.Object.FindObjectsByType<ForSaleDisplay>(FindObjectsSortMode.None).First(d => d.Id == "skate_cruiser");
+            Assert.IsTrue(cruiser.CanInteract, "shop is staffed");
+            StringAssert.Contains("wheels", cruiser.Details, "spec card");
+            decimal bank = game.Economy.Bank.Balance;
+            cruiser.Interact();
+            Assert.AreEqual(bank - 120m, game.Economy.Bank.Balance);
+            OwnedVehicle board = game.Vehicles.Carried;
+            Assert.NotNull(board, "board in hand");
+            Assert.AreEqual("skate_cruiser", board.ModelId);
+
+            // 11–12. Out to the sidewalk, hop on and ride home (down and up the curb ramps at First St).
+            yield return Route("out", P(86.25f, -3.5f), At("skate_front_out"), P(86.25f, -7.25f), P(84f, -7.25f));
+            yield return TapKey(Key.R);
+            Assert.IsTrue(_city.Rider.IsRiding, "R rides the carried board");
+            yield return RideTo(P(66f, -7.25f), "west along Maple");
+            Assert.AreEqual(0.2, _city.Rider.Ground.Roughness, 0.01, "sidewalk under the wheels");
+            StringAssert.Contains("km/h", Find<InteractionHud>().StatusText);
+            yield return RideAcross(P(61.2f, -7.25f), P(48.5f, -7.25f));
+            yield return RideTo(P(8f, -7.25f), "home");
+            Assert.Greater(board.Odometer, 60, "odometer counts");
+            yield return TapKey(Key.R);
+            Assert.IsFalse(_city.Rider.IsRiding);
+            Assert.AreSame(board, game.Vehicles.Carried, "picked the board back up");
+            yield return Route("inside", At("apartment_front_out"), At("apartment_front_in"), At("apartment_door_hall"), P(-1.8f, -1.9f));
+
+            // 13. Saved.
+            game.Save();
+            Assert.IsTrue(SaveSystem.TryRead("slot1", out SaveGame save, out _));
+            Assert.IsTrue(save.HasVehicles);
+            OwnedVehicleSaveData saved = save.Vehicles.Vehicles.Single();
+            Assert.AreEqual((int)VehicleState.Carried, saved.State);
+            Assert.AreEqual(board.Odometer, saved.Odometer, 1e-6);
+        }
+
+        [UnityTest]
+        public IEnumerator Bike_BoughtRiddenParked_StaysWhereItWasLeft_AfterReload()
+        {
+            UseSimulatedInput();
+            yield return Setup(9.5);
+            GameBootstrap game = Find<GameBootstrap>();
+            _player.PlaceAt(At("bike_front_out"), 0f);
+            yield return null;
+            yield return Route("bike shop", P(103f, -3f), At("bike_counter"));
+            ForSaleDisplay commuter = UnityEngine.Object.FindObjectsByType<ForSaleDisplay>(FindObjectsSortMode.None).First(d => d.Id == "bike_commuter");
+            commuter.Interact();
+            OwnedVehicle bike = game.Vehicles.Vehicles.Single();
+            Assert.AreEqual(VehicleState.Parked, bike.State, "rolled out front");
+            yield return null;
+            Assert.NotNull(_city.Fleet.Shown(bike), "visible out front");
+            ForSaleDisplay tuneUp = UnityEngine.Object.FindObjectsByType<ForSaleDisplay>(FindObjectsSortMode.None).First(d => d.Kind == SaleKind.TuneUp);
+            StringAssert.Contains("Your Everyday Commuter 3", tuneUp.Details, "the shop sees the bike out front");
+
+            yield return Snapshot(P(107.5f, -3.8f), 300f, "bike-shop.png", 12f);
+            yield return Route("out", P(103f, -3f), At("bike_front_out"));
+            _city.Fleet.Shown(bike).GetComponent<ParkedVehicle>().Interact();
+            Assert.IsTrue(_city.Rider.IsRiding);
+            yield return RideTo(P(113f, -7.25f), "onto the sidewalk");
+            yield return TapKey(Key.C);
+            Assert.IsTrue(_city.Rider.ChaseCamera, "C: chase camera");
+            yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "bike-chase.png");
+            yield return TapKey(Key.C);
+            yield return RideTo(P(124f, -7.25f), "along Maple");
+            Assert.Greater(bike.Odometer, 15);
+            yield return TapKey(Key.E);
+            Assert.IsFalse(_city.Rider.IsRiding, "E gets off");
+            Assert.AreEqual(VehicleState.Parked, bike.State);
+            Assert.Greater(Vector3.Distance(_player.transform.position, new Vector3((float)bike.X, (float)bike.Y, (float)bike.Z)), 0.6f, "stepped off beside it");
+            var parkedAt = new Vector3((float)bike.X, 0f, (float)bike.Z);
+
+            game.Save();
+            yield return SceneManager.LoadSceneAsync("Main");
+            yield return null;
+            yield return null;
+            GameBootstrap loaded = Find<GameBootstrap>();
+            CityBuilder city = Find<CityBuilder>();
+            OwnedVehicle again = loaded.Vehicles.Vehicles.Single();
+            Assert.AreEqual(bike.Id, again.Id, "same bike, not a new spawn");
+            Assert.AreEqual(VehicleState.Parked, again.State);
+            Assert.Less(Vector3.Distance(parkedAt, new Vector3((float)again.X, 0f, (float)again.Z)), 0.01f, "where it was left");
+            GameObject shown = city.Fleet.Shown(again);
+            Assert.NotNull(shown, "in the world after the reload");
+            Assert.Less(Vector3.Distance(new Vector3(shown.transform.position.x, 0f, shown.transform.position.z), parkedAt), 0.01f);
         }
 
         [UnityTest]

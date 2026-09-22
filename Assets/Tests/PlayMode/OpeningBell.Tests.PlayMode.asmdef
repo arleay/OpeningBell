@@ -11,6 +11,7 @@
         "OpeningBell.UI",
         "OpeningBell.Gameplay",
         "OpeningBell.Economy",
+        "OpeningBell.Vehicles",
         "OpeningBell.City",
         "Unity.InputSystem"
     ],

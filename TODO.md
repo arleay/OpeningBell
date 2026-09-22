@@ -20,14 +20,15 @@
 
 - [x] Phase 9 (city foundation, `WORLD_SPEC.md`): generated compact city (6 streets, 3 core blocks, outer ring, landmarks), apartment building with hallway and front door, Calder Building (lobby, receptionist with shifts/lunch, mailboxes, directory, restroom, elevator, stairs, floor 2, leasable Suite 204 with a second trading desk), Half Past Nine and Corner Mart (staffed, hours, counter purchases), traffic (lights, stop signs, right of way, yields to people), pedestrians (sidewalk graph, crosswalks, walk signals, benches), sun/day-night, lit windows and lamps at night. Acceptance test walks the whole commute
 
+- [x] Phase 13 (small mobility, done before Phase 10 by choice): physics-based bikes, e-bikes (assist levels, battery by game time, chargers) and skateboards (pushes, carving, wheel/bearing/truck effects, speed wobbles); persistent owned vehicles (wear, service history, parts, resale, saved position); Curbside Skate and Hillside Cycles with spec cards, parts and services; curb ramps; first-person and chase camera. Acceptance: buy a board, ride it home, save; buy a bike, park it, reload, still there. City slice acceptance items 1–13 all covered
+
 ## Next
-- [ ] **Play the build yourself** (rebuilt after Phase 9): walk to work, lease 204 in the STORE app, trade from the office
-- [ ] **Debug panel** (spec §42, part of the §45 vertical slice; still missing): set cash/time, open/close market, spawn news, teleport to city spots, grant equipment, reset portfolio, seed/FPS/tick time. Dev builds only. Much more useful now that the world is bigger
-- [ ] **Order question for you:** WORLD_SPEC's plan does cars (Phase 10) before small mobility (Phase 13), but its own progression (§95) starts broke players on a skateboard or bike, and acceptance items 11–12 need a mobility item. Recommendation: do Phase 13 (skate/bike/e-bike + shops) first, then cars
-- [ ] Core-game features still pending (PROJECT_SPEC order): scanner, trading statistics/journal, psychology (gives the coffee shop and mart real effects), stop orders
+- [ ] **Play the build yourself:** buy a board ($95–185) or a bike, ride to work
+- [ ] **Debug panel** (spec §42, part of the §45 vertical slice; still missing): set cash/time, open/close market, spawn news, teleport to city spots, grant equipment or vehicles, reset portfolio, seed/FPS/tick time. Dev builds only
+- [ ] Then WORLD_SPEC Phase 10 (cars: vehicle framework, driving, parking, fuel) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
 
 ## Later phases (do not start early)
-- WORLD_SPEC Phases 10–17: ground transport, dealerships, mechanics, small mobility, property, advanced vehicles, aviation, world polish
+- WORLD_SPEC Phases 10–12 and 14–17: ground transport, dealerships, mechanics, property, advanced vehicles, aviation, world polish
 
 ## Known debt / decisions to revisit
 - No market holidays (`MarketSchedule.IsTradingDay`)
@@ -54,6 +55,14 @@
   - Walking time scale stays 30×: the commute takes about 30–45 game minutes.
   - Deliveries still appear instantly at home, so the receptionist doesn't announce any.
   - One elevator car, two served floors.
+- Small mobility (Phase 13):
+  - The city is flat. Slope physics works (tested) but only stairs and ramps use it until a hills district exists.
+  - No selling vehicles yet: resale value is shown, but selling comes with dealerships (Phase 11).
+  - No helmets, locks or lights (no crash-injury, theft or night-visibility systems for them to act on).
+  - No tricks or ollies. Skateboards can't climb curbs, so use the ramps at crosswalks.
+  - No paint customisation yet (`OwnedVehicle` has no paint field; add with the body shop).
+  - Pedestrians clip through a stopped bike.
+  - Extra boards are "stored at home" with no way to swap them in yet.
 - Active input handling is "Both". Test switching to Input System only (UI Toolkit runtime input) before release
 - With the default seed (18492) the onboarding APEX headline draws a modest +3% move (the expected move is about +10%). Honest randomness; retune severity or the seed if the tutorial needs a clearer reaction
 - Day loop: no weekend gameplay (slept through); no fatigue/sleep-quality effects (psychology system, spec §9); sleeping mid-afternoon after 4 PM skips after-hours trading without asking

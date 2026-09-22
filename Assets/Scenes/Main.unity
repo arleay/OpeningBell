@@ -6086,6 +6086,7 @@ MonoBehaviour:
   scenario: {fileID: 11400000, guid: becca02ff12e3074fbd52daac2f63a72, type: 2}
   economySettings: {fileID: 11400000, guid: 9d0aefd749ba7a6428fb5f0fa129307c, type: 2}
   emailLibrary: {fileID: 11400000, guid: 739c20f680774404aa83f3a6fa5d3b17, type: 2}
+  vehicleLibrary: {fileID: 11400000, guid: 1788fad67a7940dab76d816c2b19d924, type: 2}
   brokerRules:
     Name: PennyBridge
     CommissionPerShare: 0.005

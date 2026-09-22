@@ -10,6 +10,12 @@ namespace OpeningBell.City
         Typing,
         Phone,
         Drink,
+        /// <summary>Seated on a bike; <c>time</c> is the crank angle in radians.</summary>
+        Cycle,
+        /// <summary>Standing on a board, knees soft.</summary>
+        Skate,
+        /// <summary>Kicking off the ground on a board.</summary>
+        Push,
     }
 
     /// <summary>
@@ -106,6 +112,25 @@ namespace OpeningBell.City
                 case NpcPose.Drink:
                     cup = true;
                     armR = Mathf.Repeat(t, 6f) < 1.5f ? -130f : -60f;
+                    break;
+                case NpcPose.Cycle:
+                    // Thighs forward, pedalling with the crank; arms out to the bars.
+                    legL = -70f + 28f * Mathf.Sin(time);
+                    legR = -70f + 28f * Mathf.Sin(time + Mathf.PI);
+                    armL = armR = -62f;
+                    drop = 0f;
+                    break;
+                case NpcPose.Skate:
+                    legL = -8f;
+                    legR = 8f;
+                    armL = -20f + Mathf.Sin(t * 1.1f) * 4f;
+                    armR = 15f;
+                    break;
+                case NpcPose.Push:
+                    legL = -8f;
+                    legR = 45f * Mathf.Sin(t * 7f);
+                    armL = -30f;
+                    armR = 30f;
                     break;
                 default:
                     armL = Mathf.Sin(t * 1.3f) * 2f;

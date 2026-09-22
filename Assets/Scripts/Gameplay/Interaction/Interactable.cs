@@ -10,6 +10,9 @@ namespace OpeningBell.Gameplay
 
         public virtual bool CanInteract => isActiveAndEnabled;
 
+        /// <summary>Optional extra lines shown under the prompt (specs of something for sale, a vehicle's state).</summary>
+        public virtual string Details => null;
+
         public abstract void Interact();
     }
 }

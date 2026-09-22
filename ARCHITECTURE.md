@@ -13,7 +13,8 @@ Unity 6000.6.2f1. Vision/requirements: `PROJECT_SPEC.md` (core game) and `WORLD_
 | `OpeningBell.Runtime` | `Scripts/Runtime` | yes | ScriptableObjects, `GameBootstrap` (composition root) |
 | `OpeningBell.UI` | `Scripts/UI` | yes | trading terminal (UI Toolkit) |
 | `OpeningBell.Gameplay` | `Scripts/Gameplay` | yes | input, FPS controller, interaction, workstation, HUD |
-| `OpeningBell.City` | `Scripts/City` | yes | generated city (Phase 9): layout, builders, doors, elevator, NPCs, traffic, pedestrians |
+| `OpeningBell.Vehicles` | `Scripts/Vehicles` | none | ride physics (bikes, e-bikes, boards), owned vehicles, fleet, parts, service, save DTOs |
+| `OpeningBell.City` | `Scripts/City` | yes | generated city (Phase 9): layout, builders, doors, elevator, NPCs, traffic, pedestrians; riding, shops (Phase 13) |
 | `OpeningBell.Tests.EditMode` | `Tests/EditMode` | editor | NUnit tests (InternalsVisibleTo on Market/Trading) |
 | `OpeningBell.Tests.PlayMode` | `Tests/PlayMode` | yes | scene-level tests that drive the real UI |
 
@@ -122,6 +123,31 @@ Log price = fair + deviation, per tick:
 - **Daylight:** `DaylightCycle` now also drives the sun (arc east → south → west), ambient light, fog, and `NightFactor` for lamps and windows. The apartment window still uses its own gradient.
 - **Not saved on purpose:** doors, elevator state, NPC and traffic positions (all time-derived or transient). The player position (anywhere in the city), the lease and purchases are saved as before.
 - **Perf (batchmode):** street view with 18 cars and 21 people is about 1.1 ms per frame on the CPU.
+
+## Small mobility (Phase 13)
+
+- **Physics, not speed stats (`RideDynamics`, pure).** Bikes:
+  - Rider power (230 W easy, 550 W sprint), capped at low speed by crank torque through the lowest gear and at high speed by spinning out the top gear.
+  - Rolling resistance, plus soft-ground drag that knobbly tyres shrug off and slicks sink into. Worn tyres roll worse. A worn drivetrain wastes power.
+  - Air drag (CdA), gravity on the measured grade, and brakes.
+  - Turning is g·tan(lean)/v, capped by the handlebar angle when slow.
+  - Calibrated results: road bike about 36 km/h on the flat; the MTB wins on grass and on steep ramps; the BMX spins out early.
+- **E-bikes:** the motor multiplies rider effort per assist level (Off/Eco/Tour/Turbo), fades out at the cutoff (20 or 28 mph), and drains battery Wh by *game* time, so a ride costs what the clock says it took. Light regen when braking.
+- **Skateboards:** discrete pushes that weaken near kicking speed. Rolling resistance comes from wheel size, durometer against ground roughness, and bearings; grass stops you. Carving is limited by truck looseness and wheel grip. Above a stability speed (set by deck length and trucks) come wobbles, then a bail.
+- **Persistent identity (`Fleet`, `OwnedVehicle`, pure):** id, model, price, purchase date, odometer, condition, tyre/wheel wear, battery and capacity, installed parts, state (parked / carried / stored / riding), position, service history, resale value. A ride in progress saves as parked beside the rider (bikes) or carried (boards). Saved in `SaveGame.Vehicles` (additive `HasVehicles`). Charging tapers above 80% and is exact over long jumps (sleep).
+- **Content:** `VehicleLibrary` SO with 3 boards, 4 bikes, 2 e-bikes, 6 parts (wheels, bearings, trucks, e-bike battery) and service prices. Parts override spec fields; the same slot replaces.
+- **Riding (`RideController`, on the player):** suspends the walking controller (keeps the cursor locked) and drives the *same* CharacterController with the model's speed and heading. Walls, stairs and curbs work as on foot:
+  - Boards use a 4 cm step offset, so they need the curb ramps now built at every crosswalk end. Bikes use 22 cm and hop curbs.
+  - Min move distance is 0 while riding: at high frame rates a slow roll moves less than 1 mm per frame, which the controller drops silently.
+  - Ground is probed ahead and behind for grade, and `SurfaceTag` gives roughness (lawn 1.0, sidewalk 0.2, road 0.3).
+  - Crashes (blocked above 5.5 m/s, or above 3 m/s on a board) cost condition and dismount. Bumping a person is a soft slowdown, and pedestrians step aside early for a rider coming at them.
+  - Keys: R hops on or off the carried board, E gets off (bikes park where they stand, and the rider steps into a free spot beside), C toggles first-person or chase camera (a rider body appears), Q changes e-bike assist. The HUD shows speed, assist and battery.
+- **Shops:** Curbside Skate (10–20) and Hillside Cycles (9–19) on Maple.
+  - Aim at an item for its spec card (`Interactable.Details`), [E] to buy with the bank card.
+  - New bikes are parked out front and boards go in your hands.
+  - Board parts go on the board you carry; the tune-up, new tyres and battery upgrade need your bike parked outside.
+  - Chargers: at home (250 W, by the front door), the Calder Building (public) and the bike shop (fast, 600 W). They charge any e-bike parked within 2.5 m, by game time.
+- **Parked vehicles are world objects built from the fleet** (`FleetView`), never spawned from prefabs, so they reappear exactly where they were left after a reload.
 
 ## Save / load
 

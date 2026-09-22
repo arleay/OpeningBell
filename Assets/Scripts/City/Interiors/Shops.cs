@@ -133,7 +133,7 @@ namespace OpeningBell.City
         }
 
         /// <summary>One-storey shop: walls with a storefront (door + display windows) on the south, interior finish, floor, ceiling.</summary>
-        private static void ShopShell(CityContext c, Transform root, Rect f, float top, float t, Material outside, Material inside, Material floor,
+        internal static void ShopShell(CityContext c, Transform root, Rect f, float top, float t, Material outside, Material inside, Material floor,
             float doorX, float doorWidth, (float Center, float Width)[] windows)
         {
             Kit k = c.Kit;

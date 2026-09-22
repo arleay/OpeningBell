@@ -6,9 +6,11 @@
         "OpeningBell.Market",
         "OpeningBell.Trading",
         "OpeningBell.Economy",
+        "OpeningBell.Vehicles",
         "OpeningBell.Runtime",
         "OpeningBell.UI",
-        "OpeningBell.Gameplay"
+        "OpeningBell.Gameplay",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -16,6 +16,8 @@ namespace OpeningBell.City
         private readonly Stack<NpcBody> _pool = new Stack<NpcBody>();
         private readonly List<PedestrianSimulation.Walker> _gone = new List<PedestrianSimulation.Walker>();
         private float _spawnTimer;
+        private Vector2 _lastPlayer;
+        private bool _hasLast;
         private int _bodySeed = 900;
 
         public PedestrianSimulation Simulation => _sim;
@@ -69,7 +71,11 @@ namespace OpeningBell.City
             float dt = _c.Game.IsPaused ? 0f : Mathf.Min(Time.deltaTime, 0.1f);
             if (dt <= 0f) return;
             Vector3 p = _c.Player.position;
-            _sim.Step(dt, new Vector2(p.x, p.z));
+            Vector2 flat = new Vector2(p.x, p.z);
+            Vector2 velocity = _hasLast ? (flat - _lastPlayer) / dt : Vector2.zero;
+            _lastPlayer = flat;
+            _hasLast = true;
+            _sim.Step(dt, flat, velocity);
             RemoveArrived();
 
             int target = TargetCount(_c.Game.Clock.Now.TimeOfDay.TotalHours);

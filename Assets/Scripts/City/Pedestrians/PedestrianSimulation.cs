@@ -46,6 +46,7 @@ namespace OpeningBell.City
         private readonly List<SidewalkGraph.Node> _benches = new List<SidewalkGraph.Node>();
         private readonly HashSet<SidewalkGraph.Node> _benchTaken = new HashSet<SidewalkGraph.Node>();
         private int _nextId;
+        private Vector2 _playerVelocity;
 
         /// <summary>Crosswalk rule supplied by the city: walk signal, or no traffic close by.</summary>
         public Func<SidewalkGraph.Crosswalk, bool> MayCross = _ => true;
@@ -118,8 +119,10 @@ namespace OpeningBell.City
             return true;
         }
 
-        public void Step(float dt, Vector2 player)
+        /// <param name="playerVelocity">So people can step aside for someone riding at them.</param>
+        public void Step(float dt, Vector2 player, Vector2 playerVelocity = default)
         {
+            _playerVelocity = playerVelocity;
             for (int i = _walkers.Count - 1; i >= 0; i--)
             {
                 Walker w = _walkers[i];
@@ -155,8 +158,10 @@ namespace OpeningBell.City
                 }
             }
 
-            // Step around the player instead of walking through them.
+            // Step around the player instead of walking through them; get out of the way of a rider early.
             Vector2 toPlayer = player - w.Position;
+            if (toPlayer.sqrMagnitude < 6f * 6f && toPlayer.sqrMagnitude > 1e-4f && Vector2.Dot(_playerVelocity, -toPlayer.normalized) > 2f)
+                w.Swerve = Mathf.Max(w.Swerve, 1.6f);
             bool blocked = toPlayer.sqrMagnitude < 0.95f * 0.95f && Vector2.Dot(toPlayer, w.Heading) > 0f;
             w.Blocked = blocked ? w.Blocked + dt : 0f;
             if (w.Blocked > 1f) w.Swerve = 1.2f;
