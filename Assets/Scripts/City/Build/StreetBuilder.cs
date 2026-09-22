@@ -52,6 +52,7 @@ namespace OpeningBell.City
             Markings(c, root, walks);
             CurbRamps(c, root, walks);
             Furniture(c, root);
+            Park(c, root);
             Junctions(c, walks, signals, walkSignals);
             Boundary(c, root);
         }
@@ -164,7 +165,16 @@ namespace OpeningBell.City
                 k.Box(bench, "Back", new Vector3(0f, 0.75f, 0.22f), new Vector3(1.8f, 0.4f, 0.06f), wood, collider: false);
                 k.Box(bench, "LegL", new Vector3(-0.8f, 0.22f, 0f), new Vector3(0.08f, 0.44f, 0.45f), pole, collider: false);
                 k.Box(bench, "LegR", new Vector3(0.8f, 0.22f, 0f), new Vector3(0.08f, 0.44f, 0.45f), pole, collider: false);
-                k.Cylinder(f, "Bin", p + bench.right * 1.4f + new Vector3(0f, 0.45f, 0f), 0.5f, 0.9f, c.P.Lit(new Color(0.2f, 0.28f, 0.22f)), collider: true);
+                Vector3 binAt = p + bench.right * 1.4f;
+                GameObject bin = k.Model(f, "trashcan", binAt, yaw, 0.22f);
+                if (bin != null)
+                {
+                    var solid = bin.AddComponent<CapsuleCollider>(); // in model units: ×0.22 is a 0.24 m radius, 0.95 m tall
+                    solid.radius = 1.1f;
+                    solid.height = 4.3f;
+                    solid.center = new Vector3(0f, 2.15f, 0f);
+                }
+                else k.Cylinder(f, "Bin", binAt + new Vector3(0f, 0.45f, 0f), 0.5f, 0.9f, c.P.Lit(new Color(0.2f, 0.28f, 0.22f)), collider: true);
                 // Sit spot: on the seat, facing out of the bench.
                 c.Place(p, PlaceKind.Bench, "bench");
             }
@@ -180,9 +190,97 @@ namespace OpeningBell.City
                 k.Cylinder(f, "Meter", new Vector3(x, 0.6f, -8.4f), 0.07f, 1.2f, pole);
                 k.Box(f, "Meter head", new Vector3(x, 1.3f, -8.4f), new Vector3(0.2f, 0.3f, 0.14f), c.P.Lit(new Color(0.35f, 0.38f, 0.4f), 0.5f), collider: false);
             }
+            // Dumpsters behind the Maple shops (clear of the back doors and the fuel station forecourt).
+            foreach (Vector3 p in new[] { new Vector3(68f, 0f, 10.8f), new Vector3(88.5f, 0f, 11f), new Vector3(121f, 0f, 9.8f) })
+            {
+                GameObject dumpster = k.Model(f, "dumpster", p, 90f, KitBuildings.Scale);
+                if (dumpster == null) continue;
+                var solid = dumpster.AddComponent<BoxCollider>(); // model units (×7.4 ≈ 2.1 × 1.6 × 2.7 m)
+                solid.center = new Vector3(0f, 0.105f, 0f);
+                solid.size = new Vector3(0.28f, 0.21f, 0.37f);
+            }
             foreach (Vector3 p in new[] { new Vector3(49f, 0f, -8.3f), new Vector3(141f, 0f, -8.3f), new Vector3(-39f, 0f, 64f) })
                 k.Cylinder(f, "Hydrant", p + new Vector3(0f, 0.35f, 0f), 0.24f, 0.7f, c.P.Lit(new Color(0.7f, 0.15f, 0.1f), 0.4f), collider: true);
         }
+
+        /// <summary>
+        /// The residential block's lawn: park trees (trunks are solid), bushes, flowers, grass tufts and rocks
+        /// (walk-through), kept clear of buildings and the bench paths. Nothing without the nature kit.
+        /// </summary>
+        private static void Park(CityContext c, Transform root)
+        {
+            Kit k = c.Kit;
+            if (k.Art == null || k.Art.Model("tree_oak") == null) return;
+            Rect lawn = Rect.MinMaxRect(-36f, -5f, 46f, 61f);
+            var keepClear = new List<Rect> { Grow(CityPlan.ApartmentBuilding, 3f), Rect.MinMaxRect(-40f, 21f, -30f, 27f), Rect.MinMaxRect(-40f, 35f, -30f, 41f) };
+            foreach (Shell s in CityPlan.Shells)
+                if (s.Footprint.Overlaps(lawn)) keepClear.Add(Grow(s.Footprint, 1.5f));
+            Transform park = Kit.Group(root, "Park");
+            var rng = new System.Random(4242);
+            var trees = new List<Vector2>();
+
+            bool Free(Vector2 p, float margin)
+            {
+                foreach (Rect r in keepClear)
+                    if (Grow(r, margin).Contains(p)) return false;
+                return true;
+            }
+
+            (string[] Names, int Count, float Scale, float Spacing, bool Solid)[] layers =
+            {
+                (new[] { "tree_oak", "tree_default", "tree_detailed", "tree_fat", "tree_plateau", "tree_oak_dark", "tree_default_dark" }, 16, 4.6f, 9f, true),
+                (new[] { "plant_bush", "plant_bushDetailed", "plant_bushLarge", "plant_bushSmall" }, 30, 3.6f, 0f, false),
+                (new[] { "flower_purpleA", "flower_redA", "flower_yellowA", "flower_yellowB" }, 40, 2.6f, 0f, false),
+                (new[] { "grass", "grass_large", "grass_leafs" }, 90, 3.2f, 0f, false),
+                (new[] { "rock_smallA", "rock_smallC", "stump_round" }, 8, 3.5f, 0f, false),
+            };
+            foreach (var (names, count, scale, spacing, solid) in layers)
+            {
+                for (int i = 0, tries = 0; i < count && tries < count * 20; tries++)
+                {
+                    var p = new Vector2(Mathf.Lerp(lawn.xMin, lawn.xMax, (float)rng.NextDouble()), Mathf.Lerp(lawn.yMin, lawn.yMax, (float)rng.NextDouble()));
+                    if (!Free(p, solid ? 2f : 0.5f) || (spacing > 0f && trees.Exists(t => (t - p).sqrMagnitude < spacing * spacing))) continue;
+                    GameObject go = k.Model(park, names[rng.Next(names.Length)], new Vector3(p.x, 0f, p.y), (float)rng.NextDouble() * 360f,
+                        scale * (0.85f + 0.3f * (float)rng.NextDouble()));
+                    Naturalize(k, go);
+                    i++;
+                    if (!solid || go == null) continue;
+                    trees.Add(p);
+                    var trunk = go.AddComponent<CapsuleCollider>(); // model units: the trunk's lower 0.6
+                    trunk.radius = 0.04f;
+                    trunk.height = 0.6f;
+                    trunk.center = new Vector3(0f, 0.3f, 0f);
+                }
+            }
+        }
+
+        /// <summary>The nature kit's own palette is teal and orange; the city wants ordinary greens and browns.</summary>
+        private static void Naturalize(Kit k, GameObject go)
+        {
+            if (go == null) return;
+            foreach (Renderer r in go.GetComponentsInChildren<Renderer>())
+            {
+                Material[] mats = r.sharedMaterials;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    Color? natural = mats[i] == null ? null : mats[i].name switch
+                    {
+                        "leafsGreen" => new Color(0.3f, 0.5f, 0.2f),
+                        "leafsDark" => new Color(0.21f, 0.39f, 0.17f),
+                        "woodBark" => new Color(0.36f, 0.25f, 0.17f),
+                        "woodBarkDark" => new Color(0.27f, 0.19f, 0.13f),
+                        "woodInner" => new Color(0.62f, 0.48f, 0.32f),
+                        "grass" => new Color(0.28f, 0.46f, 0.19f),
+                        "dirt" => new Color(0.5f, 0.48f, 0.45f),
+                        _ => (Color?)null,
+                    };
+                    if (natural.HasValue) mats[i] = k.P.Lit(natural.Value, 0.1f);
+                }
+                r.sharedMaterials = mats;
+            }
+        }
+
+        private static Rect Grow(Rect r, float by) => Rect.MinMaxRect(r.xMin - by, r.yMin - by, r.xMax + by, r.yMax + by);
 
         private static void StreetLight(CityContext c, Transform parent, Vector2 p, Vector2 towardRoad, Material pole, Material lamp)
         {
@@ -212,6 +310,19 @@ namespace OpeningBell.City
         {
             Transform tree = Kit.Group(parent, "Tree", new Vector3(p.x, 0f, p.y));
             k.Box(tree, "Pit", new Vector3(0f, 0.005f, 0f), new Vector3(1.2f, 0.02f, 1.2f), k.P.Lit(new Color(0.26f, 0.2f, 0.15f)), collider: false);
+            // Kenney Nature Kit trees at ~4.5× (5–7 m street trees); the pick and turn are stable per spot.
+            string[] kinds = { "tree_default", "tree_detailed", "tree_oak", "tree_fat", "tree_plateau", "tree_default_dark", "tree_oak_dark", "tree_detailed_dark" };
+            float hash = Mathf.Abs(Mathf.Sin(p.x * 12.9898f + p.y * 78.233f) * 43758.5453f) % 1f;
+            GameObject model = k.Model(tree, kinds[(int)(hash * kinds.Length)], Vector3.zero, hash * 360f, 4.2f + 0.7f * hash);
+            if (model != null)
+            {
+                Naturalize(k, model);
+                var trunk = tree.gameObject.AddComponent<CapsuleCollider>();
+                trunk.center = new Vector3(0f, 1.3f, 0f);
+                trunk.radius = 0.14f;
+                trunk.height = 2.6f;
+                return;
+            }
             k.Cylinder(tree, "Trunk", new Vector3(0f, 1.3f, 0f), 0.22f, 2.6f, bark, collider: true);
             k.Sphere(tree, "Canopy", new Vector3(0f, 3.6f, 0f), 3f, leaves);
             k.Sphere(tree, "Canopy top", new Vector3(0.3f, 4.6f, -0.2f), 2f, leaves);
@@ -294,6 +405,21 @@ namespace OpeningBell.City
             }
         }
 
+        /// <summary>A kit skyscraper stretched to a skyline block's size (it's far off in the fog, proportions don't show).</summary>
+        private static bool SkylineTower(CityContext c, Transform parent, Vector2 centre, float size, float height, int i)
+        {
+            string[] towers = { "building-skyscraper-a", "building-skyscraper-b", "building-skyscraper-c", "building-skyscraper-d", "building-skyscraper-e", "building-m", "building-n" };
+            GameObject prefab = c.Kit.Art != null ? c.Kit.Art.Model(towers[i % towers.Length]) : null;
+            if (prefab == null) return false;
+            Bounds bounds = KitBuildings.Measure(prefab);
+            GameObject go = c.Kit.Model(parent, prefab.name, new Vector3(centre.x, CityPlan.RoadY, centre.y), (i * 90f) % 360f,
+                new Vector3(size / bounds.size.x, height / bounds.size.y, size / bounds.size.z));
+            Texture2D palette = c.Kit.Art.Palette(i % 3 == 0 ? "CityCommercial/variation-b" : "CityCommercial/colormap");
+            Material m = c.P.KitPalette(palette, c.Kit.Art.Palette(i % 3 == 0 ? "CityCommercial/variation-b-glow" : "CityCommercial/colormap-glow"), Color.white);
+            foreach (Renderer r in go.GetComponentsInChildren<Renderer>()) r.sharedMaterial = m;
+            return true;
+        }
+
         private static Renderer Lens(Kit k, Transform head, float y, Material off) =>
             k.Box(head, "Lens", new Vector3(0f, y, -0.16f), new Vector3(0.22f, 0.22f, 0.04f), off, collider: false).GetComponent<Renderer>();
 
@@ -323,6 +449,7 @@ namespace OpeningBell.City
                 float angle = i / 46f * Mathf.PI * 2f;
                 Vector2 centre = w.center + new Vector2(Mathf.Cos(angle) * (w.width / 2f + 90f + rng.Next(0, 90)), Mathf.Sin(angle) * (w.height / 2f + 90f + rng.Next(0, 90)));
                 float size = 22f + rng.Next(0, 26), height = 18f + rng.Next(0, 60);
+                if (SkylineTower(c, b, centre, size, height, i)) continue;
                 c.Kit.Facade(b, "Skyline", new Vector3(centre.x - size / 2f, CityPlan.RoadY, centre.y - size / 2f),
                     new Vector3(centre.x + size / 2f, height, centre.y + size / 2f), i % 3 == 0 ? farGlass : far, roof, collider: false);
             }

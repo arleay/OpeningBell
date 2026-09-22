@@ -13,6 +13,7 @@ namespace OpeningBell.City
         private readonly Dictionary<string, Material> _cache = new Dictionary<string, Material>();
         private readonly List<(Material Material, Color Off, Color On)> _lamps = new List<(Material, Color, Color)>();
         private readonly List<Material> _windows = new List<Material>();
+        private readonly List<Material> _kitWindows = new List<Material>();
         private static readonly int EmissionColor = Shader.PropertyToID("_EmissionColor");
         private static readonly int BaseMap = Shader.PropertyToID("_BaseMap");
         private static readonly int EmissionMap = Shader.PropertyToID("_EmissionMap");
@@ -97,6 +98,23 @@ namespace OpeningBell.City
             return _cache[key] = m;
         }
 
+        /// <summary>
+        /// A Kenney kit palette texture, optionally tinted. With a window mask, the glass glows warm at night
+        /// (every window, dimmer than the facades' scattered lit ones).
+        /// </summary>
+        public Material KitPalette(Texture2D palette, Texture2D windows, Color tint)
+        {
+            string key = $"kit{palette.GetHashCode()}{tint}"; // Unity objects hash by identity; kits all name theirs "colormap"
+            if (_cache.TryGetValue(key, out Material m)) return m;
+            m = new Material(_litEmissive) { name = "Kit " + palette.name, color = tint };
+            m.SetTexture(BaseMap, palette);
+            m.SetTexture(EmissionMap, windows);
+            m.SetColor(EmissionColor, Color.black);
+            m.SetFloat(Smoothness, 0.15f);
+            if (windows != null) _kitWindows.Add(m);
+            return _cache[key] = m;
+        }
+
         public Material Sign(Color color)
         {
             string key = $"sign{color}";
@@ -111,6 +129,8 @@ namespace OpeningBell.City
             foreach (var (material, off, on) in _lamps) material.color = Color.Lerp(off, on, night);
             Color glow = new Color(1f, 0.86f, 0.66f) * (0.62f * night);
             foreach (Material w in _windows) w.SetColor(EmissionColor, glow);
+            Color kitGlow = new Color(1f, 0.82f, 0.58f) * (0.5f * night);
+            foreach (Material w in _kitWindows) w.SetColor(EmissionColor, kitGlow);
         }
     }
 }

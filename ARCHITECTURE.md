@@ -184,6 +184,23 @@ Log price = fair + deviation, per tick:
   - The city (`CityBuilder.DeliverUsedCar`, via `TerminalContext.BuyUsedCar`) leaves the car at the kerb on Maple outside home.
 - **Fuel station:** Tidewater Fuel behind the Maple shops, with a driveway ramp off Exchange St, a canopy with night lights, and two pumps. `FuelPump` fills the car parked within 5 m at $1.65/L by card.
 
+## Art pass (third-party models, see CREDITS.md)
+
+- **One library asset:** `ScriptableObjects/City/CityArt.asset` (on `CityBuilder`) holds the Kenney models, looked up by file name, plus kit palette textures, the Quaternius people and the shared `Art/Animation/People.controller`.
+  - Built by the editor command **Opening Bell → Rebuild City Art** (`CityArtBuilder`, batch: `-executeMethod OpeningBell.EditorTools.CityArtBuilder.Rebuild`). It also writes `Logs/art-report.txt` with every model's size, and a `-glow` night-window mask per palette (the blue glass cells).
+  - `ArtImportRules` (AssetPostprocessor, versioned) handles imports: Quaternius → Humanoid with baked axis conversion, UAL clips renamed and looped (`*_Loop` plus the staff work loops) and locked in place; Kenney → readable meshes (for runtime static batching) and palette textures without mipmaps.
+  - **Every builder falls back to primitives** when a model is missing (`Kit.Model` returns null), so layout code and tests never depend on art.
+- **Background buildings (`KitBuildings`):** each `Shell` gets rows of Kenney City Kit (Commercial) buildings along its street front at one scale (×7.4: 3.7 m lanes, ~3.2 m storeys). Models are picked near the shell's height, widths are stretched to fill the frontage exactly, and deep lots get extra rows behind. Facade style picks the palette variant or tint. One box collider per lot. The parking garage keeps its procedural facade.
+- **Upper floors of the enterable buildings (`ModularFacade`):** Kenney Modular Buildings wall modules (×5: 3.15 m storeys, ~3.6 m bays) clad each face, with a window set per building, occasional balconies or awnings, and a cornice. The core box stays as collider and roof.
+- **Night windows:** kit materials come from `Palette.KitPalette` (the lit-emissive template, so the variant ships) with the glow mask as emission, driven by `ApplyNight`.
+- **Streets:** Kenney Nature Kit trees (recoloured to natural greens and browns; the kit's own palette is teal and orange), a dressed park on the residential lawn (solid trunks, walk-through undergrowth), furniture-kit bins, road-kit dumpsters, and kit skyscrapers for the fog skyline. Lamp posts, signals and signs stay procedural: lenses and lamps must switch materials, and the kit's posts read toy-like up close.
+- **People (`NpcBody`):** a Quaternius character (Humanoid avatar, `People.controller`) replaces the box body. Poses cross-fade to animator states (Idle, Walk paced by a Speed parameter from the measured 0.95 m/s clip, Sit, Talk, Interact, Drive…), with a random idle phase and animation culling when off screen. Staff pick fitting outfits (`look`). Riders use the Drive loop on bikes. The box person is still the fallback.
+- **Player feel (`FirstPersonController`):**
+  - Ground acceleration and weak air control; a jump (Space; the car handbrake shares the key, never at the same time).
+  - Head bob and sway in step with the feet (the phase advances with distance walked); a lean into strafes; a spring dip on landing; a slight FOV widening at a sprint; idle breathing.
+  - `Footstep` and `Landed` events drive `Footsteps` (City), which picks grass, paving or indoor boards from what's underfoot (`SurfaceTag`, untagged = indoors) and plays synthesized steps (`ProceduralSounds.Footstep`).
+  - Camera motion resets whenever someone else takes the camera (desk, vehicles).
+
 ## Save / load
 
 - **Goal: exact resume.** Loading builds the simulation from the same definitions (catalog, config, news templates, seed), then overwrites runtime state. A loaded game continues tick-for-tick like the original. `SaveLoadTests.SavedGame_ResumesExactly_ThroughJson` saves mid-session with open orders and a queued scheduled headline, round-trips JSON, runs both two days on, and compares everything.

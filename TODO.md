@@ -25,10 +25,12 @@
 - [x] Rendering pass: post-processing (tonemapping, grading, bloom, vignette), SSAO, MSAA, soft cascaded shadows, Forward+ street-light pools and headlights at night, dimming sky, trilight ambient
 - [x] Phase 10 (cars): raycast-suspension car physics (tyre curves, friction circle, torque curves, automatic with converter, FWD/RWD/AWD, drag and downforce), 8 cars from sedan to supercar, Kenney car kit models for driven cars and traffic, enter/exit with a camera glide, chase and hood cameras, fuel by game time, crash damage, used-car classifieds in STORE (delivered to the kerb), Tidewater Fuel station, cars saved where parked
 
+- [x] Art pass 1 (free CC0 packs, see CREDITS.md): animated Quaternius people (pedestrians, staff, riders) on a shared humanoid animator; Kenney buildings for every background lot plus the skyline; Kenney modular upper floors on the apartment, shops and Calder; nature-kit street trees and a dressed park; bins and dumpsters; lit kit windows at night; head bob, sway, strafe lean, landing dip, sprint FOV, jump; surface footsteps. Gallery test writes `TestResults/art-*.png`
+
 ## Next
 - [ ] **Play the build yourself:** buy the $3,900 used sedan (transfer from brokerage first), drive to work, fill up at Tidewater Fuel
 - [ ] **Debug panel** (spec §42, part of the §45 vertical slice; still missing): set cash/time, teleport to city spots, grant equipment or vehicles, seed/FPS/tick time. Dev builds only
-- [ ] Art, next steps: free low-poly packs for buildings/props (Kenney City kits) and animated people (Kenney/Quaternius characters) to replace the boxes
+- [ ] Art pass 2: interiors with the Kenney Furniture Kit (apartment first: bed, desk, chairs, kitchen, sofa, plants; keep the upgrade variants and interactables), shop and lobby furniture, ground-floor trims on the enterable buildings, suburban houses for the outer ring
 - [ ] Then WORLD_SPEC Phase 11 (dealerships: used lot and standard dealer, test drives, resale) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
 
 ## Later phases (do not start early)
@@ -48,9 +50,6 @@
 - UI refresh allocates strings every 0.1s. Fine now; profile in Phase 8
 - Apartment is placeholder primitives: no light switches or appliance interactions yet (spec §5 lists them; add when a phase needs them). The desk lamp shade floats (no stand)
 - City (Phase 9):
-  - Art is primitives plus procedural facades.
-  - No curb ramps yet; the 15 cm curb is a step. Needed for bikes and cars.
-  - No real street-light pools at night (only emissive lamps, lit windows, ambient). Forward+ or light decals in Phase 17.
   - Pedestrians have no physics: they can clip through cars that have stopped on a crosswalk.
   - Shop items (coffee, pastry, energy drink, sandwich) cost money but have no effect until psychology/needs exist.
   - The office lease can't be cancelled.
@@ -79,6 +78,13 @@
   - Cars aren't sold anywhere but the classifieds until dealerships (Phase 11).
   - The engine sound is one synthesized loop.
   - Traffic cars don't honk or react to being hit.
+- Art pass 1:
+  - Interiors, ground floors of the enterable buildings, lamp posts, signals and signs are still primitives.
+  - Kenney buildings are stretched to fit lots (up to ~25% wider, deeper rows); side walls at row ends show it.
+  - Kit night windows all glow together (the palette can't vary per window); the procedural parking garage still scatters.
+  - People have one animation set: no sitting-down transition, no per-person clothing colours, and the Typing pose uses the UAL "Interact" loop. Riders use the driving loop (no pedalling).
+  - Pedestrians still walk through each other (no local avoidance beyond the simulation's rules).
+  - The UAL root-motion file used to measure walk speed isn't in the project; `CityArtBuilder` keeps the measured 0.95 m/s.
 - Active input handling is "Both". Test switching to Input System only (UI Toolkit runtime input) before release
 - With the default seed (18492) the onboarding APEX headline draws a modest +3% move (the expected move is about +10%). Honest randomness; retune severity or the seed if the tutorial needs a clearer reaction
 - Day loop: no weekend gameplay (slept through); no fatigue/sleep-quality effects (psychology system, spec §9); sleeping mid-afternoon after 4 PM skips after-hours trading without asking

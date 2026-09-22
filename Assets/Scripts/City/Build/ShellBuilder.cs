@@ -10,6 +10,8 @@ namespace OpeningBell.City
     public static class ShellBuilder
     {
         private const float StorefrontHeight = 4.2f;
+        /// <summary>Kenney's modular door faces its local +z; the door group's outside is -z.</summary>
+        private const float KitDoorYaw = 180f;
 
         public static void Build(CityContext c)
         {
@@ -21,23 +23,41 @@ namespace OpeningBell.City
             foreach (Shell s in CityPlan.Shells)
             {
                 Rect f = s.Footprint;
+                int seed = 7000 + index;
                 string name = $"Building {index++} ({s.Style})";
-                float baseTop = 0f;
-                if (s.Storefront)
+                // The parking garage keeps its banded concrete facade; the kit has nothing like it.
+                Transform group = Kit.Group(root, name);
+                float tallest = 0f;
+                bool dressed = s.Sign != "PARKING" && KitBuildings.Build(c, group, s, seed, out tallest);
+                if (dressed)
                 {
-                    c.Kit.Facade(root, name + " shops", new Vector3(f.xMin, 0f, f.yMin), new Vector3(f.xMax, StorefrontHeight, f.yMax), c.P.Facade(s.Style, true), roof);
-                    baseTop = StorefrontHeight;
+                    var solid = new GameObject(name + " collider").AddComponent<BoxCollider>();
+                    solid.transform.SetParent(group, false);
+                    solid.center = new Vector3(f.center.x, tallest / 2f, f.center.y);
+                    solid.size = new Vector3(f.width, tallest, f.height);
                 }
-                c.Kit.Facade(root, name, new Vector3(f.xMin, baseTop, f.yMin), new Vector3(f.xMax, s.Height, f.yMax), c.P.Facade(s.Style, false), roof);
+                else
+                {
+                    float baseTop = 0f;
+                    if (s.Storefront)
+                    {
+                        c.Kit.Facade(group, name + " shops", new Vector3(f.xMin, 0f, f.yMin), new Vector3(f.xMax, StorefrontHeight, f.yMax), c.P.Facade(s.Style, true), roof);
+                        baseTop = StorefrontHeight;
+                    }
+                    c.Kit.Facade(group, name, new Vector3(f.xMin, baseTop, f.yMin), new Vector3(f.xMax, s.Height, f.yMax), c.P.Facade(s.Style, false), roof);
+                }
 
                 // Front door facing the closest street.
                 Vector2 outward = FrontDirection(f, out Vector2 frontCentre);
                 Vector2 along = new Vector2(outward.y, -outward.x);
                 Vector2 doorAt = frontCentre + along * (Mathf.Abs(Vector2.Dot(along, f.size)) * 0.18f);
                 float yaw = Mathf.Atan2(-outward.x, -outward.y) * Mathf.Rad2Deg; // door faces outward (its -z)
-                Transform d = Kit.Group(root, "Front door", new Vector3(doorAt.x, 0f, doorAt.y), yaw);
-                c.Kit.Box(d, "Frame", new Vector3(0f, 1.25f, -0.03f), new Vector3(1.5f, 2.5f, 0.06f), frame, collider: false);
-                c.Kit.Box(d, "Door", new Vector3(0f, 1.15f, -0.07f), new Vector3(1.2f, 2.3f, 0.04f), door, collider: false);
+                Transform d = Kit.Group(group, "Front door", new Vector3(doorAt.x, 0f, doorAt.y), yaw);
+                if (!dressed || c.Kit.Model(d, "door-white-glass", new Vector3(0f, 0f, -0.04f), KitDoorYaw, 5f) == null)
+                {
+                    c.Kit.Box(d, "Frame", new Vector3(0f, 1.25f, -0.03f), new Vector3(1.5f, 2.5f, 0.06f), frame, collider: false);
+                    c.Kit.Box(d, "Door", new Vector3(0f, 1.15f, -0.07f), new Vector3(1.2f, 2.3f, 0.04f), door, collider: false);
+                }
                 c.Place(new Vector3(doorAt.x + outward.x * 0.6f, 0f, doorAt.y + outward.y * 0.6f), PlaceKind.Door, name);
 
                 if (s.Sign != null)

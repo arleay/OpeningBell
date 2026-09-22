@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace OpeningBell.City
@@ -19,13 +20,24 @@ namespace OpeningBell.City
     }
 
     /// <summary>
-    /// TODO(art): primitive stand-in person (boxes, sphere head) with procedural limb swings until character art
-    /// exists. Root at the feet, facing +z.
+    /// A person's body: an animated Quaternius character from <see cref="CityArt"/> (humanoid, shared animator,
+    /// poses cross-fade), or a primitive stand-in (boxes, sphere head, procedural limb swings) when there's no
+    /// character art. Root at the feet, facing +z; the visual is always child 0.
     /// </summary>
     public sealed class NpcBody : MonoBehaviour
     {
+        // Character art
+        private Animator _animator;
+        private float _walkClipSpeed = 1.3f;
+        private int _state;
+        private Transform _heldCup;
+
+        // Primitive stand-in
         private Transform _body, _legL, _legR, _armL, _armR, _cup;
         private float _phaseOffset;
+
+        private static readonly int SpeedParam = Animator.StringToHash("Speed");
+        private static readonly Dictionary<string, int> StateHashes = new Dictionary<string, int>();
 
         private static readonly Color[] Skin =
         {
@@ -45,33 +57,122 @@ namespace OpeningBell.City
             new Color(0.1f, 0.08f, 0.06f), new Color(0.3f, 0.2f, 0.12f), new Color(0.6f, 0.45f, 0.25f), new Color(0.55f, 0.55f, 0.55f),
         };
 
-        public static NpcBody Create(Kit kit, Transform parent, string name, int seed, Color? outfit = null)
+        /// <summary>True when this body is an animated character rather than primitives.</summary>
+        public bool IsCharacter => _animator != null;
+
+        /// <summary>Hip height when seated (bike saddle, bench), from the root.</summary>
+        public float SeatHeight => IsCharacter ? 0.5f * transform.GetChild(0).localScale.y : 0.92f;
+
+        /// <param name="look">Preferred outfit (a character file name such as "Suit"); random when null.</param>
+        public static NpcBody Create(Kit kit, Transform parent, string name, int seed, Color? outfit = null, string look = null)
         {
             var rng = new System.Random(seed);
+            var root = new GameObject(name);
+            root.transform.SetParent(parent, false);
+            var npc = root.AddComponent<NpcBody>();
+            npc._phaseOffset = (float)rng.NextDouble() * 10f;
+            if (kit.Art != null && kit.Art.HasPeople) npc.BuildCharacter(kit.Art, kit, rng, look);
+            else npc.BuildPrimitive(kit, rng, outfit);
+            return npc;
+        }
+
+        private void BuildCharacter(CityArt art, Kit kit, System.Random rng, string look)
+        {
+            IReadOnlyList<GameObject> people = art.People;
+            var matches = new List<GameObject>();
+            foreach (GameObject p in people)
+                if (look == null || p.name == look) matches.Add(p);
+            if (matches.Count == 0) matches.AddRange(people);
+            GameObject model = Instantiate(matches[rng.Next(matches.Count)], transform, false);
+            model.name = "Body";
+            // The Quaternius people stand about 1.87 m; scale to a believable 1.66–1.80 m spread.
+            model.transform.localScale = Vector3.one * (0.89f + 0.075f * (float)rng.NextDouble());
+            _animator = model.GetComponent<Animator>();
+            _animator.runtimeAnimatorController = art.PeopleAnimator;
+            _animator.applyRootMotion = false;
+            _animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+            _walkClipSpeed = art.WalkClipSpeed;
+            // Everyone starts at a different point in their idle so a crowd doesn't breathe in unison.
+            _state = Hash("Idle");
+            _animator.Play(_state, 0, (float)rng.NextDouble());
+
+            Transform hand = _animator.GetBoneTransform(HumanBodyBones.RightHand);
+            if (hand != null)
+            {
+                _heldCup = kit.Cylinder(hand, "Cup", Vector3.zero, 0.08f, 0.12f, kit.P.Lit(new Color(0.9f, 0.88f, 0.84f))).transform;
+                // Bones are scaled with the model; keep the cup a real-world size, just off the palm.
+                _heldCup.localScale = new Vector3(0.08f, 0.06f, 0.08f) / Mathf.Max(0.01f, hand.lossyScale.x);
+                _heldCup.localPosition = new Vector3(0f, 0.08f / Mathf.Max(0.01f, hand.lossyScale.x), 0f);
+                _heldCup.gameObject.SetActive(false);
+            }
+        }
+
+        private static int Hash(string state)
+        {
+            if (!StateHashes.TryGetValue(state, out int h)) StateHashes[state] = h = Animator.StringToHash(state);
+            return h;
+        }
+
+        /// <summary>Poses the body. <paramref name="time"/> drives primitive walk cycles and fidgets (any running clock).</summary>
+        public void Animate(NpcPose pose, float time, float stride = 1f)
+        {
+            if (IsCharacter) AnimateCharacter(pose, stride);
+            else AnimatePrimitive(pose, time, stride);
+        }
+
+        private void AnimateCharacter(NpcPose pose, float stride)
+        {
+            string state;
+            float speed = 1f;
+            switch (pose)
+            {
+                case NpcPose.Walk:
+                    state = "Walk";
+                    // stride 1 is a 1.35 m/s stroll (PedestrianView's convention); match the clip's pace to it.
+                    speed = stride * 1.35f / _walkClipSpeed;
+                    break;
+                case NpcPose.Push:
+                    state = "Walk";
+                    speed = 0.8f;
+                    break;
+                case NpcPose.Sit: state = "Sit"; break;
+                case NpcPose.Typing: state = "Interact"; break;
+                case NpcPose.Phone: state = "Talk"; break;
+                case NpcPose.Cycle: state = "Drive"; break;
+                default: state = "Idle"; break; // Stand, Drink, Skate
+            }
+            int hash = Hash(state);
+            if (hash != _state)
+            {
+                _state = hash;
+                _animator.CrossFadeInFixedTime(hash, 0.25f, 0, _phaseOffset % 1f);
+            }
+            _animator.SetFloat(SpeedParam, speed);
+            bool cup = pose == NpcPose.Drink;
+            if (_heldCup != null && _heldCup.gameObject.activeSelf != cup) _heldCup.gameObject.SetActive(cup);
+        }
+
+        private void BuildPrimitive(Kit kit, System.Random rng, Color? outfit)
+        {
             Color skin = Skin[rng.Next(Skin.Length)];
             Color shirt = outfit ?? Clothes[rng.Next(Clothes.Length)];
             Color pants = Color.Lerp(Clothes[rng.Next(Clothes.Length)], new Color(0.12f, 0.12f, 0.14f), 0.6f);
             Color hair = Hair[rng.Next(Hair.Length)];
             float height = 0.93f + 0.14f * (float)rng.NextDouble();
 
-            var root = new GameObject(name);
-            root.transform.SetParent(parent, false);
-            var npc = root.AddComponent<NpcBody>();
-            npc._phaseOffset = (float)rng.NextDouble() * 10f;
-            npc._body = Kit.Group(root.transform, "Body");
-            npc._body.localScale = Vector3.one * height;
-            Transform b = npc._body;
+            _body = Kit.Group(transform, "Body");
+            _body.localScale = Vector3.one * height;
+            Transform b = _body;
 
-            npc._legL = Limb(kit, b, "LegL", new Vector3(-0.1f, 0.9f, 0f), new Vector3(0.15f, 0.9f, 0.18f), kit.P.Lit(pants));
-            npc._legR = Limb(kit, b, "LegR", new Vector3(0.1f, 0.9f, 0f), new Vector3(0.15f, 0.9f, 0.18f), kit.P.Lit(pants));
+            _legL = Limb(kit, b, "LegL", new Vector3(-0.1f, 0.9f, 0f), new Vector3(0.15f, 0.9f, 0.18f), kit.P.Lit(pants));
+            _legR = Limb(kit, b, "LegR", new Vector3(0.1f, 0.9f, 0f), new Vector3(0.15f, 0.9f, 0.18f), kit.P.Lit(pants));
             kit.Box(b, "Torso", new Vector3(0f, 1.21f, 0f), new Vector3(0.44f, 0.64f, 0.26f), kit.P.Lit(shirt), collider: false);
-            npc._armL = Limb(kit, b, "ArmL", new Vector3(-0.28f, 1.49f, 0f), new Vector3(0.11f, 0.62f, 0.12f), kit.P.Lit(shirt));
-            npc._armR = Limb(kit, b, "ArmR", new Vector3(0.28f, 1.49f, 0f), new Vector3(0.11f, 0.62f, 0.12f), kit.P.Lit(shirt));
+            _armL = Limb(kit, b, "ArmL", new Vector3(-0.28f, 1.49f, 0f), new Vector3(0.11f, 0.62f, 0.12f), kit.P.Lit(shirt));
+            _armR = Limb(kit, b, "ArmR", new Vector3(0.28f, 1.49f, 0f), new Vector3(0.11f, 0.62f, 0.12f), kit.P.Lit(shirt));
             kit.Sphere(b, "Head", new Vector3(0f, 1.69f, 0f), 0.26f, kit.P.Lit(skin));
             kit.Box(b, "Hair", new Vector3(0f, 1.78f, -0.02f), new Vector3(0.25f, 0.1f, 0.25f), kit.P.Lit(hair), collider: false);
-            npc._cup = kit.Cylinder(npc._armR, "Cup", new Vector3(0f, -0.62f, 0.06f), 0.08f, 0.12f, kit.P.Lit(new Color(0.9f, 0.88f, 0.84f))).transform;
-            npc._cup.gameObject.SetActive(false);
-            return npc;
+            _cup = kit.Cylinder(_armR, "Cup", new Vector3(0f, -0.62f, 0.06f), 0.08f, 0.12f, kit.P.Lit(new Color(0.9f, 0.88f, 0.84f))).transform;
+            _cup.gameObject.SetActive(false);
         }
 
         private static Transform Limb(Kit kit, Transform parent, string name, Vector3 pivot, Vector3 size, Material m)
@@ -81,8 +182,7 @@ namespace OpeningBell.City
             return joint;
         }
 
-        /// <summary>Poses the limbs. <paramref name="time"/> drives walk cycles and fidgets (any running clock).</summary>
-        public void Animate(NpcPose pose, float time, float stride = 1f)
+        private void AnimatePrimitive(NpcPose pose, float time, float stride)
         {
             float t = time + _phaseOffset;
             float legL = 0f, legR = 0f, armL = 0f, armR = 0f, drop = 0f;

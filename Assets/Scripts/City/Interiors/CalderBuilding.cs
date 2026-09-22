@@ -179,8 +179,7 @@ namespace OpeningBell.City
             c.Dynamic.gameObject.AddComponent<TenantSigns>().Configure(c, directory, plate);
 
             // Upper floors: outside only.
-            c.Kit.Facade(root, "Tower", new Vector3(X0, Floor2Top, Z0), new Vector3(X1, Height, Z1), c.P.Facade(FacadeStyle.Concrete, false),
-                c.P.Lit(new Color(0.24f, 0.24f, 0.25f)));
+            ModularFacade.Build(c, root, "Tower", new Vector3(X0, Floor2Top, Z0), new Vector3(X1, Height, Z1), FacadeStyle.Concrete, 51);
 
             // Receptionist.
             Vector3 station = new Vector3(ElevatorX, 0.02f, 2.9f);
@@ -189,7 +188,7 @@ namespace OpeningBell.City
             StaffNpc.Create(k, dyn, "Receptionist", 4101, new Color(0.18f, 0.2f, 0.28f),
                 new WorkSchedule { Shift = Hours.Of(7.5, 17.5), Break = Hours.Of(12, 12.75), HasBreak = true },
                 route, 180f, new[] { NpcPose.Typing, NpcPose.Typing, NpcPose.Phone, NpcPose.Drink, NpcPose.Stand },
-                lines.Greeting, lines.Talk, c.Game, c.Hud, c.Player);
+                lines.Greeting, lines.Talk, c.Game, c.Hud, c.Player, look: "Formal");
 
             c.Place(new Vector3(ElevatorX, 0f, Z0 - 0.8f), PlaceKind.Door, "Calder Building");
             c.Anchor("calder_front_out", new Vector3(ElevatorX, 0f, Z0 - 2f));

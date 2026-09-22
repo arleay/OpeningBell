@@ -33,8 +33,7 @@ namespace OpeningBell.City
             const float doorX = 71f;
 
             ShopShell(c, root, f, top, t, brick, inside, floor, doorX, 1.1f, new[] { (67.2f, 5.2f), (74.8f, 5.2f) });
-            c.Kit.Facade(root, "Flats above", new Vector3(f.xMin, top, f.yMin), new Vector3(f.xMax, 10.5f, f.yMax), c.P.Facade(FacadeStyle.Brick, false),
-                c.P.Lit(new Color(0.24f, 0.24f, 0.25f)));
+            ModularFacade.Build(c, root, "Flats above", new Vector3(f.xMin, top, f.yMin), new Vector3(f.xMax, 10.5f, f.yMax), FacadeStyle.Brick, 21);
             k.Box(root, "Awning", new Vector3((f.xMin + f.xMax) / 2f, 3.45f, f.yMin - 0.7f), new Vector3(f.width - 0.4f, 0.1f, 1.4f), c.P.Lit(new Color(0.16f, 0.32f, 0.3f)), collider: false);
             k.Text(root, "HALF PAST NINE", new Vector3(doorX, 3.85f, f.yMin - 0.02f), 0f, 0.34f, new Color(0.95f, 0.85f, 0.6f));
             k.Text(root, "COFFEE · 6 AM – 8 PM", new Vector3(doorX, 2.6f, f.yMin - 0.03f), 0f, 0.07f, new Color(0.95f, 0.93f, 0.88f));
@@ -67,7 +66,7 @@ namespace OpeningBell.City
                 new WorkSchedule { Shift = CoffeeHours }, route, 180f, new[] { NpcPose.Stand, NpcPose.Typing, NpcPose.Drink },
                 () => c.Game.Clock.Now.Hour < 11 ? "Morning! What can I get you?" : "Hey, welcome in.",
                 new Rotation("Pre-market crowd comes in around nine. It's a zoo.", "Oat milk's back, if you care.", "We close at eight.").Next,
-                c.Game, c.Hud, c.Player);
+                c.Game, c.Hud, c.Player, look: "Casual2");
 
             Counter(c, root, new Vector3(69.2f, 1.07f, 3.4f), "Coffee", 4.50m, barista, "Here you go. Careful, it's hot.", cup: true);
             Counter(c, root, new Vector3(73f, 1.07f, 3.4f), "Pastry", 3.75m, barista, "Good choice. Fresh this morning.", cup: false);
@@ -122,7 +121,7 @@ namespace OpeningBell.City
                 new WorkSchedule { Shift = MartHours }, route, 180f, new[] { NpcPose.Stand, NpcPose.Phone, NpcPose.Stand },
                 () => "Hey.",
                 new Rotation("Let me know if you need anything.", "Energy drinks are two for six on Fridays.", "Cash or card? Card. Everybody's card.").Next,
-                c.Game, c.Hud, c.Player);
+                c.Game, c.Hud, c.Player, look: "Casual");
 
             Counter(c, root, new Vector3(113.2f, 1f, -2.4f), "Energy drink", 3.25m, clerk, "That'll keep you up through the close.", cup: true);
             Counter(c, root, new Vector3(115.6f, 1f, -2.4f), "Sandwich", 6.50m, clerk, "Want a bag? No? Cool.", cup: false);

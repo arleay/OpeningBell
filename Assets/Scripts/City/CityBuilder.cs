@@ -25,6 +25,9 @@ namespace OpeningBell.City
         [SerializeField] private Material unlitTemplate;
         [SerializeField] private Material signTemplate;
 
+        [Tooltip("Third-party models (buildings, props, people). Without it the city is all primitives.")]
+        [SerializeField, Optional] private CityArt art;
+
         private CityContext _c;
 
         public IReadOnlyDictionary<string, Vector3> Anchors => _c.Anchors;
@@ -44,7 +47,7 @@ namespace OpeningBell.City
             var palette = new Palette(litTemplate, litEmissiveTemplate, glassTemplate, unlitTemplate, signTemplate);
             _c = new CityContext
             {
-                Kit = new Kit(palette),
+                Kit = new Kit(palette, art),
                 Game = game,
                 Hud = hud,
                 Player = player.transform,
@@ -97,6 +100,7 @@ namespace OpeningBell.City
             Driver = player.gameObject.AddComponent<DriveController>();
             Driver.Configure(game, player, interactor, hud, Fleet, () => _c.Night);
             Fleet.Configure(game, _c.Kit, Rider, Driver);
+            player.gameObject.AddComponent<Footsteps>().Configure(player);
         }
 
         private bool _lightsOn;

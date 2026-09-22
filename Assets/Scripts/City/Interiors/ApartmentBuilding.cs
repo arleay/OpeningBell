@@ -14,7 +14,7 @@ namespace OpeningBell.City
             Kit k = c.Kit;
             Transform root = Kit.Group(c.Static, "Apartment building");
             Rect f = CityPlan.ApartmentBuilding; // x -3.3..12.3, z -4.8..2.8
-            Material brick = c.P.Lit(new Color(0.5f, 0.26f, 0.2f), 0.05f);
+            Material brick = c.P.Lit(new Color(0.6f, 0.35f, 0.26f), 0.05f);
             Material plaster = c.P.Lit(new Color(0.8f, 0.77f, 0.7f), 0.05f);
             Material carpet = c.P.Lit(new Color(0.35f, 0.3f, 0.34f), 0.02f);
             Material ceiling = c.P.Lit(new Color(0.9f, 0.89f, 0.86f));
@@ -47,8 +47,7 @@ namespace OpeningBell.City
             k.Text(mail, "1A  1B  2A  2B", new Vector3(0f, 1.5f, -0.11f), 0f, 0.05f, new Color(0.15f, 0.15f, 0.15f));
 
             // Upper floor (outside only) and roof.
-            c.Kit.Facade(root, "Upper floor", new Vector3(f.xMin, wallTop, f.yMin), new Vector3(f.xMax, 6.4f, f.yMax), c.P.Facade(FacadeStyle.Brick, false),
-                c.P.Lit(new Color(0.24f, 0.24f, 0.25f)));
+            ModularFacade.Build(c, root, "Upper floor", new Vector3(f.xMin, wallTop, f.yMin), new Vector3(f.xMax, 6.4f, f.yMax), FacadeStyle.Brick, 11);
 
             // Entrance: stoop, lamp, number.
             k.Span(root, "Stoop", new Vector3(5f, -0.05f, f.yMin - 0.9f), new Vector3(7f, 0.02f, f.yMin), c.P.Lit(new Color(0.6f, 0.59f, 0.56f)));

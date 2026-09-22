@@ -3,6 +3,14 @@ using UnityEngine;
 
 namespace OpeningBell.Gameplay
 {
+    /// <summary>What a footstep sounds like: paving and tile, floorboards, or grass.</summary>
+    public enum StepSurface
+    {
+        Hard,
+        Wood,
+        Grass,
+    }
+
     /// <summary>
     /// TODO(audio): placeholder sounds synthesized at startup so the game has audio feedback before real assets
     /// exist. Replace each clip with a recorded/designed asset later; call sites won't change.
@@ -61,6 +69,39 @@ namespace OpeningBell.Gameplay
                 state += ((float)rng.NextDouble() * 2f - 1f) * smoothing;
                 state *= 0.995f;
                 return Mathf.Clamp(state, -1f, 1f);
+            });
+        }
+
+        /// <summary>
+        /// One footfall: a heel strike, then a softer toe roll 45–65 ms later, coloured by the surface (a grit
+        /// click on paving, a hollow knock on floorboards, a rustle on grass). Variants differ by seed and pitch.
+        /// </summary>
+        public static AudioClip Footstep(StepSurface surface, int variant)
+        {
+            var rng = new System.Random(500 + (int)surface * 31 + variant);
+            float toe = 0.045f + 0.02f * (float)rng.NextDouble();
+            float pitch = 0.9f + 0.2f * (float)rng.NextDouble();
+            float low = 0f, lower = 0f;
+            return Make($"step-{surface}-{variant}", 0.22f, t =>
+            {
+                float white = (float)rng.NextDouble() * 2f - 1f;
+                float toeEnv = t > toe ? 0.55f * Decay(t - toe, 0.025f) : 0f;
+                float env = Decay(t, 0.018f) + toeEnv;
+                switch (surface)
+                {
+                    case StepSurface.Grass:
+                        low += 0.35f * (white - low);
+                        return ((white - low) * 0.5f + low * 0.4f) * (0.7f * Decay(t, 0.05f) + toeEnv) * 0.5f;
+                    case StepSurface.Wood:
+                        low += 0.12f * (white - low);
+                        float knock = 0.6f * Sine(150f * pitch, t) + 0.25f * Sine(310f * pitch, t);
+                        return (low * 1.6f + knock * Decay(t, 0.03f)) * env * 0.6f;
+                    default:
+                        low += 0.3f * (white - low);
+                        lower += 0.05f * (white - lower);
+                        float grit = (white - low) * 0.6f + lower * 1.2f;
+                        return (grit + 0.5f * Sine(95f * pitch, t) * Decay(t, 0.012f)) * env * 0.55f;
+                }
             });
         }
 

@@ -27,11 +27,14 @@ namespace OpeningBell.City
     public sealed class Kit
     {
         public readonly Palette P;
+        /// <summary>Third-party models; null (or missing entries) means primitives only.</summary>
+        public readonly CityArt Art;
         private readonly Mesh _cube, _cylinder, _sphere, _capsule, _quad;
 
-        public Kit(Palette palette)
+        public Kit(Palette palette, CityArt art = null)
         {
             P = palette;
+            Art = art;
             _cube = BuiltinMesh(PrimitiveType.Cube);
             _cylinder = BuiltinMesh(PrimitiveType.Cylinder);
             _sphere = BuiltinMesh(PrimitiveType.Sphere);
@@ -67,6 +70,25 @@ namespace OpeningBell.City
             go.AddComponent<MeshRenderer>().sharedMaterial = m;
             return go;
         }
+
+        /// <summary>
+        /// A copy of the art model named <paramref name="model"/>, or null when it isn't available (callers then
+        /// build their primitive version). Art models carry no colliders; callers add what gameplay needs.
+        /// </summary>
+        public GameObject Model(Transform parent, string model, Vector3 position, float yaw, Vector3 scale)
+        {
+            GameObject prefab = Art != null ? Art.Model(model) : null;
+            if (prefab == null) return null;
+            GameObject go = Object.Instantiate(prefab, parent, false);
+            go.name = model;
+            go.transform.localPosition = position;
+            go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            go.transform.localScale = scale;
+            return go;
+        }
+
+        public GameObject Model(Transform parent, string model, Vector3 position, float yaw, float scale = 1f) =>
+            Model(parent, model, position, yaw, Vector3.one * scale);
 
         public GameObject Box(Transform parent, string name, Vector3 center, Vector3 size, Material m, bool collider = true, float yaw = 0f)
         {

@@ -31,8 +31,7 @@ namespace OpeningBell.City
             const float doorX = 86.25f, top = 4.2f;
             Shops.ShopShell(c, root, f, top, 0.25f, c.P.Lit(new Color(0.22f, 0.22f, 0.24f), 0.1f), c.P.Lit(new Color(0.9f, 0.9f, 0.88f)),
                 c.P.Lit(new Color(0.55f, 0.55f, 0.53f), 0.3f), doorX, 1.1f, new[] { (81.8f, 5.2f), (90.7f, 5.2f) });
-            c.Kit.Facade(root, "Flats above", new Vector3(f.xMin, top, f.yMin), new Vector3(f.xMax, 12f, f.yMax), c.P.Facade(FacadeStyle.Brick, false),
-                c.P.Lit(new Color(0.24f, 0.24f, 0.25f)));
+            ModularFacade.Build(c, root, "Flats above", new Vector3(f.xMin, top, f.yMin), new Vector3(f.xMax, 12f, f.yMax), FacadeStyle.Brick, 31);
             k.Span(root, "Sign band", new Vector3(f.xMin, 3.35f, f.yMin - 0.12f), new Vector3(f.xMax, 4.15f, f.yMin), c.P.Lit(new Color(0.85f, 0.35f, 0.1f)), collider: false);
             k.Text(root, "CURBSIDE SKATE CO.", new Vector3(doorX, 3.75f, f.yMin - 0.14f), 0f, 0.34f, new Color(0.1f, 0.1f, 0.1f));
             k.Text(root, "OPEN 10 AM – 8 PM", new Vector3(doorX + 1.4f, 2.3f, f.yMin - 0.03f), 0f, 0.07f, new Color(0.95f, 0.93f, 0.88f));
@@ -52,7 +51,7 @@ namespace OpeningBell.City
                 180f, new[] { NpcPose.Stand, NpcPose.Phone, NpcPose.Stand },
                 () => "Yo. Boards on the table, parts up here.",
                 () => "Soft wheels if you ride Maple, the asphalt's rough. And use the curb ramps.",
-                c.Game, c.Hud, c.Player);
+                c.Game, c.Hud, c.Player, look: "Punk");
 
             Vector3 shopCentre = new Vector3(f.center.x, 0f, f.center.y);
             string[] boards = { "skate_street", "skate_cruiser", "skate_longboard" };
@@ -90,8 +89,7 @@ namespace OpeningBell.City
             const float doorX = 103f, top = 4.4f;
             Shops.ShopShell(c, root, f, top, 0.25f, c.P.Lit(new Color(0.62f, 0.62f, 0.6f), 0.1f), c.P.Lit(new Color(0.93f, 0.93f, 0.92f)),
                 c.P.Lit(new Color(0.3f, 0.32f, 0.34f), 0.4f), doorX, 1.3f, new[] { (98.3f, 6.2f), (107.7f, 6.2f) });
-            c.Kit.Facade(root, "Flats above", new Vector3(f.xMin, top, f.yMin), new Vector3(f.xMax, 10f, f.yMax), c.P.Facade(FacadeStyle.Concrete, false),
-                c.P.Lit(new Color(0.24f, 0.24f, 0.25f)));
+            ModularFacade.Build(c, root, "Flats above", new Vector3(f.xMin, top, f.yMin), new Vector3(f.xMax, 10f, f.yMax), FacadeStyle.Stucco, 41);
             k.Span(root, "Sign band", new Vector3(f.xMin, 3.5f, f.yMin - 0.12f), new Vector3(f.xMax, 4.35f, f.yMin), c.P.Lit(new Color(0.12f, 0.4f, 0.28f)), collider: false);
             k.Text(root, "HILLSIDE CYCLES", new Vector3(doorX, 3.92f, f.yMin - 0.14f), 0f, 0.36f, new Color(0.95f, 0.95f, 0.9f));
             k.Text(root, "BIKES · E-BIKES · SERVICE   9 AM – 7 PM", new Vector3(doorX, 2.6f, f.yMin - 0.03f), 0f, 0.07f, new Color(0.95f, 0.93f, 0.88f));
@@ -109,7 +107,7 @@ namespace OpeningBell.City
                 180f, new[] { NpcPose.Typing, NpcPose.Stand, NpcPose.Drink },
                 () => "Hey! Looking to ride, or need a tune-up?",
                 () => "Road bike's fastest on pavement, but the trail bike doesn't care about grass. E-bikes: charge 'em overnight.",
-                c.Game, c.Hud, c.Player);
+                c.Game, c.Hud, c.Player, look: "Worker");
 
             Vector3 shopCentre = new Vector3(f.center.x, 0f, f.center.y);
             Vector3 pickup = new Vector3(107.5f, 0f, f.yMin - 0.45f); // clear of the bench and bin at x 104–105.4

@@ -104,7 +104,7 @@ namespace OpeningBell.City
             _rider = NpcBody.Create(_kit, transform, "Rider", 7070, new Color(0.25f, 0.3f, 0.38f));
             _rider.transform.localPosition = v.Kind == VehicleKind.Skateboard
                 ? new Vector3(0f, _visual.SaddleHeight, 0f)
-                : new Vector3(0f, _visual.SaddleHeight - 0.92f, -0.14f);
+                : new Vector3(0f, _visual.SaddleHeight - _rider.SeatHeight, -0.14f);
             _rider.transform.localRotation = Quaternion.Euler(0f, v.Kind == VehicleKind.Skateboard ? -70f : 0f, 0f);
             _rider.gameObject.SetActive(_chase);
 

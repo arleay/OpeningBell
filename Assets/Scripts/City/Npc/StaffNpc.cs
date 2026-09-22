@@ -44,9 +44,9 @@ namespace OpeningBell.City
 
         public static StaffNpc Create(Kit kit, Transform parent, string speaker, int seed, Color outfit, WorkSchedule schedule,
             IReadOnlyList<Vector3> routeToBackDoor, float stationYaw, NpcPose[] activities, Func<string> greeting, Func<string> talk,
-            GameBootstrap game, InteractionHud hud, Transform player)
+            GameBootstrap game, InteractionHud hud, Transform player, string look = null)
         {
-            NpcBody body = NpcBody.Create(kit, parent, speaker, seed, outfit);
+            NpcBody body = NpcBody.Create(kit, parent, speaker, seed, outfit, look);
             var npc = body.gameObject.AddComponent<StaffNpc>();
             var capsule = body.gameObject.AddComponent<CapsuleCollider>();
             capsule.center = new Vector3(0f, 0.9f, 0f);

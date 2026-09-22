@@ -7544,6 +7544,7 @@ MonoBehaviour:
   glassTemplate: {fileID: 2100000, guid: 328d7be35bd5ff8469ecf9a6be1963f5, type: 2}
   unlitTemplate: {fileID: 2100000, guid: 2fc0df645932d2843ae7b3e0e5809f7e, type: 2}
   signTemplate: {fileID: 2100000, guid: 1f0ee3c103393fa42a727e9d08542258, type: 2}
+  art: {fileID: 11400000, guid: cbd358298dd56ca4d9221caef81113e5, type: 2}
 --- !u!4 &1617424301
 Transform:
   m_ObjectHideFlags: 0
