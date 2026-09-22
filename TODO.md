@@ -31,6 +31,8 @@
 - [ ] **Play the build yourself:** buy the $3,900 used sedan (transfer from brokerage first), drive to work, fill up at Tidewater Fuel
 - [ ] **Debug panel** (spec §42, part of the §45 vertical slice; still missing): set cash/time, teleport to city spots, grant equipment or vehicles, seed/FPS/tick time. Dev builds only
 - [x] Art pass 2a: apartment furnished with the Kenney Furniture Kit (`ApartmentInterior`): kit beds, desks, chairs, keyboard/mouse, desk lamp with a base, kitchenette (sink, drawers, fridge, microwave, wall cabinets, bin), loveseat, coffee table, rug, plant, bookcase, nightstands, coat rack, ceiling lamp, window trim. Upgrade variants and interactables unchanged. Gallery shots `art-apartment*.png`
+- [x] Player body and brawling: first-person body (legs, hands, shadow; head hidden from the camera), punches steered into view with IK, NPC reactions (stagger, knockdown and get-up), flee or fight back, chase with lost-sight/distance give-up, bystanders scatter. `CombatPlayTests` writes `combat-*.png`
+- [ ] **Next: rebuild the city as a small open town** around the apartment (WORLD_SPEC direction change). Rework `CityPlan` and everything keyed to its coordinates (anchors, curb spots, shops, traffic, tests)
 - [ ] Art pass 2b: shop, lobby and office furniture (same `Kit.Fit` approach; `ModelSheet` for orientation/shelf heights), ground-floor trims on the enterable buildings, suburban houses for the outer ring
 - [ ] Then WORLD_SPEC Phase 11 (dealerships: used lot and standard dealer, test drives, resale) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
 
@@ -86,6 +88,12 @@
   - People have one animation set: no sitting-down transition, no per-person clothing colours, and the Typing pose uses the UAL "Interact" loop. Riders use the driving loop (no pedalling).
   - Pedestrians still walk through each other (no local avoidance beyond the simulation's rules).
   - The UAL root-motion file used to measure walk speed isn't in the project; `CityArtBuilder` keeps the measured 0.95 m/s.
+- Brawling:
+  - No consequences (health, police, reputation) by design for now; the player can't be hurt.
+  - Fighters ignore traffic (cars don't stop for them) and steer around obstacles only locally; no pathfinding.
+  - One animation set: the get-up is the fall played backwards; punches come from the UAL jab and cross.
+  - The player's head is collapsed for the camera, so the player's shadow has no head.
+  - Riders and staff only react in place (no chasing from behind a counter or off a bike).
 - Active input handling is "Both". Test switching to Input System only (UI Toolkit runtime input) before release
 - With the default seed (18492) the onboarding APEX headline draws a modest +3% move (the expected move is about +10%). Honest randomness; retune severity or the seed if the tutorial needs a clearer reaction
 - Day loop: no weekend gameplay (slept through); no fatigue/sleep-quality effects (psychology system, spec §9); sleeping mid-afternoon after 4 PM skips after-hours trading without asking

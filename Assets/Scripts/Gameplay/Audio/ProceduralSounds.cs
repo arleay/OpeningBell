@@ -105,6 +105,33 @@ namespace OpeningBell.Gameplay
             });
         }
 
+        /// <summary>A punch landing: a dull low thump under a short slap of filtered noise. Variants differ in pitch.</summary>
+        public static AudioClip Punch(int variant)
+        {
+            var rng = new System.Random(700 + variant);
+            float pitch = 0.85f + 0.3f * (float)rng.NextDouble();
+            float low = 0f;
+            return Make($"punch-{variant}", 0.25f, t =>
+            {
+                float white = (float)rng.NextDouble() * 2f - 1f;
+                low += 0.25f * (white - low);
+                float thump = Sine(70f * pitch * (1f - 0.8f * t), t) * Decay(t, 0.045f);
+                return (0.8f * thump + 0.7f * low * Decay(t, 0.012f)) * 0.8f;
+            });
+        }
+
+        /// <summary>A swing through the air: a quick rising whoosh.</summary>
+        public static AudioClip Whoosh()
+        {
+            var rng = new System.Random(733);
+            float low = 0f;
+            return Make("whoosh", 0.18f, t =>
+            {
+                low += (0.05f + 0.6f * t) * (((float)rng.NextDouble() * 2f - 1f) - low);
+                return low * Mathf.Sin(Mathf.PI * t / 0.18f) * 0.35f;
+            });
+        }
+
         private static AudioClip Make(string name, float seconds, Func<float, float> wave)
         {
             int count = Mathf.CeilToInt(seconds * SampleRate);

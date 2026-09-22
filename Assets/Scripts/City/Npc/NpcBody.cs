@@ -17,6 +17,8 @@ namespace OpeningBell.City
         Skate,
         /// <summary>Kicking off the ground on a board.</summary>
         Push,
+        /// <summary>Jogging or running (fights, fleeing); <c>stride</c> as for Walk.</summary>
+        Run,
     }
 
     /// <summary>
@@ -113,8 +115,29 @@ namespace OpeningBell.City
             return h;
         }
 
+        /// <summary>
+        /// Set while a fight (<see cref="NpcFighter"/>) drives this body: its owner's <see cref="Animate"/> calls are
+        /// ignored until it's handed back.
+        /// </summary>
+        public bool Overridden { get; set; }
+
+        internal Animator Animator => _animator;
+
         /// <summary>Poses the body. <paramref name="time"/> drives primitive walk cycles and fidgets (any running clock).</summary>
         public void Animate(NpcPose pose, float time, float stride = 1f)
+        {
+            if (!Overridden) Pose(pose, time, stride);
+        }
+
+        /// <summary>Plays an animator state directly (reactions, falls); a no-op for primitive bodies.</summary>
+        internal void PlayState(string state, float fade, float normalizedTime = 0f)
+        {
+            if (_animator == null) return;
+            _state = Hash(state);
+            _animator.CrossFadeInFixedTime(_state, fade, 0, normalizedTime);
+        }
+
+        internal void Pose(NpcPose pose, float time, float stride = 1f)
         {
             if (IsCharacter) AnimateCharacter(pose, stride);
             else AnimatePrimitive(pose, time, stride);
@@ -134,6 +157,10 @@ namespace OpeningBell.City
                 case NpcPose.Push:
                     state = "Walk";
                     speed = 0.8f;
+                    break;
+                case NpcPose.Run:
+                    state = "Jog";
+                    speed = Mathf.Max(0.6f, stride * 1.35f / 4.83f); // the jog clip covers 4.83 m/s
                     break;
                 case NpcPose.Sit: state = "Sit"; break;
                 case NpcPose.Typing: state = "Interact"; break;
@@ -190,7 +217,8 @@ namespace OpeningBell.City
             switch (pose)
             {
                 case NpcPose.Walk:
-                    float swing = Mathf.Sin(t * 7.5f * stride) * 26f;
+                case NpcPose.Run:
+                    float swing = Mathf.Sin(t * 7.5f * stride) * (pose == NpcPose.Run ? 40f : 26f);
                     legL = swing;
                     legR = -swing;
                     armL = -swing * 0.7f;

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using OpeningBell.Gameplay;
 using UnityEngine;
 
 namespace OpeningBell.City
@@ -124,6 +125,32 @@ namespace OpeningBell.City
                 NpcPose pose = sitting ? NpcPose.Sit : w.State == PedestrianSimulation.WalkerState.Walking && w.Blocked <= 0f ? NpcPose.Walk : NpcPose.Stand;
                 body.Animate(pose, time, w.Speed / 1.35f);
             }
+        }
+
+        /// <summary>
+        /// Takes a walker's body out of the sidewalk simulation so a fight can drive it; it returns to the pool when
+        /// the fight is over (the simulation spawns someone else to keep the head count). Null if it isn't a walker.
+        /// </summary>
+        public NpcFighter Provoke(NpcBody body, FirstPersonController player, bool brave)
+        {
+            PedestrianSimulation.Walker walker = null;
+            foreach (var pair in _shown)
+                if (pair.Value == body) { walker = pair.Key; break; }
+            if (walker == null) return null;
+            _sim.Remove(walker);
+            _shown.Remove(walker);
+            return NpcFighter.Engage(body, player, mobile: true, brave, _ =>
+            {
+                body.gameObject.SetActive(false);
+                _pool.Push(body);
+            });
+        }
+
+        /// <summary>Walkers' bodies within <paramref name="radius"/> of <paramref name="at"/> (witnesses).</summary>
+        public void Near(Vector3 at, float radius, List<NpcBody> into)
+        {
+            foreach (NpcBody body in _shown.Values)
+                if ((body.transform.position - at).sqrMagnitude < radius * radius) into.Add(body);
         }
 
         /// <summary>Sit facing away from the bench back, i.e. away from the ring point it hangs off.</summary>

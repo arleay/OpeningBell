@@ -19,8 +19,7 @@ namespace OpeningBell.Tests
 
         private IEnumerator Shot(Vector3 at, float yaw, float pitch, string file)
         {
-            _player.PlaceAt(at, yaw);
-            _player.CameraPivot.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+            _player.PlaceAt(at, yaw, pitch);
             for (int i = 0; i < 4; i++) yield return null;
             yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), file);
         }

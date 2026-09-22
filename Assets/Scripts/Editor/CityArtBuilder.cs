@@ -38,7 +38,21 @@ namespace OpeningBell.EditorTools
             ("PickUp", "PickUp_Table", false),
             ("Fix", "Fixing_Kneeling", false),
             ("Crouch", "Crouch_Idle_Loop", false),
+            ("HitHead", "Hit_Head", false),
+            ("HitChest", "Hit_Chest", false),
+            ("Fall", "Death01", false),
+            // Getting back up is the fall played backwards (the library has no get-up clip).
+            ("GetUp", "Death01", false),
         };
+
+        /// <summary>Upper-body layer (arms) so people can throw punches while walking. Code sets its weight.</summary>
+        public static readonly (string State, string Clip)[] UpperStates =
+        {
+            ("PunchJab", "Punch_Jab"),
+            ("PunchCross", "Punch_Cross"),
+        };
+
+        public const string UpperMaskPath = "Assets/Art/Animation/UpperBody.mask";
 
         [MenuItem("Opening Bell/Rebuild City Art")]
         public static void Rebuild()
@@ -200,6 +214,40 @@ namespace OpeningBell.EditorTools
                     s.speedParameter = "Speed";
                 }
                 if (state == "Idle") machine.defaultState = s;
+                if (state == "GetUp") s.speed = -1f;
+            }
+
+            var mask = new AvatarMask();
+            for (int i = 0; i < (int)AvatarMaskBodyPart.LastBodyPart; i++)
+            {
+                var part = (AvatarMaskBodyPart)i;
+                // Arms only: the clips' torso twist swings a shoulder across a first-person camera.
+                mask.SetHumanoidBodyPartActive(part, part == AvatarMaskBodyPart.LeftArm || part == AvatarMaskBodyPart.RightArm
+                    || part == AvatarMaskBodyPart.LeftFingers || part == AvatarMaskBodyPart.RightFingers);
+            }
+            AssetDatabase.DeleteAsset(UpperMaskPath);
+            AssetDatabase.CreateAsset(mask, UpperMaskPath);
+            controller.AddLayer("Upper");
+            AnimatorControllerLayer[] layers = controller.layers;
+            layers[1].avatarMask = mask;
+            layers[1].defaultWeight = 0f;
+            layers[1].blendingMode = AnimatorLayerBlendingMode.Override;
+            layers[1].iKPass = true; // the player's fists are steered into view with IK (PlayerBody)
+            controller.layers = layers;
+            AnimatorStateMachine upper = controller.layers[1].stateMachine;
+            AnimatorState none = upper.AddState("None");
+            none.writeDefaultValues = false; // an empty state that writes defaults would snap the arms to the bind pose
+            upper.defaultState = none;
+            foreach (var (state, clipName) in UpperStates)
+            {
+                if (!clips.TryGetValue(clipName, out AnimationClip clip))
+                {
+                    report.AppendLine("MISSING clip " + clipName);
+                    continue;
+                }
+                AnimatorState s = upper.AddState(state);
+                s.motion = clip;
+                s.writeDefaultValues = false;
             }
             report.AppendLine($"controller: {machine.states.Length} states; clips available: {string.Join(" ", clips.Keys)}");
             return controller;

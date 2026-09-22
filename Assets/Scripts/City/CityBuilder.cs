@@ -103,6 +103,13 @@ namespace OpeningBell.City
             Driver.Configure(game, player, interactor, hud, Fleet, () => _c.Night);
             Fleet.Configure(game, _c.Kit, Rider, Driver);
             player.gameObject.AddComponent<Footsteps>().Configure(player);
+            PlayerBody body = null;
+            if (art != null && art.HasPeople)
+            {
+                body = player.gameObject.AddComponent<PlayerBody>();
+                body.Configure(player, art);
+            }
+            player.gameObject.AddComponent<PlayerFists>().Configure(player, body, Pedestrians);
 
             // Last, so a renamed scene object costs only the furniture, not the city.
             ApartmentInterior.Dress(_c.Kit, apartment, workstation.transform);

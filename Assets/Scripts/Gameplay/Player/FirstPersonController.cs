@@ -173,6 +173,19 @@ namespace OpeningBell.Gameplay
             }
         }
 
+        /// <summary>
+        /// Taking a hit: the head snaps down and rolls away from the blow (the landing spring and lean smoothing bring
+        /// it back), and the body is shoved by <paramref name="push"/> (m/s, worn off by ground friction).
+        /// </summary>
+        public void Jolt(float strength, float side, Vector3 push)
+        {
+            if (!_controlEnabled || _suspended) return;
+            _dipVelocity -= 0.5f * strength;
+            _roll += side * 7f * strength;
+            push.y = 0f;
+            _planar += push;
+        }
+
         private void ResetCameraMotion()
         {
             _planar = Vector3.zero;
@@ -184,12 +197,12 @@ namespace OpeningBell.Gameplay
         }
 
         /// <summary>Teleports the player; a CharacterController must be disabled to be moved directly.</summary>
-        public void PlaceAt(Vector3 position, float yaw)
+        public void PlaceAt(Vector3 position, float yaw, float pitch = 0f)
         {
             _body.enabled = false;
             transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
             _body.enabled = true;
-            _pitch = 0f;
+            _pitch = Mathf.Clamp(pitch, -pitchLimit, pitchLimit);
             _verticalSpeed = 0f;
             ResetCameraMotion();
         }

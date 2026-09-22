@@ -18,6 +18,8 @@ namespace OpeningBell.Gameplay
         public InputAction Sprint { get; private set; }
         public InputAction Jump { get; private set; }
         public InputAction Interact { get; private set; }
+        /// <summary>Throw a punch (left mouse).</summary>
+        public InputAction Attack { get; private set; }
         public InputAction OpenMenu { get; private set; }
         /// <summary>Hop on / off the skateboard you're carrying.</summary>
         public InputAction Ride { get; private set; }
@@ -44,6 +46,7 @@ namespace OpeningBell.Gameplay
             // Space is also the car handbrake; the two never apply at once (walking is suspended while driving).
             Jump = _player.AddAction("Jump", InputActionType.Button, "<Keyboard>/space");
             Interact = _player.AddAction("Interact", InputActionType.Button, "<Keyboard>/e");
+            Attack = _player.AddAction("Attack", InputActionType.Button, "<Mouse>/leftButton");
             OpenMenu = _player.AddAction("Menu", InputActionType.Button, "<Keyboard>/escape");
             Ride = _player.AddAction("Ride", InputActionType.Button, "<Keyboard>/r");
             CameraToggle = _player.AddAction("Camera", InputActionType.Button, "<Keyboard>/c");

@@ -3,7 +3,8 @@
 Extends `PROJECT_SPEC.md`. Section numbers (§) follow the original prompt. The goal is a compact, dense, original first-person city where almost every building exists for a gameplay reason, in the spirit of Schedule I's structure. **Copy nothing of Schedule I** (map, names, art, mechanics). Use fictional brands only, no real logos or trademarks (§94). Quality target (§100): "a real place that happens to support a trading career", not a trading menu with streets attached.
 
 ## World (§1–2, 13–15, 70–75, 91–93)
-- Compact, walkable, dense, learnable: shortcuts, parking, hours, routes, alleys, routines. No giant empty open world, and no roads added just to lengthen travel.
+- **Direction change (2026-09-22): a small open town, not a compact city** (Schedule I feel). The apartment is the centre of the player's life; the town spreads around it with room to breathe: a main street with the shops, office and fuel, residential streets of houses and yards, a park, open lots and green edges. Low-rise (few tall buildings). Still learnable and walkable; no empty filler roads.
+- ~~Compact, walkable, dense~~ Learnable: shortcuts, parking, hours, routes, alleys, routines. No giant empty open world, and no roads added just to lengthen travel.
 - Scale target: 5–10 min on foot, 2–4 min by bike or e-bike, 1–3 min by car, faster by helicopter.
 - Districts:
   - **Downtown/financial:** office, brokerage offices, bank, coffee, restaurants, parking garages, luxury tower.
@@ -52,6 +53,7 @@ Extends `PROJECT_SPEC.md`. Section numbers (§) follow the original prompt. The 
 - Traffic: follows lanes, stops at lights and stop signs, yields, avoids collisions, parks or despawns. Density follows the time of day. Stability matters more than AAA AI.
 - Pedestrians: walk sidewalks, cross streets, visit shops, enter and exit buildings, sit, wait at crosswalks. Schedule-based. A few good NPCs beat many broken ones.
 - Important NPCs keep schedules (e.g. the mechanic opens at 8, lunches at 12, closes at 18).
+- **Player body and brawling (added 2026-09-22):** the player sees their own arms, hands and body in first person. Punching people (left mouse): hit reactions, knockdowns and getting up; most run, some fight back and chase, giving up once they lose sight of the player at a distance or the player gets far enough away. Bystanders scatter. No consequences yet (no health, police or reputation).
 
 ## Vehicles (§16–35, 76–90)
 - **Persistent identity** for every owned vehicle: id, make/model, type, price, mileage, condition, fuel or charge, paint, mods, performance and cosmetic parts, damage, tyres, engine, location, insurance, registration, ownership date, maintenance history, resale value. Never disposable prefabs.
@@ -150,6 +152,7 @@ Extends `PROJECT_SPEC.md`. Section numbers (§) follow the original prompt. The 
 - **15 Advanced vehicles:** motorcycles, performance cars, advanced tuning.
 - **16 Aviation:** helicopters, dealer, hangars, helipads, flight controls.
 - **17 World polish:** traffic, NPC routines, audio, weather, business schedules, optimisation.
+- **Direction change (2026-09-22), in order:** player body ✅, punching and NPC reactions ✅, then rebuild the city as a small open town around the apartment.
 
 ## First city slice acceptance (§99)
 1. Exit the apartment.
