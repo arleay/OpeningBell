@@ -13,6 +13,6 @@
 | [City Kit (Suburban)](https://kenney.nl/assets/city-kit-suburban) (v2.0) | Kenney | CC0 1.0 | Houses, fences and planters, not yet placed (`Kenney/CitySuburban`) |
 | [Ultimate Modular Men](https://quaternius.com/packs/ultimatemodularcharacters.html) and [Women](https://quaternius.com/packs/ultimatemodularwomen.html) (humanoid rig versions) | Quaternius ([quaternius.com](https://quaternius.com)) | CC0 1.0 | Pedestrians and staff (`Assets/Art/ThirdParty/Quaternius/Characters`) |
 | [Universal Animation Library](https://quaternius.itch.io/universal-animation-library) (Standard) | Quaternius | CC0 1.0 | People's animations (`Quaternius/Animations`) |
+| [Ultimate Food Pack](https://quaternius.com/packs/ultimatefood.html) (53-model subset) | Quaternius | CC0 1.0 | Shop and apartment food props (`Quaternius/Props/Food`) |
 
 CC0 needs no attribution; it's credited here anyway. The license text is kept next to each asset.
-- **Ultimate Food Pack** by Quaternius (CC0 1.0), quaternius.com: food and kitchen props in the Corner Mart, Half Past Nine and the apartment (`Assets/Art/ThirdParty/Quaternius/Props/Food`, a subset of 53 models).
