@@ -152,7 +152,7 @@ Extends `PROJECT_SPEC.md`. Section numbers (§) follow the original prompt. The 
 - **15 Advanced vehicles:** motorcycles, performance cars, advanced tuning.
 - **16 Aviation:** helicopters, dealer, hangars, helipads, flight controls.
 - **17 World polish:** traffic, NPC routines, audio, weather, business schedules, optimisation.
-- **Direction change (2026-09-22), in order:** player body ✅, punching and NPC reactions ✅, then rebuild the city as a small open town around the apartment.
+- **Direction change (2026-09-22), in order:** player body ✅, punching and NPC reactions ✅, small open town around the apartment ✅.
 
 ## First city slice acceptance (§99)
 1. Exit the apartment.

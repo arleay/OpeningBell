@@ -36,7 +36,7 @@ namespace OpeningBell.City
 
             Material walk = c.P.Lit(Concrete, 0.08f);
             float sw = CityPlan.SidewalkWidth;
-            foreach (var (name, a, ground) in CityPlan.Blocks)
+            foreach (var (name, a, ground, lawn) in CityPlan.Blocks)
             {
                 Transform b = Kit.Group(root, name);
                 const float bottom = -0.9f;
@@ -44,9 +44,8 @@ namespace OpeningBell.City
                 Tag(k.Span(b, "Sidewalk N", new Vector3(a.xMin, bottom, a.yMax - sw), new Vector3(a.xMax, 0f, a.yMax), walk), 0.2f);
                 Tag(k.Span(b, "Sidewalk W", new Vector3(a.xMin, bottom, a.yMin + sw), new Vector3(a.xMin + sw, 0f, a.yMax - sw), walk), 0.2f);
                 Tag(k.Span(b, "Sidewalk E", new Vector3(a.xMax - sw, bottom, a.yMin + sw), new Vector3(a.xMax, 0f, a.yMax - sw), walk), 0.2f);
-                // The residential block is lawn and park; the others are paved.
                 Tag(k.Span(b, "Ground", new Vector3(a.xMin + sw, bottom, a.yMin + sw), new Vector3(a.xMax - sw, -0.01f, a.yMax - sw), c.P.Lit(ground, 0.04f)),
-                    name == "Residential" ? 1f : 0.25f);
+                    lawn ? 1f : 0.25f);
             }
 
             Markings(c, root, walks);
@@ -255,7 +254,7 @@ namespace OpeningBell.City
         }
 
         /// <summary>The nature kit's own palette is teal and orange; the city wants ordinary greens and browns.</summary>
-        private static void Naturalize(Kit k, GameObject go)
+        internal static void Naturalize(Kit k, GameObject go)
         {
             if (go == null) return;
             foreach (Renderer r in go.GetComponentsInChildren<Renderer>())
@@ -405,6 +404,20 @@ namespace OpeningBell.City
             }
         }
 
+        /// <summary>A clump of big trees far off in the fog (and sometimes a house among them).</summary>
+        private static bool DistantTrees(CityContext c, Transform parent, Vector2 centre, float size, System.Random rng)
+        {
+            string[] kinds = { "tree_default", "tree_oak", "tree_fat", "tree_default_dark", "tree_oak_dark" };
+            if (c.Kit.Art == null || c.Kit.Art.Model(kinds[0]) == null) return false;
+            for (int t = 0; t < 5; t++)
+            {
+                Vector2 p = centre + new Vector2((float)(rng.NextDouble() - 0.5), (float)(rng.NextDouble() - 0.5)) * size;
+                Naturalize(c.Kit, c.Kit.Model(parent, kinds[rng.Next(kinds.Length)], new Vector3(p.x, CityPlan.RoadY, p.y),
+                    (float)rng.NextDouble() * 360f, 9f + (float)rng.NextDouble() * 7f));
+            }
+            return true;
+        }
+
         /// <summary>A kit skyscraper stretched to a skyline block's size (it's far off in the fog, proportions don't show).</summary>
         private static bool SkylineTower(CityContext c, Transform parent, Vector2 centre, float size, float height, int i)
         {
@@ -449,6 +462,8 @@ namespace OpeningBell.City
                 float angle = i / 46f * Mathf.PI * 2f;
                 Vector2 centre = w.center + new Vector2(Mathf.Cos(angle) * (w.width / 2f + 90f + rng.Next(0, 90)), Mathf.Sin(angle) * (w.height / 2f + 90f + rng.Next(0, 90)));
                 float size = 22f + rng.Next(0, 26), height = 18f + rng.Next(0, 60);
+                // A town's horizon is trees and the odd roof, not towers.
+                if (DistantTrees(c, b, centre, size, rng)) continue;
                 if (SkylineTower(c, b, centre, size, height, i)) continue;
                 c.Kit.Facade(b, "Skyline", new Vector3(centre.x - size / 2f, CityPlan.RoadY, centre.y - size / 2f),
                     new Vector3(centre.x + size / 2f, height, centre.y + size / 2f), i % 3 == 0 ? farGlass : far, roof, collider: false);

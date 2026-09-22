@@ -52,16 +52,16 @@ namespace OpeningBell.City
             Sync();
         }
 
-        /// <summary>Cars on the whole network by hour: rush hours busy, nights quiet.</summary>
+        /// <summary>Cars on the whole network by hour: rush hours busy, nights quiet. Sized for the town's ~3 km of road.</summary>
         public static int TargetCount(double hour)
         {
-            if (hour < 5) return 3;
-            if (hour < 6.5) return 7;
-            if (hour < 9.5) return 18;
-            if (hour < 16) return 11;
-            if (hour < 19) return 18;
-            if (hour < 22) return 9;
-            return 5;
+            if (hour < 5) return 5;
+            if (hour < 6.5) return 11;
+            if (hour < 9.5) return 28;
+            if (hour < 16) return 17;
+            if (hour < 19) return 28;
+            if (hour < 22) return 14;
+            return 7;
         }
 
         private static Vector2 Flat(Vector3 p) => new Vector2(p.x, p.z);

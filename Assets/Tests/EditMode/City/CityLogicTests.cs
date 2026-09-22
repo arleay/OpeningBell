@@ -28,7 +28,8 @@ namespace OpeningBell.Tests
             RoadNetwork.Node lights = net.FindNode("Maple & Exchange");
             Assert.IsNotNull(lights.Lights);
             Assert.AreEqual(6, lights.Movements.Count, "T junction: 3 approaches × 2 exits");
-            Assert.AreEqual(2, net.FindNode("Maple & Cedar").Movements.Count, "corner: one turn each way");
+            Assert.AreEqual(2, net.FindNode("Oak & Pine").Movements.Count, "corner: one turn each way");
+            Assert.AreEqual(12, net.FindNode("Maple & Cedar").Movements.Count, "crossing: 4 approaches × 3 exits");
 
             // Left from Maple into the stem crosses the opposing through lane; the two throughs don't meet.
             RoadNetwork.Movement[] through = lights.Movements.Where(m => m.Turn == RoadNetwork.Turn.Straight).ToArray();

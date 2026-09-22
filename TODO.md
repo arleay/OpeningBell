@@ -32,12 +32,12 @@
 - [ ] **Debug panel** (spec §42, part of the §45 vertical slice; still missing): set cash/time, teleport to city spots, grant equipment or vehicles, seed/FPS/tick time. Dev builds only
 - [x] Art pass 2a: apartment furnished with the Kenney Furniture Kit (`ApartmentInterior`): kit beds, desks, chairs, keyboard/mouse, desk lamp with a base, kitchenette (sink, drawers, fridge, microwave, wall cabinets, bin), loveseat, coffee table, rug, plant, bookcase, nightstands, coat rack, ceiling lamp, window trim. Upgrade variants and interactables unchanged. Gallery shots `art-apartment*.png`
 - [x] Player body and brawling: first-person body (legs, hands, shadow; head hidden from the camera), punches steered into view with IK, NPC reactions (stagger, knockdown and get-up), flee or fight back, chase with lost-sight/distance give-up, bystanders scatter. `CombatPlayTests` writes `combat-*.png`
-- [ ] **Next: rebuild the city as a small open town** around the apartment (WORLD_SPEC direction change). Rework `CityPlan` and everything keyed to its coordinates (anchors, curb spots, shops, traffic, tests)
+- [x] Small open town: the core now sits in an outer grid (Oak, Birch, Willow, Pine) of suburban house rows, lawns, a town field and green edges; the tall outer ring and skyline towers are gone and the town centre is low-rise. Traffic density scaled for ~3 km of road. Gallery: `art-town-aerial.png`, `art-town-street.png`, `art-mainstreet.png`
 - [ ] Art pass 2b: shop, lobby and office furniture (same `Kit.Fit` approach; `ModelSheet` for orientation/shelf heights), ground-floor trims on the enterable buildings, suburban houses for the outer ring
 - [ ] Then WORLD_SPEC Phase 11 (dealerships: used lot and standard dealer, test drives, resale) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
 
 ## Later phases (do not start early)
-- WORLD_SPEC Phases 11–12 and 14–17: dealerships, mechanics, property, advanced vehicles, aviation, world polish
+- WORLD_SPEC Phases 11–12 and 14–17 (property, Phase 14, can now use the town's houses): dealerships, mechanics, property, advanced vehicles, aviation, world polish
 
 ## Known debt / decisions to revisit
 - No market holidays (`MarketSchedule.IsTradingDay`)
@@ -88,6 +88,10 @@
   - People have one animation set: no sitting-down transition, no per-person clothing colours, and the Typing pose uses the UAL "Interact" loop. Riders use the driving loop (no pedalling).
   - Pedestrians still walk through each other (no local avoidance beyond the simulation's rules).
   - The UAL root-motion file used to measure walk speed isn't in the project; `CityArtBuilder` keeps the measured 0.95 m/s.
+- Town:
+  - Houses are outside-only (no interiors), and pedestrians still only walk between the core's doors and benches, so the new streets are quiet on foot.
+  - The town field is empty grass (room for a market or pitch later).
+  - From high up, the ground's edge shows beyond the green edges.
 - Brawling:
   - No consequences (health, police, reputation) by design for now; the player can't be hurt.
   - Fighters ignore traffic (cars don't stop for them) and steer around obstacles only locally; no pathfinding.

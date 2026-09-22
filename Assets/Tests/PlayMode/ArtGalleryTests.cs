@@ -55,6 +55,9 @@ namespace OpeningBell.Tests
             yield return Shot(_city.Anchors["coffee_front_out"] + new Vector3(0f, 0f, 3f), 0f, 4f, "art-coffee.png");
             yield return Shot(new Vector3(-20f, 0f, 20f), 45f, 0f, "art-park.png");
             yield return Shot(new Vector3(60f, 45f, -70f), 20f, 32f, "art-aerial.png");
+            yield return Shot(new Vector3(-10f, 120f, -230f), 0f, 32f, "art-town-aerial.png");
+            yield return Shot(new Vector3(-60f, 0f, -7.5f), -90f, 2f, "art-town-street.png");
+            yield return Shot(new Vector3(66f, 0f, -20.5f), 80f, -2f, "art-mainstreet.png");
 
             game.SkipTo(game.Clock.Now.Date.AddHours(21.2));
             for (int i = 0; i < 10; i++) yield return null;

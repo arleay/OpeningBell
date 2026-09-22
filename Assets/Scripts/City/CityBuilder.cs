@@ -60,6 +60,7 @@ namespace OpeningBell.City
             _c.Dynamic = Kit.Group(transform, "Dynamic");
 
             ShellBuilder.Build(_c);
+            TownBuilder.Build(_c);
             ApartmentBuilding.Build(_c);
             CalderBuilding.Build(_c, out Desk desk);
             OfficeDesk = desk;
