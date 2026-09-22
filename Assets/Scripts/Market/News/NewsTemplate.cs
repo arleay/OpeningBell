@@ -22,6 +22,20 @@ namespace OpeningBell.Market
         Bankruptcy,
         Sector,
         Economic,
+        Geopolitical,
+    }
+
+    /// <summary>
+    /// A sector that moves differently from the rest of the market on a market-wide headline: threats of war sink
+    /// the index but lift energy and defence; tariffs on electronics hit tech hardest.
+    /// </summary>
+    [Serializable]
+    public sealed class SectorTilt
+    {
+        public Sector Sector;
+
+        /// <summary>Expected direction of the sector's own extra move, −1..+1 (on top of the market move).</summary>
+        public double Bias;
     }
 
     public enum NewsScope
@@ -61,6 +75,9 @@ namespace OpeningBell.Market
         /// <summary>Restricts random security news to these sectors (empty = any).</summary>
         public List<Sector> OnlySectors = new List<Sector>();
 
+        /// <summary>Market-scope only: sectors that get an extra move of their own.</summary>
+        public List<SectorTilt> Tilts = new List<SectorTilt>();
+
         public bool AppliesTo(Sector sector) => OnlySectors == null || OnlySectors.Count == 0 || OnlySectors.Contains(sector);
 
         public void Validate()
@@ -72,6 +89,12 @@ namespace OpeningBell.Market
                 throw new ArgumentException($"News template {Id}: severity must satisfy 0 ≤ Min ≤ Max ≤ 1.");
             if (Uncertainty < 0) throw new ArgumentException($"News template {Id}: Uncertainty cannot be negative.");
             if (Weight < 0) throw new ArgumentException($"News template {Id}: Weight cannot be negative.");
+            if (Tilts != null)
+                foreach (SectorTilt tilt in Tilts)
+                {
+                    if (Scope != NewsScope.Market) throw new ArgumentException($"News template {Id}: only market news can tilt sectors.");
+                    if (tilt.Bias < -1 || tilt.Bias > 1) throw new ArgumentException($"News template {Id}: tilt bias must be in [-1, 1].");
+                }
         }
     }
 

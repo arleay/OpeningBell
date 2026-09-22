@@ -37,6 +37,11 @@
 - [x] Round rotating minimap with icons (home, office, shops, fuel, parked cars)
 - [x] Title screen with Continue / New Game / Quit and a character creator (body, outfit, skin, hair and top colours, name) with a turntable preview; the look is saved
 - [x] Food props (Quaternius Ultimate Food Pack): stocked mart shelves and drinks fridge, café pastries, apartment fruit and soda
+- [x] Tiny character set (Quaternius Ultimate Animated Character Pack, re-rigged in Blender): a third body type in the creator, player-only; drag to turn the preview
+- [x] First-person body: the body slides back as you look down and pins the neck behind the eyes while walking/running (`FirstPersonBodyTests`)
+- [x] Order ticket quantity (and price/transfer fields) accept only digits (`TicketInput.Restrict`)
+- [x] Phone (Tab): home screen with clock and market widget; Messages (fills, bills), Phone (contacts, recents, keypad, calls as subtitles), Maps (pan/zoom town map, places by distance), PennyBridge (watchlist, positions, orders, stock page with chart, market/limit order sheet), News (feed, articles with live reaction). Headline and fill notifications bottom right; Tab opens the one showing. `PhoneTests` writes `phone-*.png`
+- [x] Market news can tilt sectors (`SectorTilt`): geopolitical and macro headlines (fictional President Hale, the Varenn Mountains, Kessar Strait) sink the index while lifting energy/defence, hit tech on tariffs, banks on a lender run, etc. Market news rate 0.3 → 0.6/day
 - [ ] Art pass 2b: shop, lobby and office furniture (same `Kit.Fit` approach; `ModelSheet` for orientation/shelf heights), ground-floor trims on the enterable buildings, suburban houses for the outer ring
 - [ ] Then WORLD_SPEC Phase 11 (dealerships: used lot and standard dealer, test drives, resale) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
 
@@ -44,6 +49,7 @@
 - WORLD_SPEC Phases 11–12 and 14–17 (property, Phase 14, can now use the town's houses): dealerships, mechanics, property, advanced vehicles, aviation, world polish
 
 ## Known debt / decisions to revisit
+- Phone: you stand still while it's out (control is off); no texting back or incoming calls; call history isn't saved; the phone can't be used in vehicles or at the desk
 - No market holidays (`MarketSchedule.IsTradingDay`)
 - No market impact from player orders. Fine at retail size; revisit for large accounts
 - No queue model for limit orders at the bid/ask. Conservative (they wait for a trade-through)

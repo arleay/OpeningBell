@@ -32,6 +32,7 @@ namespace OpeningBell.UI
             Ui.Label("panel-title", transfer, "TRANSFER");
             _amount = new TextField { name = "transfer-amount", value = "500" };
             _amount.AddToClassList("ticket-field");
+            TicketInput.Restrict(_amount, ".,$");
             transfer.Add(_amount);
             var buttons = Ui.Box("quick-row", transfer);
             Ui.Button("FROM BROKERAGE", () => Transfer(fromBrokerage: true), "", buttons, "transfer-from-broker");

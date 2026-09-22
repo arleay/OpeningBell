@@ -38,6 +38,14 @@ namespace OpeningBell.Tests
         [TestCase("")]
         public void Quantity_RejectsInvalidInput(string text) => Assert.IsFalse(TicketInput.TryParseQuantity(text, out _));
 
+        [TestCase("12a", ",", "12")]
+        [TestCase("1,0x00", ",", "1,000")]
+        [TestCase("abc", ",", "")]
+        [TestCase("-5.5", ",", "55")]
+        [TestCase("$12.5q0", ".,$", "$12.50")]
+        public void Restricted_Fields_KeepOnlyDigitsAndAllowedMarks(string typed, string allowed, string kept) =>
+            Assert.AreEqual(kept, TicketInput.Keep(typed, allowed));
+
         [Test]
         public void Price_ParsesDollarsAndCommas_RejectsNonPositive()
         {

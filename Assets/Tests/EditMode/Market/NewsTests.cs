@@ -119,6 +119,33 @@ namespace OpeningBell.Tests
         }
 
         [Test]
+        public void MarketNews_SectorTilt_MovesThatSectorAgainstTheMarket()
+        {
+            // A war threat: the market sells off, energy rallies. Same seed with and without the tilt.
+            NewsTemplate plain = T("threat", NewsScope.Market, -1, 1.0, 0, "Leader threatens strikes");
+            NewsTemplate tilted = T("threat", NewsScope.Market, -1, 1.0, 0, "Leader threatens strikes");
+            tilted.Tilts.Add(new SectorTilt { Sector = Sector.Energy, Bias = 1 });
+            var control = Sim(9, ScheduledOnly(), new[] { plain }, At(10 * 60, "threat"));
+            var news = Sim(9, ScheduledOnly(), new[] { tilted }, At(10 * 60, "threat"));
+            control.AdvanceTo(Monday.AddHours(12));
+            news.AdvanceTo(Monday.AddHours(12));
+
+            Assert.Less(news.News.Single().RealizedMove, 0, "the market move is down");
+            CollectionAssert.AreEqual(new[] { "BBB" }, news.News.Single().Tickers, "the tilted sector is tagged");
+            Assert.Greater(news.Securities[1].Last, control.Securities[1].Last, "BBB (Energy) ends higher with the tilt");
+            Assert.AreEqual(control.Securities[0].Last, news.Securities[0].Last, "AAA (Technology) is untouched by the tilt");
+            Assert.AreEqual(control.Index.Level, news.Index.Level, "the index takes only the market move");
+        }
+
+        [Test]
+        public void MarketNews_OnlyMarketScopeMayTilt()
+        {
+            NewsTemplate bad = T("x", NewsScope.Sector, 1, 0.5, 0);
+            bad.Tilts.Add(new SectorTilt { Sector = Sector.Energy, Bias = 1 });
+            Assert.Throws<ArgumentException>(bad.Validate);
+        }
+
+        [Test]
         public void RandomNews_IsDeterministic_AndNearTheConfiguredRate()
         {
             var templates = new[]

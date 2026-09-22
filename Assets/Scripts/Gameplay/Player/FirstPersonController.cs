@@ -76,6 +76,12 @@ namespace OpeningBell.Gameplay
             }
         }
 
+        /// <summary>
+        /// Control is off for a hand-held screen (the phone): the cursor is free, but the player is still standing in
+        /// the world, so their body and the minimap stay up.
+        /// </summary>
+        public bool Browsing { get; set; }
+
         /// <summary>Off while seated: no movement or look, cursor released for the terminal.</summary>
         public bool ControlEnabled
         {

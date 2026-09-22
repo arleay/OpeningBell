@@ -18,6 +18,31 @@ namespace OpeningBell.UI
             return long.TryParse(clean, NumberStyles.None, CultureInfo.InvariantCulture, out quantity) && quantity > 0;
         }
 
+        /// <summary>
+        /// Restricts a field to the characters in <paramref name="allowed"/> (digits always). Filtering the value
+        /// rather than key presses also catches pasted text.
+        /// </summary>
+        public static void Restrict(TextField field, string allowed = "")
+        {
+            field.RegisterValueChangedCallback(e =>
+            {
+                string clean = Keep(e.newValue, allowed);
+                if (clean == e.newValue) return;
+                int caret = Mathf.Min(field.cursorIndex, clean.Length);
+                field.SetValueWithoutNotify(clean);
+                field.SelectRange(caret, caret);
+            });
+        }
+
+        public static string Keep(string text, string allowed)
+        {
+            if (string.IsNullOrEmpty(text)) return text ?? "";
+            var sb = new System.Text.StringBuilder(text.Length);
+            foreach (char ch in text)
+                if ((ch >= '0' && ch <= '9') || allowed.IndexOf(ch) >= 0) sb.Append(ch);
+            return sb.ToString();
+        }
+
         public static bool TryParsePrice(string text, out decimal price)
         {
             price = 0m;
@@ -54,6 +79,7 @@ namespace OpeningBell.UI
 
             Ui.Label("field-caption", Root, "QUANTITY");
             _quantity = Field("qty", "100", Root);
+            TicketInput.Restrict(_quantity, ","); // whole shares; commas from the quick buttons ("1,000")
             var quick = Ui.Box("quick-row", Root);
             foreach (long q in new long[] { 100, 500, 1000 })
                 Ui.Button(Fmt.Shares(q), () => SetQuantity(q), "", quick);
@@ -63,6 +89,7 @@ namespace OpeningBell.UI
             Ui.Label("field-caption", _limitSection, "LIMIT PRICE");
             var priceRow = Ui.Box("field-row", _limitSection);
             _limitPrice = Field("limit-price", "", priceRow);
+            TicketInput.Restrict(_limitPrice, ".,$");
             Ui.Button("-", () => NudgeLimit(-1), "nudge", priceRow);
             Ui.Button("+", () => NudgeLimit(+1), "nudge", priceRow);
             var fill = Ui.Box("quick-row", _limitSection);

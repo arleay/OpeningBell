@@ -57,7 +57,8 @@ namespace OpeningBell.Market
         // News (only active when the simulation is given templates).
         public double SecurityNewsPerDay = 5;
         public double SectorNewsPerDay = 0.5;
-        public double MarketNewsPerDay = 0.3;
+        /// <summary>Macro and geopolitical headlines: roughly one every other trading day.</summary>
+        public double MarketNewsPerDay = 0.6;
 
         /// <summary>Move at severity 1, in multiples of the target's daily volatility.</summary>
         public double NewsImpactDailyVols = 4;

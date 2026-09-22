@@ -31,6 +31,10 @@ namespace OpeningBell.Gameplay
         public InputAction Handbrake { get; private set; }
         public InputAction Leave { get; private set; }
         public InputAction CloseMenu { get; private set; }
+        /// <summary>Take out / put away the phone (Tab). In its own always-on map: it works whichever map is active.</summary>
+        public InputAction Phone { get; private set; }
+
+        private InputActionMap _global;
 
         private void Awake()
         {
@@ -60,6 +64,10 @@ namespace OpeningBell.Gameplay
             _menu = new InputActionMap("Menu");
             CloseMenu = _menu.AddAction("Close", InputActionType.Button, "<Keyboard>/escape");
 
+            _global = new InputActionMap("Global");
+            Phone = _global.AddAction("Phone", InputActionType.Button, "<Keyboard>/tab");
+            _global.Enable();
+
             UsePlayerControls();
         }
 
@@ -79,6 +87,7 @@ namespace OpeningBell.Gameplay
             _player?.Dispose();
             _workstation?.Dispose();
             _menu?.Dispose();
+            _global?.Dispose();
         }
     }
 }

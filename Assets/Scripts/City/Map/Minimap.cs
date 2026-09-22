@@ -42,6 +42,21 @@ namespace OpeningBell.City
 
         public bool Visible => _frame != null && _frame.style.display != DisplayStyle.None;
 
+        /// <summary>The painted town (north up), shared with the phone's Maps app.</summary>
+        public Texture2D Texture => _texture;
+
+        /// <summary>Anchors of the marked places, available before the HUD is built.</summary>
+        public static readonly (MapIcon Icon, string Anchor, string Name)[] Landmarks =
+        {
+            (MapIcon.Home, "apartment_front_out", "Home"),
+            (MapIcon.Office, "calder_front_out", "Calder Building"),
+            (MapIcon.Coffee, "coffee_front_out", "Half Past Nine"),
+            (MapIcon.Mart, "mart_front_out", "Corner Mart"),
+            (MapIcon.Skate, "skate_front_out", "Curbside Skate"),
+            (MapIcon.Bike, "bike_front_out", "Hillside Cycles"),
+            (MapIcon.Fuel, "fuel_driveway", "Tidewater Fuel"),
+        };
+
         /// <summary>Where each marked place is (for tests and a future full map).</summary>
         public IEnumerable<(MapIcon Icon, Vector3 At)> Places
         {
@@ -124,13 +139,7 @@ namespace OpeningBell.City
             {
                 if (_c.Anchors.TryGetValue(anchor, out Vector3 at)) _places.Add(new Place(icon, at, Icon(icon)));
             }
-            Mark(MapIcon.Home, "apartment_front_out");
-            Mark(MapIcon.Office, "calder_front_out");
-            Mark(MapIcon.Coffee, "coffee_front_out");
-            Mark(MapIcon.Mart, "mart_front_out");
-            Mark(MapIcon.Skate, "skate_front_out");
-            Mark(MapIcon.Bike, "bike_front_out");
-            Mark(MapIcon.Fuel, "fuel_driveway");
+            foreach (var (icon, anchor, _) in Landmarks) Mark(icon, anchor);
         }
 
         private VisualElement Icon(MapIcon icon)
@@ -151,7 +160,7 @@ namespace OpeningBell.City
                 if (_hud.Root == null) return;
                 Build(_hud.Root);
             }
-            bool show = _player.ControlEnabled;
+            bool show = _player.ControlEnabled || _player.Browsing;
             _frame.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
             if (!show) return;
 

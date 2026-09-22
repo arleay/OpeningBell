@@ -41,6 +41,7 @@ namespace OpeningBell.City
         public RideController Rider { get; private set; }
         public DriveController Driver { get; private set; }
         public Minimap Minimap { get; private set; }
+        public Phone Phone { get; private set; }
         public TitleScreen Title { get; private set; }
         public RoadNetwork Roads => _c.Roads;
 
@@ -116,6 +117,8 @@ namespace OpeningBell.City
             player.gameObject.AddComponent<PlayerFists>().Configure(player, body, Pedestrians);
             Minimap = gameObject.AddComponent<Minimap>();
             Minimap.Configure(_c, player, hud, Fleet);
+            Phone = gameObject.AddComponent<Phone>();
+            Phone.Configure(game, player, hud, Minimap, _c);
             if (art != null && art.HasPeople)
             {
                 Title = gameObject.AddComponent<TitleScreen>();

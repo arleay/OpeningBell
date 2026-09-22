@@ -103,7 +103,7 @@ namespace OpeningBell.City
         private void LateUpdate()
         {
             if (_model == null) return;
-            bool show = _player.ControlEnabled && !_player.Suspended;
+            bool show = (_player.ControlEnabled || _player.Browsing) && !_player.Suspended;
             if (_model.activeSelf != show) _model.SetActive(show);
             if (!show) return;
 

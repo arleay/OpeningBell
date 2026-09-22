@@ -161,6 +161,20 @@ namespace OpeningBell.Market
                         double shift = move * s.Spec.MarketBeta;
                         engine.ApplyNews(s, shift, DrawOverreaction(shift), severity, 0.3);
                     }
+                    // Sector tilts: an extra move of the sector's own on top of the market's. Drawn only for
+                    // templates that have them, so older headlines keep their random streams.
+                    if (t.Tilts != null)
+                        foreach (SectorTilt tilt in t.Tilts)
+                        {
+                            double sectorMove = DrawReaction(tilt.Bias, t.Uncertainty, severity, _config.SectorDailyVolatility);
+                            foreach (SecurityRuntimeState s in _securities)
+                            {
+                                if (s.Spec.Sector != tilt.Sector) continue;
+                                double shift = sectorMove * s.Spec.SectorBeta;
+                                engine.ApplyNews(s, shift, DrawOverreaction(shift), severity, 0.5);
+                                if (!_tickers.Contains(s.Ticker)) _tickers.Add(s.Ticker);
+                            }
+                        }
                     headline = Format(t.Headline, "", "", default);
                     break;
                 }
@@ -174,12 +188,15 @@ namespace OpeningBell.Market
         /// less than a biotech on equally big news). The share of the expected move that shows up varies (some is
         /// already priced in), and uncertainty adds symmetric noise, so direction is likely but never guaranteed.
         /// </summary>
-        internal double DrawReaction(NewsTemplate t, double severity, double dailyVolatility)
+        internal double DrawReaction(NewsTemplate t, double severity, double dailyVolatility) =>
+            DrawReaction(t.Bias, t.Uncertainty, severity, dailyVolatility);
+
+        private double DrawReaction(double bias, double uncertainty, double severity, double dailyVolatility)
         {
             if (severity <= 0) return 0;
             double magnitude = severity * _config.NewsImpactDailyVols * dailyVolatility;
-            double expected = t.Bias * magnitude * (0.4 + 0.9 * _rng.NextDouble());
-            return expected + t.Uncertainty * magnitude * _rng.NextGaussian();
+            double expected = bias * magnitude * (0.4 + 0.9 * _rng.NextDouble());
+            return expected + uncertainty * magnitude * _rng.NextGaussian();
         }
 
         /// <summary>
