@@ -15,6 +15,8 @@ namespace OpeningBell.City
         private const float SetBack = 0.12f;
         /// <summary>How far ahead of the eyes a punch lands, metres.</summary>
         private const float FistReach = 0.45f;
+        /// <summary>Extra metres the body slides back when looking straight down (see LateUpdate).</summary>
+        private const float LookDownShift = 0.24f;
         private const string DefaultLook = "Casual2";
 
         private static readonly int SpeedParam = Animator.StringToHash("Speed");
@@ -101,6 +103,13 @@ namespace OpeningBell.City
             bool show = _player.ControlEnabled && !_player.Suspended;
             if (_model.activeSelf != show) _model.SetActive(show);
             if (!show) return;
+
+            // A real head pivots at the neck, so looking down carries the eyes forward over the chest. The camera
+            // pivots in place instead, so the body slides back to match: looking at your feet shows chest, belly and
+            // shoes from the front rather than the top of your own shoulders and the cut-off neck.
+            float pitch = Mathf.DeltaAngle(0f, _player.CameraPivot.localEulerAngles.x);
+            float down = Mathf.Clamp01(pitch / 85f);
+            _model.transform.localPosition = new Vector3(0f, 0f, -(SetBack + LookDownShift * Mathf.Sin(down * Mathf.PI * 0.5f)));
 
             Vector3 v = _controller.velocity;
             v.y = 0f;
