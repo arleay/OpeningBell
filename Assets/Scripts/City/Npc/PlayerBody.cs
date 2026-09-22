@@ -32,6 +32,8 @@ namespace OpeningBell.City
         private float _punchStart = -99f, _punchLand;
         private bool _punchCross;
         private Transform _head;
+        /// <summary>A Tiny costume body: big mitts on short arms, so fists are shrunk and thrown further out.</summary>
+        private bool _tiny;
 
         public bool Visible => _model != null && _model.activeSelf;
 
@@ -73,6 +75,10 @@ namespace OpeningBell.City
             _state = Idle;
             _model.AddComponent<IKRelay>().Body = this;
             _head = _animator.GetBoneTransform(HumanBodyBones.Head);
+            _tiny = look != null && !_art.IsTownsperson(CharacterStyle.ModelIndex(_art, look));
+            if (_tiny)
+                foreach (HumanBodyBones b in new[] { HumanBodyBones.LeftHand, HumanBodyBones.RightHand })
+                    _animator.GetBoneTransform(b).localScale = Vector3.one * 0.6f; // humanoid clips never animate scale
             foreach (SkinnedMeshRenderer r in _model.GetComponentsInChildren<SkinnedMeshRenderer>())
                 r.updateWhenOffscreen = true; // the camera sits inside the bounds, which can cull limbs at the edges
         }
@@ -133,7 +139,8 @@ namespace OpeningBell.City
             Transform eye = _player.CameraPivot;
             AvatarIKGoal hand = _punchCross ? AvatarIKGoal.RightHand : AvatarIKGoal.LeftHand;
             float side = _punchCross ? 1f : -1f;
-            Vector3 target = eye.position + eye.forward * FistReach - eye.up * 0.12f + eye.right * (0.06f * side);
+            float reach = _tiny ? FistReach + 0.15f : FistReach;
+            Vector3 target = eye.position + eye.forward * reach - eye.up * (_tiny ? 0.2f : 0.12f) + eye.right * (0.06f * side);
             _animator.SetIKPosition(hand, target);
             _animator.SetIKPositionWeight(hand, weight);
             // Knuckles forward: palm down, fist pointing where the camera looks.

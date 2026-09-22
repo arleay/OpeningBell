@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using OpeningBell.Gameplay;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -212,7 +213,8 @@ namespace OpeningBell.City
             var seen = new HashSet<string>();
             for (int i = 0; i < _art.People.Count; i++)
                 if (seen.Add(BodyOf(i))) first.Add(i);
-            return first;
+            // The costume set goes last, after the realistic bodies (folders sort Men, Tiny, Women).
+            return first.OrderBy(i => _art.IsTownsperson(i) ? 0 : 1).ThenBy(i => i).ToList();
         }
 
         private List<int> Outfits(string body)
@@ -227,7 +229,7 @@ namespace OpeningBell.City
         {
             string body = BodyOf(_look.Model);
             if (_bodyLabel != null) _bodyLabel.text = body == "Women" ? "Feminine" : body == "Men" ? "Masculine" : body;
-            if (_outfitLabel != null) _outfitLabel.text = _art.People[_look.Model].name;
+            if (_outfitLabel != null) _outfitLabel.text = _art.People[_look.Model].name.Replace('_', ' ');
             foreach (var (swatch, index, group) in _swatches)
             {
                 int chosen = group == 0 ? _look.Skin : group == 1 ? _look.Hair : _look.Top;

@@ -31,6 +31,8 @@ namespace OpeningBell.City
 
         /// <summary>"Men/Casual" style label for person <paramref name="i"/> (just the model name if unlabelled).</summary>
         public string PeopleLabel(int i) => i < peopleLabels.Length ? peopleLabels[i] : people[i].name;
+        /// <summary>Townsfolk come from the realistic sets; the "Tiny" costume characters are for the player only.</summary>
+        public bool IsTownsperson(int i) => !PeopleLabel(i).StartsWith("Tiny/");
         public RuntimeAnimatorController PeopleAnimator => peopleAnimator;
         public float WalkClipSpeed => walkClipSpeed;
         public bool HasPeople => people.Length > 0 && peopleAnimator != null;

@@ -29,6 +29,7 @@ namespace OpeningBell.City
 
         [Tooltip("Third-party models (buildings, props, people). Without it the city is all primitives.")]
         [SerializeField, Optional] private CityArt art;
+        public CityArt Art => art;
 
         private CityContext _c;
 

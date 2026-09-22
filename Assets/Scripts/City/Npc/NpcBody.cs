@@ -82,9 +82,12 @@ namespace OpeningBell.City
         {
             IReadOnlyList<GameObject> people = art.People;
             var matches = new List<GameObject>();
-            foreach (GameObject p in people)
+            var town = new List<GameObject>();
+            for (int i = 0; i < people.Count; i++)
+                if (art.IsTownsperson(i)) town.Add(people[i]);
+            foreach (GameObject p in town)
                 if (look == null || p.name == look) matches.Add(p);
-            if (matches.Count == 0) matches.AddRange(people);
+            if (matches.Count == 0) matches.AddRange(town);
             GameObject model = Instantiate(matches[rng.Next(matches.Count)], transform, false);
             model.name = "Body";
             // The Quaternius people stand about 1.87 m; scale to a believable 1.66–1.80 m spread.

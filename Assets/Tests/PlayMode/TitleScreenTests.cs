@@ -66,5 +66,36 @@ namespace OpeningBell.Tests
             Assert.AreEqual(chosen.Model, save.Look.Model);
             Assert.AreEqual(chosen.Top, save.Look.Top);
         }
+
+        /// <summary>The Tiny costume set (re-rigged Animated Character Pack) is the third body type: it plays as the
+        /// player's first-person body, fists and all. Screenshots: title-tiny.png, tiny-firstperson.png.</summary>
+        [UnityTest]
+        public IEnumerator Creator_OffersTinyCharacters()
+        {
+            yield return LoadMain();
+            var city = Find<CityBuilder>();
+            var player = Find<FirstPersonController>();
+            var hud = Find<InteractionHud>();
+            TitleScreen title = city.Title;
+            title.Open();
+            for (int i = 0; i < 5; i++) yield return null;
+            title.ShowCreator();
+
+            title.Step(0, 2); // Masculine → Feminine → Tiny
+            Assert.IsTrue(city.Art.PeopleLabel(title.Look.Model).StartsWith("Tiny/"), city.Art.PeopleLabel(title.Look.Model));
+            for (int i = 0; i < 60 && !city.Art.PeopleLabel(title.Look.Model).EndsWith("/Cow"); i++) title.Step(1, 1);
+            StringAssert.EndsWith("/Cow", city.Art.PeopleLabel(title.Look.Model), "the cow suit imported as a humanoid");
+            for (int i = 0; i < 5; i++) yield return null;
+            yield return CaptureWithHud(player, hud, "title-tiny.png");
+
+            title.StartGame();
+            yield return null;
+            var body = player.GetComponent<PlayerBody>();
+            player.PlaceAt(new Vector3(-1.9f, 0f, -2f), 40f, 20f);
+            for (int i = 0; i < 10; i++) yield return null;
+            float land = body.Punch(false);
+            yield return new WaitForSeconds(land);
+            yield return CaptureCamera(player.GetComponentInChildren<Camera>(), "tiny-firstperson.png");
+        }
     }
 }
