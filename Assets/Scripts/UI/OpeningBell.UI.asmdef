@@ -6,7 +6,8 @@
         "OpeningBell.Market",
         "OpeningBell.Trading",
         "OpeningBell.Economy",
-        "OpeningBell.Runtime"
+        "OpeningBell.Runtime",
+        "OpeningBell.Vehicles"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

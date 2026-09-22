@@ -32,6 +32,21 @@ namespace OpeningBell.Gameplay
         public static AudioClip Chime() => Make("chime", 1.2f, t =>
             (t < 0.35f ? Sine(1318f, t) * Decay(t, 0.25f) : Sine(1046f, t) * Decay(t - 0.35f, 0.3f)) * 0.35f);
 
+        /// <summary>
+        /// Engine loop at 1800 rpm (a four-stroke four fires at rpm/30 Hz = 60 Hz): odd-heavy harmonics plus a
+        /// little roughness. Pitch it with the revs. Whole cycles, so it loops cleanly.
+        /// </summary>
+        public static AudioClip Engine()
+        {
+            var rng = new System.Random(77);
+            float rough = 0f;
+            return Make("engine", 1f, t =>
+            {
+                rough = rough * 0.97f + ((float)rng.NextDouble() - 0.5f) * 0.06f;
+                return 0.45f * Sine(60f, t) + 0.28f * Sine(120f, t) + 0.2f * Sine(180f, t) + 0.1f * Sine(300f, t) + rough;
+            });
+        }
+
         /// <summary>Fridge compressor: mains hum with harmonics. Loops seamlessly (whole number of cycles).</summary>
         public static AudioClip FridgeHum() => Make("fridge-hum", 1f, t =>
             0.5f * Sine(60f, t) + 0.25f * Sine(120f, t) + 0.12f * Sine(180f, t));

@@ -51,6 +51,7 @@ namespace OpeningBell.City
         private readonly Dictionary<RoadNetwork.Node, List<Car>> _occupants = new Dictionary<RoadNetwork.Node, List<Car>>();
         private readonly List<Vector2> _samples = new List<Vector2>(40);
         private int _nextId;
+        private IReadOnlyList<Vector2> _otherCars;
 
         public RoadNetwork Network => _net;
         public IReadOnlyList<Car> Cars => _cars;
@@ -125,9 +126,11 @@ namespace OpeningBell.City
         // ---- step ----
 
         /// <param name="people">Positions of pedestrians and the player: cars stop for anyone in front of them.</param>
-        public void Step(float dt, IReadOnlyList<Vector2> people)
+        /// <param name="otherCars">Cars outside the simulation (the player's, parked ones): followed like traffic.</param>
+        public void Step(float dt, IReadOnlyList<Vector2> people, IReadOnlyList<Vector2> otherCars = null)
         {
             Time += dt;
+            _otherCars = otherCars;
             foreach (Car car in _cars)
             {
                 float target = TargetSpeed(car, people);
@@ -181,6 +184,8 @@ namespace OpeningBell.City
             SamplePathAhead(car);
             foreach (Car other in _cars)
                 if (other != car) free = Mathf.Min(free, AlongPath(other.Position, 1.6f) - FollowGap);
+            if (_otherCars != null)
+                foreach (Vector2 p in _otherCars) free = Mathf.Min(free, AlongPath(p, 1.6f) - FollowGap);
             if (people != null)
                 foreach (Vector2 p in people) free = Mathf.Min(free, AlongPath(p, 1.9f) - PersonGap);
 
@@ -336,6 +341,9 @@ namespace OpeningBell.City
             float r2 = radius * radius;
             foreach (Car c in _cars)
                 if ((c.Position - p).sqrMagnitude < r2) return true;
+            if (_otherCars != null)
+                foreach (Vector2 o in _otherCars)
+                    if ((o - p).sqrMagnitude < r2) return true;
             return false;
         }
     }

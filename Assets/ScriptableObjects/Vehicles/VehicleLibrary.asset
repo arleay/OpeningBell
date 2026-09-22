@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   models:
   - Id: skate_street
-    Name: 'Curbside Street Deck'
+    Name: Curbside Street Deck
     Kind: 0
     Price: 95
     Description: 'Classic 8" street board: small hard wheels, tight trucks. Quick on smooth pavement, twitchy on rough.'
@@ -41,11 +41,63 @@ MonoBehaviour:
       WheelDurometer: 99
       BearingFactor: 1.1
       TruckLooseness: 0.3
+    Car:
+      Mass: 1300
+      CenterOfMassHeight: 0.55
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.58
+      Drive: 0
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6500
+      CurveRpm:
+      - 1000
+      - 2500
+      - 4000
+      - 5500
+      - 6500
+      CurveTorque:
+      - 120
+      - 165
+      - 180
+      - 165
+      - 140
+      GearRatios:
+      - 3.5
+      - 2.05
+      - 1.4
+      - 1
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 4.1
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.32
+      TireGrip: 1
+      PeakSlipAngle: 0.14
+      BrakeTorque: 4160
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 32000
+      Damping: 3200
+      RestLength: 0.38
+      Travel: 0.2
+      AntiRoll: 9000
+      DragCoefficient: 0.32
+      FrontalArea: 2.1
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 50
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: 
   - Id: skate_cruiser
-    Name: 'Harbor Cruiser'
+    Name: Harbor Cruiser
     Kind: 0
     Price: 120
-    Description: 'Short cruiser with soft 60 mm wheels and loose trucks. Carves, soaks up cracks, gets nervous when fast.'
+    Description: Short cruiser with soft 60 mm wheels and loose trucks. Carves, soaks up cracks, gets nervous when fast.
     ColorR: 0.18
     ColorG: 0.55
     ColorB: 0.55
@@ -69,11 +121,63 @@ MonoBehaviour:
       WheelDurometer: 80
       BearingFactor: 1.05
       TruckLooseness: 0.6
+    Car:
+      Mass: 1300
+      CenterOfMassHeight: 0.55
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.58
+      Drive: 0
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6500
+      CurveRpm:
+      - 1000
+      - 2500
+      - 4000
+      - 5500
+      - 6500
+      CurveTorque:
+      - 120
+      - 165
+      - 180
+      - 165
+      - 140
+      GearRatios:
+      - 3.5
+      - 2.05
+      - 1.4
+      - 1
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 4.1
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.32
+      TireGrip: 1
+      PeakSlipAngle: 0.14
+      BrakeTorque: 4160
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 32000
+      Damping: 3200
+      RestLength: 0.38
+      Travel: 0.2
+      AntiRoll: 9000
+      DragCoefficient: 0.32
+      FrontalArea: 2.1
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 50
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: 
   - Id: skate_longboard
-    Name: 'Downhill Longboard'
+    Name: Downhill Longboard
     Kind: 0
     Price: 185
-    Description: 'Long deck, big 70 mm wheels, good bearings. Rolls forever and stays calm at speed; wide turns.'
+    Description: Long deck, big 70 mm wheels, good bearings. Rolls forever and stays calm at speed; wide turns.
     ColorR: 0.62
     ColorG: 0.46
     ColorB: 0.28
@@ -93,15 +197,67 @@ MonoBehaviour:
       MotorPower: 0
       AssistCutoff: 0
       BatteryWh: 0
-      DeckLength: 1.0
+      DeckLength: 1
       WheelDurometer: 78
-      BearingFactor: 1.0
+      BearingFactor: 1
       TruckLooseness: 0.45
+    Car:
+      Mass: 1300
+      CenterOfMassHeight: 0.55
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.58
+      Drive: 0
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6500
+      CurveRpm:
+      - 1000
+      - 2500
+      - 4000
+      - 5500
+      - 6500
+      CurveTorque:
+      - 120
+      - 165
+      - 180
+      - 165
+      - 140
+      GearRatios:
+      - 3.5
+      - 2.05
+      - 1.4
+      - 1
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 4.1
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.32
+      TireGrip: 1
+      PeakSlipAngle: 0.14
+      BrakeTorque: 4160
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 32000
+      Damping: 3200
+      RestLength: 0.38
+      Travel: 0.2
+      AntiRoll: 9000
+      DragCoefficient: 0.32
+      FrontalArea: 2.1
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 50
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: 
   - Id: bike_bmx
-    Name: 'Rook BMX'
+    Name: Rook BMX
     Kind: 1
     Price: 340
-    Description: '20" wheels, one gear, tiny frame. Snappy and tight-turning, but spins out early.'
+    Description: 20" wheels, one gear, tiny frame. Snappy and tight-turning, but spins out early.
     ColorR: 0.9
     ColorG: 0.45
     ColorB: 0.12
@@ -125,11 +281,63 @@ MonoBehaviour:
       WheelDurometer: 99
       BearingFactor: 1
       TruckLooseness: 0.5
+    Car:
+      Mass: 1300
+      CenterOfMassHeight: 0.55
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.58
+      Drive: 0
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6500
+      CurveRpm:
+      - 1000
+      - 2500
+      - 4000
+      - 5500
+      - 6500
+      CurveTorque:
+      - 120
+      - 165
+      - 180
+      - 165
+      - 140
+      GearRatios:
+      - 3.5
+      - 2.05
+      - 1.4
+      - 1
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 4.1
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.32
+      TireGrip: 1
+      PeakSlipAngle: 0.14
+      BrakeTorque: 4160
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 32000
+      Damping: 3200
+      RestLength: 0.38
+      Travel: 0.2
+      AntiRoll: 9000
+      DragCoefficient: 0.32
+      FrontalArea: 2.1
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 50
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: 
   - Id: bike_commuter
-    Name: 'Everyday Commuter 3'
+    Name: Everyday Commuter 3
     Kind: 1
     Price: 460
-    Description: 'Upright steel city bike, 3 gears, fenders. Heavy but tough; fine on any street.'
+    Description: Upright steel city bike, 3 gears, fenders. Heavy but tough; fine on any street.
     ColorR: 0.16
     ColorG: 0.22
     ColorB: 0.42
@@ -153,11 +361,63 @@ MonoBehaviour:
       WheelDurometer: 99
       BearingFactor: 1
       TruckLooseness: 0.5
+    Car:
+      Mass: 1300
+      CenterOfMassHeight: 0.55
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.58
+      Drive: 0
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6500
+      CurveRpm:
+      - 1000
+      - 2500
+      - 4000
+      - 5500
+      - 6500
+      CurveTorque:
+      - 120
+      - 165
+      - 180
+      - 165
+      - 140
+      GearRatios:
+      - 3.5
+      - 2.05
+      - 1.4
+      - 1
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 4.1
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.32
+      TireGrip: 1
+      PeakSlipAngle: 0.14
+      BrakeTorque: 4160
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 32000
+      Damping: 3200
+      RestLength: 0.38
+      Travel: 0.2
+      AntiRoll: 9000
+      DragCoefficient: 0.32
+      FrontalArea: 2.1
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 50
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: 
   - Id: bike_mtb
-    Name: 'Ridgeback Trail'
+    Name: Ridgeback Trail
     Kind: 1
     Price: 890
-    Description: '29" knobbly tyres, 12 low gears. Climbs anything and doesn''t care about grass; slower on smooth roads.'
+    Description: 29" knobbly tyres, 12 low gears. Climbs anything and doesn't care about grass; slower on smooth roads.
     ColorR: 0.25
     ColorG: 0.45
     ColorB: 0.25
@@ -181,18 +441,70 @@ MonoBehaviour:
       WheelDurometer: 99
       BearingFactor: 1
       TruckLooseness: 0.5
+    Car:
+      Mass: 1300
+      CenterOfMassHeight: 0.55
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.58
+      Drive: 0
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6500
+      CurveRpm:
+      - 1000
+      - 2500
+      - 4000
+      - 5500
+      - 6500
+      CurveTorque:
+      - 120
+      - 165
+      - 180
+      - 165
+      - 140
+      GearRatios:
+      - 3.5
+      - 2.05
+      - 1.4
+      - 1
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 4.1
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.32
+      TireGrip: 1
+      PeakSlipAngle: 0.14
+      BrakeTorque: 4160
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 32000
+      Damping: 3200
+      RestLength: 0.38
+      Travel: 0.2
+      AntiRoll: 9000
+      DragCoefficient: 0.32
+      FrontalArea: 2.1
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 50
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: 
   - Id: bike_road
-    Name: 'Veloce Sprint'
+    Name: Veloce Sprint
     Kind: 1
     Price: 1290
-    Description: 'Light carbon road bike, 22 gears, slick tyres, tucked position. Fastest on pavement; hates grass.'
+    Description: Light carbon road bike, 22 gears, slick tyres, tucked position. Fastest on pavement; hates grass.
     ColorR: 0.72
     ColorG: 0.1
     ColorB: 0.1
     Spec:
       Mass: 8.6
       WheelDiameter: 0.68
-      Wheelbase: 1.0
+      Wheelbase: 1
       RollingResistance: 0.0042
       RoughnessPenalty: 3.5
       DragArea: 0.32
@@ -209,8 +521,60 @@ MonoBehaviour:
       WheelDurometer: 99
       BearingFactor: 1
       TruckLooseness: 0.5
+    Car:
+      Mass: 1300
+      CenterOfMassHeight: 0.55
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.58
+      Drive: 0
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6500
+      CurveRpm:
+      - 1000
+      - 2500
+      - 4000
+      - 5500
+      - 6500
+      CurveTorque:
+      - 120
+      - 165
+      - 180
+      - 165
+      - 140
+      GearRatios:
+      - 3.5
+      - 2.05
+      - 1.4
+      - 1
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 4.1
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.32
+      TireGrip: 1
+      PeakSlipAngle: 0.14
+      BrakeTorque: 4160
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 32000
+      Damping: 3200
+      RestLength: 0.38
+      Travel: 0.2
+      AntiRoll: 9000
+      DragCoefficient: 0.32
+      FrontalArea: 2.1
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 50
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: 
   - Id: ebike_commuter
-    Name: 'Volt Commuter'
+    Name: Volt Commuter
     Kind: 2
     Price: 1650
     Description: 'Pedal-assist city e-bike: 500 W motor to 20 mph, 500 Wh battery. Hills and headwinds stop mattering.'
@@ -237,8 +601,60 @@ MonoBehaviour:
       WheelDurometer: 99
       BearingFactor: 1
       TruckLooseness: 0.5
+    Car:
+      Mass: 1300
+      CenterOfMassHeight: 0.55
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.58
+      Drive: 0
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6500
+      CurveRpm:
+      - 1000
+      - 2500
+      - 4000
+      - 5500
+      - 6500
+      CurveTorque:
+      - 120
+      - 165
+      - 180
+      - 165
+      - 140
+      GearRatios:
+      - 3.5
+      - 2.05
+      - 1.4
+      - 1
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 4.1
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.32
+      TireGrip: 1
+      PeakSlipAngle: 0.14
+      BrakeTorque: 4160
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 32000
+      Damping: 3200
+      RestLength: 0.38
+      Travel: 0.2
+      AntiRoll: 9000
+      DragCoefficient: 0.32
+      FrontalArea: 2.1
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 50
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: 
   - Id: ebike_speed
-    Name: 'Volt Speed'
+    Name: Volt Speed
     Kind: 2
     Price: 2700
     Description: 'Class 3 speed e-bike: 750 W to 28 mph, 700 Wh. The quickest way across town short of a car.'
@@ -265,13 +681,733 @@ MonoBehaviour:
       WheelDurometer: 99
       BearingFactor: 1
       TruckLooseness: 0.5
+    Car:
+      Mass: 1300
+      CenterOfMassHeight: 0.55
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.58
+      Drive: 0
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6500
+      CurveRpm:
+      - 1000
+      - 2500
+      - 4000
+      - 5500
+      - 6500
+      CurveTorque:
+      - 120
+      - 165
+      - 180
+      - 165
+      - 140
+      GearRatios:
+      - 3.5
+      - 2.05
+      - 1.4
+      - 1
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 4.1
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.32
+      TireGrip: 1
+      PeakSlipAngle: 0.14
+      BrakeTorque: 4160
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 32000
+      Damping: 3200
+      RestLength: 0.38
+      Travel: 0.2
+      AntiRoll: 9000
+      DragCoefficient: 0.32
+      FrontalArea: 2.1
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 50
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: 
+  - Id: car_sedan
+    Name: Kestrel Sedan
+    Kind: 3
+    Price: 24000
+    Description: 'Sensible four-door: 1.8 L four-cylinder, front-wheel drive, five-speed automatic. Predictable and cheap to run.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 1300
+      CenterOfMassHeight: 0.55
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.6
+      Drive: 0
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6500
+      CurveRpm:
+      - 1000
+      - 2000
+      - 3000
+      - 4000
+      - 5000
+      - 6000
+      - 6500
+      CurveTorque:
+      - 115
+      - 150
+      - 168
+      - 175
+      - 170
+      - 158
+      - 140
+      GearRatios:
+      - 3.6
+      - 2.1
+      - 1.45
+      - 1.05
+      - 0.82
+      ReverseRatio: 3.3
+      FinalDrive: 4.06
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2300
+      StallMultiplier: 1.9
+      WheelRadius: 0.33
+      TireGrip: 1
+      PeakSlipAngle: 0.14
+      BrakeTorque: 4420
+      BrakeFront: 0.66
+      HandbrakeTorque: 1600
+      SpringRate: 30000
+      Damping: 3000
+      RestLength: 0.36
+      Travel: 0.2
+      AntiRoll: 9000
+      DragCoefficient: 0.31
+      FrontalArea: 2.15
+      DownforceCoefficient: 0
+      MaxSteerDeg: 36
+      FuelCapacity: 50
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: sedan
+  - Id: car_hatch
+    Name: Brisk GTi
+    Kind: 3
+    Price: 31000
+    Description: 'Hot hatch: turbocharged 1.8 L with a fat mid-range, front-wheel drive, stiff springs. Pulls hard out of corners, pushes wide if you rush them.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 1260
+      CenterOfMassHeight: 0.5
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.61
+      Drive: 0
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6800
+      CurveRpm:
+      - 1000
+      - 1800
+      - 2500
+      - 4500
+      - 5500
+      - 6500
+      - 6800
+      CurveTorque:
+      - 160
+      - 300
+      - 320
+      - 320
+      - 300
+      - 250
+      - 220
+      GearRatios:
+      - 3.3
+      - 2.1
+      - 1.5
+      - 1.15
+      - 0.92
+      - 0.78
+      ReverseRatio: 3.2
+      FinalDrive: 3.9
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 1.05
+      PeakSlipAngle: 0.12
+      BrakeTorque: 4940
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 38000
+      Damping: 3600
+      RestLength: 0.38
+      Travel: 0.2
+      AntiRoll: 14000
+      DragCoefficient: 0.32
+      FrontalArea: 2.1
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 50
+      FuelPerKwh: 0.31
+      IdleFuelPerHour: 0.8
+    Mesh: hatchback-sports
+  - Id: car_suv
+    Name: Ridgeline SUV
+    Kind: 3
+    Price: 36000
+    Description: 'Family SUV: 2.5 L four, all-wheel drive, tall and soft. Grips in the wet, leans in the corners.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 1700
+      CenterOfMassHeight: 0.78
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.57
+      Drive: 2
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6200
+      CurveRpm:
+      - 1000
+      - 2500
+      - 4000
+      - 5500
+      - 6200
+      CurveTorque:
+      - 160
+      - 235
+      - 250
+      - 225
+      - 195
+      GearRatios:
+      - 3.9
+      - 2.3
+      - 1.5
+      - 1.12
+      - 0.9
+      - 0.75
+      ReverseRatio: 3.2
+      FinalDrive: 3.9
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 0.95
+      PeakSlipAngle: 0.15
+      BrakeTorque: 5460
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 36000
+      Damping: 3800
+      RestLength: 0.42
+      Travel: 0.24
+      AntiRoll: 12000
+      DragCoefficient: 0.38
+      FrontalArea: 2.7
+      DownforceCoefficient: 0
+      MaxSteerDeg: 35
+      FuelCapacity: 60
+      FuelPerKwh: 0.31
+      IdleFuelPerHour: 0.9
+    Mesh: suv
+  - Id: car_pickup
+    Name: Haulmark Pickup
+    Kind: 3
+    Price: 42000
+    Description: 'Full-size pickup: 5.0 L V8, rear-wheel drive, heavy. Huge low-end torque; spins the rear tyres if you''re greedy.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 2100
+      CenterOfMassHeight: 0.8
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.56
+      Drive: 1
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6000
+      CurveRpm:
+      - 1000
+      - 2500
+      - 3500
+      - 4500
+      - 5500
+      - 6000
+      CurveTorque:
+      - 360
+      - 470
+      - 520
+      - 505
+      - 440
+      - 400
+      GearRatios:
+      - 4
+      - 2.3
+      - 1.5
+      - 1.15
+      - 0.85
+      - 0.67
+      ReverseRatio: 3.2
+      FinalDrive: 3.55
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 0.95
+      PeakSlipAngle: 0.15
+      BrakeTorque: 6760
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 42000
+      Damping: 4200
+      RestLength: 0.42
+      Travel: 0.25
+      AntiRoll: 10000
+      DragCoefficient: 0.42
+      FrontalArea: 3
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 90
+      FuelPerKwh: 0.33
+      IdleFuelPerHour: 1.3
+    Mesh: truck
+  - Id: car_van
+    Name: Courier Van
+    Kind: 3
+    Price: 33000
+    Description: 'Panel van: 2.2 L turbo-diesel, rear-wheel drive. Slow, frugal, enormous.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 1950
+      CenterOfMassHeight: 0.85
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.55
+      Drive: 1
+      AwdFrontShare: 0.4
+      IdleRpm: 800
+      RedlineRpm: 4600
+      CurveRpm:
+      - 1000
+      - 1700
+      - 2500
+      - 3500
+      - 4200
+      - 4600
+      CurveTorque:
+      - 240
+      - 360
+      - 370
+      - 330
+      - 280
+      - 240
+      GearRatios:
+      - 4.2
+      - 2.5
+      - 1.6
+      - 1.2
+      - 0.95
+      - 0.78
+      ReverseRatio: 3.2
+      FinalDrive: 3.7
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 0.95
+      PeakSlipAngle: 0.16
+      BrakeTorque: 6240
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 40000
+      Damping: 4000
+      RestLength: 0.42
+      Travel: 0.2
+      AntiRoll: 11000
+      DragCoefficient: 0.36
+      FrontalArea: 3.3
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 75
+      FuelPerKwh: 0.26
+      IdleFuelPerHour: 0.9
+    Mesh: van
+  - Id: car_gt
+    Name: Vantage GT
+    Kind: 3
+    Price: 64000
+    Description: 'Sports sedan: 3.0 L twin-turbo six, rear-wheel drive, eight speeds. Balanced and quick; the rear will step out if you ask.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 1550
+      CenterOfMassHeight: 0.48
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.52
+      Drive: 1
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 7000
+      CurveRpm:
+      - 1000
+      - 2000
+      - 3000
+      - 5000
+      - 6500
+      - 7000
+      CurveTorque:
+      - 260
+      - 480
+      - 500
+      - 500
+      - 430
+      - 380
+      GearRatios:
+      - 4.7
+      - 3.1
+      - 2.1
+      - 1.67
+      - 1.29
+      - 1
+      - 0.84
+      - 0.67
+      ReverseRatio: 3.2
+      FinalDrive: 3.15
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 1.15
+      PeakSlipAngle: 0.11
+      BrakeTorque: 7280
+      BrakeFront: 0.62
+      HandbrakeTorque: 1600
+      SpringRate: 45000
+      Damping: 4200
+      RestLength: 0.34
+      Travel: 0.16
+      AntiRoll: 18000
+      DragCoefficient: 0.3
+      FrontalArea: 2.05
+      DownforceCoefficient: 0.25
+      MaxSteerDeg: 34
+      FuelCapacity: 64
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: sedan-sports
+  - Id: car_luxury
+    Name: Strata Luxe
+    Kind: 3
+    Price: 88000
+    Description: 'Luxury SUV: 4.4 L V8, all-wheel drive, air-smooth ride. Fast for its size, and it knows it.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 2250
+      CenterOfMassHeight: 0.75
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.53
+      Drive: 2
+      AwdFrontShare: 0.45
+      IdleRpm: 850
+      RedlineRpm: 6500
+      CurveRpm:
+      - 1000
+      - 2000
+      - 4500
+      - 6000
+      - 6500
+      CurveTorque:
+      - 380
+      - 600
+      - 620
+      - 520
+      - 470
+      GearRatios:
+      - 4.7
+      - 3.1
+      - 2.1
+      - 1.67
+      - 1.29
+      - 1
+      - 0.84
+      - 0.67
+      ReverseRatio: 3.2
+      FinalDrive: 3.3
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 1.05
+      PeakSlipAngle: 0.13
+      BrakeTorque: 8060
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 42000
+      Damping: 4600
+      RestLength: 0.42
+      Travel: 0.24
+      AntiRoll: 16000
+      DragCoefficient: 0.35
+      FrontalArea: 2.8
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 80
+      FuelPerKwh: 0.31
+      IdleFuelPerHour: 1.1
+    Mesh: suv-luxury
+  - Id: car_super
+    Name: Aurel Vector
+    Kind: 3
+    Price: 240000
+    Description: 'Mid-engine supercar: 5.2 L V10 to 8,700 rpm, rear-wheel drive, real downforce. Absurd.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 1400
+      CenterOfMassHeight: 0.42
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.42
+      Drive: 1
+      AwdFrontShare: 0.4
+      IdleRpm: 1000
+      RedlineRpm: 8700
+      CurveRpm:
+      - 1000
+      - 3000
+      - 5000
+      - 6500
+      - 8000
+      - 8700
+      CurveTorque:
+      - 300
+      - 520
+      - 580
+      - 600
+      - 560
+      - 500
+      GearRatios:
+      - 3.2
+      - 2.3
+      - 1.75
+      - 1.4
+      - 1.15
+      - 0.95
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 3.6
+      DrivetrainEfficiency: 0.88
+      StallRpm: 3000
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 1.3
+      PeakSlipAngle: 0.1
+      BrakeTorque: 9100
+      BrakeFront: 0.6
+      HandbrakeTorque: 1600
+      SpringRate: 60000
+      Damping: 5000
+      RestLength: 0.3
+      Travel: 0.12
+      AntiRoll: 22000
+      DragCoefficient: 0.34
+      FrontalArea: 1.9
+      DownforceCoefficient: 0.9
+      MaxSteerDeg: 32
+      FuelCapacity: 80
+      FuelPerKwh: 0.32
+      IdleFuelPerHour: 0.8
+    Mesh: race-future
   parts:
   - Id: wheels_soft60
-    Name: 'Soft 60mm wheels (80A)'
+    Name: Soft 60mm wheels (80A)
     Fits: 0
     Slot: 0
     Price: 38
-    Description: 'Grippier, smoother over cracks and rough asphalt.'
+    Description: Grippier, smoother over cracks and rough asphalt.
     WheelDiameter: 0.06
     WheelDurometer: 80
     BearingFactor: 0
@@ -279,11 +1415,11 @@ MonoBehaviour:
     TruckLooseness: 0
     BatteryMultiplier: 0
   - Id: wheels_big70
-    Name: 'Big 70mm wheels (78A)'
+    Name: Big 70mm wheels (78A)
     Fits: 0
     Slot: 0
     Price: 48
-    Description: 'Roll the longest and ignore rough ground.'
+    Description: Roll the longest and ignore rough ground.
     WheelDiameter: 0.07
     WheelDurometer: 78
     BearingFactor: 0
@@ -291,7 +1427,7 @@ MonoBehaviour:
     TruckLooseness: 0
     BatteryMultiplier: 0
   - Id: bearings_precision
-    Name: 'Precision bearings'
+    Name: Precision bearings
     Fits: 0
     Slot: 1
     Price: 32
@@ -303,11 +1439,11 @@ MonoBehaviour:
     TruckLooseness: 0
     BatteryMultiplier: 0
   - Id: trucks_loose
-    Name: 'Loose trucks (carve)'
+    Name: Loose trucks (carve)
     Fits: 0
     Slot: 2
     Price: 55
-    Description: 'Sharper turns, less stable when fast.'
+    Description: Sharper turns, less stable when fast.
     WheelDiameter: 0
     WheelDurometer: 0
     BearingFactor: 0
@@ -315,11 +1451,11 @@ MonoBehaviour:
     TruckLooseness: 0.85
     BatteryMultiplier: 0
   - Id: trucks_tight
-    Name: 'Tight trucks (stable)'
+    Name: Tight trucks (stable)
     Fits: 0
     Slot: 2
     Price: 55
-    Description: 'Calm at speed, wider turns.'
+    Description: Calm at speed, wider turns.
     WheelDiameter: 0
     WheelDurometer: 0
     BearingFactor: 0
@@ -327,16 +1463,93 @@ MonoBehaviour:
     TruckLooseness: 0.15
     BatteryMultiplier: 0
   - Id: battery_extended
-    Name: 'Extended battery (+50%)'
+    Name: Extended battery (+50%)
     Fits: 2
     Slot: 3
     Price: 420
-    Description: 'Bigger pack for longer range between charges.'
+    Description: Bigger pack for longer range between charges.
     WheelDiameter: 0
     WheelDurometer: 0
     BearingFactor: 0
     SetsTruckLooseness: 0
     TruckLooseness: 0
     BatteryMultiplier: 1.5
+  listings:
+  - Id: used_sedan_1
+    ModelId: car_sedan
+    Price: 3900
+    OdometerKm: 164000
+    Condition: 0.62
+    TireCondition: 0.55
+    FuelFraction: 0.35
+    Seller: Dale
+    Description: 2011 Kestrel Sedan. Starts every time, some rust on the arches, tyres have a season left.
+  - Id: used_van_1
+    ModelId: car_van
+    Price: 5400
+    OdometerKm: 212000
+    Condition: 0.7
+    TireCondition: 0.6
+    FuelFraction: 0.5
+    Seller: Marta's Plumbing
+    Description: 2014 Courier Van. Ex-work van, shelving in the back, never missed a service.
+  - Id: used_hatch_1
+    ModelId: car_hatch
+    Price: 8900
+    OdometerKm: 98000
+    Condition: 0.82
+    TireCondition: 0.8
+    FuelFraction: 0.6
+    Seller: Jordan
+    Description: 2016 Brisk GTi. Quick, fun, new clutch. Selling because I moved downtown.
+  - Id: used_pickup_1
+    ModelId: car_pickup
+    Price: 6200
+    OdometerKm: 238000
+    Condition: 0.58
+    TireCondition: 0.5
+    FuelFraction: 0.3
+    Seller: Earl
+    Description: 2009 Haulmark Pickup. V8, thirsty, pulls like a train. Ignore the dent.
+  carMeshes:
+  - {fileID: 919132149155446097, guid: b456159d3a58a144ab1b34adb277d040, type: 3}
+  - {fileID: 919132149155446097, guid: cb61e7f639a3397438ed2066a91045b5, type: 3}
+  - {fileID: 919132149155446097, guid: ee825e100a3512340812fc72c20abc53, type: 3}
+  - {fileID: 919132149155446097, guid: 542cc29ec30719749ac1da1ac0b0330b, type: 3}
+  - {fileID: 919132149155446097, guid: 2fbecbe51b6516440931f3d2d467e548, type: 3}
+  - {fileID: 919132149155446097, guid: 7f6bfa2c0af9011479b50dd23c7435e1, type: 3}
+  - {fileID: 919132149155446097, guid: d334e7ce628e3b74d82a5af77ac9f61c, type: 3}
+  - {fileID: 919132149155446097, guid: 8547673f2862cdd46ae3caf50e099e1a, type: 3}
+  - {fileID: 919132149155446097, guid: 4f2e4d4dbdf57dd43a9c9d2de0a7f7cd, type: 3}
+  - {fileID: 919132149155446097, guid: ab19478da979d464e94118358e41be49, type: 3}
+  - {fileID: 919132149155446097, guid: c0042a8b68c7ee54c8a72e73b05db7b5, type: 3}
+  - {fileID: 919132149155446097, guid: faa82ee8752e19e48a58c37ea636e53b, type: 3}
+  - {fileID: 919132149155446097, guid: b34ed760dfdaa934c92b14a8b79a7e1b, type: 3}
+  - {fileID: 919132149155446097, guid: d12384f537479a3459072001cd8d5b80, type: 3}
+  - {fileID: 919132149155446097, guid: e145c75c3991c6d459b6a9049142ac80, type: 3}
+  - {fileID: 919132149155446097, guid: 011c6eda4b7018249b6e105c7832c4fd, type: 3}
+  - {fileID: 919132149155446097, guid: 3cef6418dedf29547ba87efc872664b2, type: 3}
+  trafficMix:
+  - sedan
+  - sedan
+  - sedan
+  - sedan
+  - suv
+  - suv
+  - suv
+  - taxi
+  - taxi
+  - van
+  - van
+  - hatchback-sports
+  - hatchback-sports
+  - delivery
+  - truck
+  - truck
+  - sedan-sports
+  - suv-luxury
+  - police
+  - delivery-flat
+  - truck-flat
   tuneUpPrice: 60
   newTiresPrice: 45

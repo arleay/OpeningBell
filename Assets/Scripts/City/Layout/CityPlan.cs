@@ -48,7 +48,8 @@ namespace OpeningBell.City
     {
         public const float RoadHalfWidth = 5f;
         public const float SidewalkWidth = 3.5f;
-        public const float LaneOffset = 2.5f;
+        // Lanes sit 2 m off the centre line: leaves room for a car parked at the kerb beside passing traffic.
+        public const float LaneOffset = 2f;
         public const float RoadY = -0.15f;
         /// <summary>Stop lines sit just outside the crosswalk band (5–8.5 m from the junction centre).</summary>
         public const float StopLine = 9f;

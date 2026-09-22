@@ -142,7 +142,7 @@ Extends `PROJECT_SPEC.md`. Section numbers (§) follow the original prompt. The 
 
 ## Phase plan (§98), do not implement everything at once
 - **9 City foundation:** streets, sidewalks, office building, lobby, receptionist, elevator, exterior access, basic traffic, basic pedestrians. ✅
-- **10 Ground transport:** vehicle framework, car driving, parking, fuel, enter/exit, save.
+- **10 Ground transport:** vehicle framework, car driving, parking, fuel, enter/exit, save. ✅
 - **11 Dealerships:** used and standard dealers, buying, test drives, resale.
 - **12 Mechanics:** repair, maintenance, diagnostics, upgrades, damage.
 - **13 Small mobility:** skateboards, bicycles, e-bikes, dedicated shops. ✅ (done before 10 by choice)

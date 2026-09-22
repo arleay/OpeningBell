@@ -22,13 +22,17 @@
 
 - [x] Phase 13 (small mobility, done before Phase 10 by choice): physics-based bikes, e-bikes (assist levels, battery by game time, chargers) and skateboards (pushes, carving, wheel/bearing/truck effects, speed wobbles); persistent owned vehicles (wear, service history, parts, resale, saved position); Curbside Skate and Hillside Cycles with spec cards, parts and services; curb ramps; first-person and chase camera. Acceptance: buy a board, ride it home, save; buy a bike, park it, reload, still there. City slice acceptance items 1–13 all covered
 
+- [x] Rendering pass: post-processing (tonemapping, grading, bloom, vignette), SSAO, MSAA, soft cascaded shadows, Forward+ street-light pools and headlights at night, dimming sky, trilight ambient
+- [x] Phase 10 (cars): raycast-suspension car physics (tyre curves, friction circle, torque curves, automatic with converter, FWD/RWD/AWD, drag and downforce), 8 cars from sedan to supercar, Kenney car kit models for driven cars and traffic, enter/exit with a camera glide, chase and hood cameras, fuel by game time, crash damage, used-car classifieds in STORE (delivered to the kerb), Tidewater Fuel station, cars saved where parked
+
 ## Next
-- [ ] **Play the build yourself:** buy a board ($95–185) or a bike, ride to work
-- [ ] **Debug panel** (spec §42, part of the §45 vertical slice; still missing): set cash/time, open/close market, spawn news, teleport to city spots, grant equipment or vehicles, reset portfolio, seed/FPS/tick time. Dev builds only
-- [ ] Then WORLD_SPEC Phase 10 (cars: vehicle framework, driving, parking, fuel) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
+- [ ] **Play the build yourself:** buy the $3,900 used sedan (transfer from brokerage first), drive to work, fill up at Tidewater Fuel
+- [ ] **Debug panel** (spec §42, part of the §45 vertical slice; still missing): set cash/time, teleport to city spots, grant equipment or vehicles, seed/FPS/tick time. Dev builds only
+- [ ] Art, next steps: free low-poly packs for buildings/props (Kenney City kits) and animated people (Kenney/Quaternius characters) to replace the boxes
+- [ ] Then WORLD_SPEC Phase 11 (dealerships: used lot and standard dealer, test drives, resale) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
 
 ## Later phases (do not start early)
-- WORLD_SPEC Phases 10–12 and 14–17: ground transport, dealerships, mechanics, property, advanced vehicles, aviation, world polish
+- WORLD_SPEC Phases 11–12 and 14–17: dealerships, mechanics, property, advanced vehicles, aviation, world polish
 
 ## Known debt / decisions to revisit
 - No market holidays (`MarketSchedule.IsTradingDay`)
@@ -63,6 +67,18 @@
   - No paint customisation yet (`OwnedVehicle` has no paint field; add with the body shop).
   - Pedestrians clip through a stopped bike.
   - Extra boards are "stored at home" with no way to swap them in yet.
+- Cars (Phase 10):
+  - Automatic only; manual/dual-clutch later (spec §22).
+  - Open differentials only (no LSD or ESC/ABS modelling beyond the friction circle).
+  - No tyre temperature or wet grip (weather is Phase 17).
+  - Kenney models are recoloured only per model (palette texture), so there's no paint choice yet.
+  - No interiors (the hood view looks over the bonnet).
+  - Damage is condition and power only; no visual dents or broken parts (the kit has debris models for later).
+  - AI traffic doesn't overtake: a car parked in a lane blocks it.
+  - No parking garages or passes yet (§63), no insurance or registration (optional §83–84), no towing or breakdowns (§81–82).
+  - Cars aren't sold anywhere but the classifieds until dealerships (Phase 11).
+  - The engine sound is one synthesized loop.
+  - Traffic cars don't honk or react to being hit.
 - Active input handling is "Both". Test switching to Input System only (UI Toolkit runtime input) before release
 - With the default seed (18492) the onboarding APEX headline draws a modest +3% move (the expected move is about +10%). Honest randomness; retune severity or the seed if the tutorial needs a clearer reaction
 - Day loop: no weekend gameplay (slept through); no fatigue/sleep-quality effects (psychology system, spec §9); sleeping mid-afternoon after 4 PM skips after-hours trading without asking

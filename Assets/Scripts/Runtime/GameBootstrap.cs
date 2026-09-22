@@ -61,6 +61,8 @@ namespace OpeningBell
         public Inbox Inbox { get; private set; }
         /// <summary>The player's bikes and boards (spec §16: persistent identity).</summary>
         public global::OpeningBell.Vehicles.Fleet Vehicles { get; private set; }
+        /// <summary>Vehicle content (models, 3D meshes, traffic mix).</summary>
+        public VehicleLibrary VehicleLibrary => vehicleLibrary;
         private EmailDirector _emails;
 
         /// <summary>Set by <see cref="StartNewGame"/> so the reloaded scene ignores the (deleted) save.</summary>
@@ -77,6 +79,12 @@ namespace OpeningBell
 
         /// <summary>Seated trading slows time; walking around lets it pass faster (spec §7).</summary>
         public bool IsAtWorkstation { get; set; }
+
+        /// <summary>
+        /// Where to save the player instead of their body (set while driving: beside the car, so a reload doesn't
+        /// put them inside it). Null = the body's position.
+        /// </summary>
+        public Vector3? PlayerSavePosition { get; set; }
 
         private void Awake()
         {
@@ -148,7 +156,7 @@ namespace OpeningBell
             };
             if (player != null)
             {
-                Vector3 p = player.position;
+                Vector3 p = PlayerSavePosition ?? player.position;
                 save.HasPlayer = true;
                 save.Player = new PlayerSaveData { X = p.x, Y = p.y, Z = p.z, Yaw = player.eulerAngles.y };
             }
@@ -160,6 +168,7 @@ namespace OpeningBell
         {
             SaveSystem.Delete(saveSlot);
             _forceNewGame = true;
+            Time.timeScale = 1f; // the pause menu stopped physics
             enabled = false; // no quit-time save of the abandoned game
             UnityEngine.SceneManagement.SceneManager.LoadScene(gameObject.scene.name);
         }

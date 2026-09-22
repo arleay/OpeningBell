@@ -14,18 +14,17 @@ namespace OpeningBell.City
         private CityContext _c;
         private Camera _camera;
         private PeopleSource _peopleSource;
-        private readonly Dictionary<TrafficSimulation.Car, Transform> _shown = new Dictionary<TrafficSimulation.Car, Transform>();
-        private readonly Stack<Transform> _pool = new Stack<Transform>();
         private readonly List<Vector2> _people = new List<Vector2>();
+        private readonly List<Vector2> _others = new List<Vector2>();
         private readonly List<TrafficSimulation.Car> _remove = new List<TrafficSimulation.Car>();
         private List<SignalHead> _signals;
         private List<WalkSignal> _walkSignals;
-        private Material _red, _yellow, _green, _off, _walk, _wait, _headlight, _taillight;
+        private Material _red, _yellow, _green, _off, _walk, _wait;
         private readonly Plane[] _frustum = new Plane[6];
         private float _populationTimer;
 
-        /// <summary>Fills the list with positions cars must not drive into (pedestrians, the player).</summary>
-        public delegate void PeopleSource(List<Vector2> into);
+        /// <summary>Fills the lists with people cars must not drive into, and cars outside the simulation to follow.</summary>
+        public delegate void PeopleSource(List<Vector2> people, List<Vector2> cars);
 
         public TrafficSimulation Simulation => _sim;
         public int CarCount => _sim.Cars.Count;
@@ -44,8 +43,6 @@ namespace OpeningBell.City
             _green = c.P.Glow(new Color(0.2f, 1f, 0.45f));
             _walk = c.P.Glow(new Color(0.95f, 0.95f, 0.9f), 1.6f);
             _wait = c.P.Glow(new Color(1f, 0.5f, 0.1f), 1.6f);
-            _headlight = c.P.Lamp(new Color(0.75f, 0.75f, 0.7f), new Color(1f, 0.97f, 0.85f));
-            _taillight = c.P.Lamp(new Color(0.45f, 0.08f, 0.06f), new Color(1f, 0.12f, 0.08f));
 
             // Fill the streets for the current hour and let them settle before the first frame.
             int target = TargetCount(_c.Game.Clock.Now.TimeOfDay.TotalHours);
@@ -73,8 +70,9 @@ namespace OpeningBell.City
         {
             float dt = _c.Game.IsPaused ? 0f : Mathf.Min(Time.deltaTime, 0.1f);
             _people.Clear();
-            _peopleSource?.Invoke(_people);
-            if (dt > 0f) _sim.Step(dt, _people);
+            _others.Clear();
+            _peopleSource?.Invoke(_people, _others);
+            if (dt > 0f) _sim.Step(dt, _people, _others);
 
             _populationTimer -= Time.deltaTime;
             if (_populationTimer <= 0f)
@@ -115,33 +113,67 @@ namespace OpeningBell.City
             return !GeometryUtility.TestPlanesAABB(_frustum, bounds);
         }
 
+        /// <summary>One traffic car's look: a car-kit model with wheels that roll.</summary>
+        private sealed class TrafficCar
+        {
+            public Transform Root;
+            public Rigidbody Body;
+            public Transform[] Wheels;
+            public float Radius;
+            public Light Beam;
+            public string Model;
+            public double Spin;
+            public Vector3 Last;
+        }
+
+        private readonly Dictionary<TrafficSimulation.Car, TrafficCar> _cars = new Dictionary<TrafficSimulation.Car, TrafficCar>();
+        private readonly Dictionary<string, Stack<TrafficCar>> _byModel = new Dictionary<string, Stack<TrafficCar>>();
+
         private void Sync()
         {
+            bool night = _c.Night > 0.5f;
             foreach (TrafficSimulation.Car car in _sim.Cars)
             {
-                if (!_shown.TryGetValue(car, out Transform t))
+                if (!_cars.TryGetValue(car, out TrafficCar t))
                 {
-                    t = _pool.Count > 0 ? _pool.Pop() : BuildCar();
-                    Paint(t, car.ColorSeed);
-                    t.gameObject.SetActive(true);
-                    _shown[car] = t;
+                    t = Take(ModelFor(car));
+                    _cars[car] = t;
+                    t.Root.gameObject.SetActive(true);
+                    t.Root.SetPositionAndRotation(Pose(car, out Quaternion r), r);
+                    t.Last = t.Root.position;
                 }
-                t.SetPositionAndRotation(new Vector3(car.Position.x, CityPlan.RoadY, car.Position.y),
-                    Quaternion.LookRotation(new Vector3(car.Heading.x, 0f, car.Heading.y)));
-                Light beam = t.GetComponentInChildren<Light>(true);
-                bool night = _c.Night > 0.5f;
-                if (beam.enabled != night) beam.enabled = night;
+                Vector3 p = Pose(car, out Quaternion rotation);
+                // Kinematic bodies move through the physics step so bumps with the player's car stay sane.
+                t.Body.MovePosition(p);
+                t.Body.MoveRotation(rotation);
+                t.Spin += Vector3.Distance(p, t.Last) / t.Radius;
+                t.Last = p;
+                var roll = Quaternion.Euler((float)(t.Spin * Mathf.Rad2Deg), 0f, 0f);
+                foreach (Transform w in t.Wheels) w.localRotation = roll;
+                if (t.Beam != null && t.Beam.enabled != night) t.Beam.enabled = night;
             }
             _remove.Clear();
-            foreach (var pair in _shown)
+            foreach (var pair in _cars)
                 if (!Contains(pair.Key)) _remove.Add(pair.Key);
             foreach (TrafficSimulation.Car car in _remove)
             {
-                Transform t = _shown[car];
-                t.gameObject.SetActive(false);
-                _pool.Push(t);
-                _shown.Remove(car);
+                TrafficCar t = _cars[car];
+                t.Root.gameObject.SetActive(false);
+                _byModel[t.Model].Push(t);
+                _cars.Remove(car);
             }
+        }
+
+        private static Vector3 Pose(TrafficSimulation.Car car, out Quaternion rotation)
+        {
+            rotation = Quaternion.LookRotation(new Vector3(car.Heading.x, 0f, car.Heading.y));
+            return new Vector3(car.Position.x, CityPlan.RoadY, car.Position.y);
+        }
+
+        private string ModelFor(TrafficSimulation.Car car)
+        {
+            IReadOnlyList<string> mix = _c.Game.VehicleLibrary != null ? _c.Game.VehicleLibrary.TrafficMix : null;
+            return mix == null || mix.Count == 0 ? "" : mix[(car.ColorSeed & 0x7fffffff) % mix.Count];
         }
 
         private bool Contains(TrafficSimulation.Car car)
@@ -151,64 +183,57 @@ namespace OpeningBell.City
             return false;
         }
 
-        private static readonly Color[] Paints =
+        private TrafficCar Take(string model)
         {
-            new Color(0.75f, 0.75f, 0.77f), new Color(0.1f, 0.1f, 0.11f), new Color(0.92f, 0.92f, 0.9f), new Color(0.55f, 0.08f, 0.07f),
-            new Color(0.12f, 0.22f, 0.42f), new Color(0.35f, 0.37f, 0.4f), new Color(0.2f, 0.32f, 0.25f), new Color(0.6f, 0.5f, 0.35f),
-        };
+            if (!_byModel.TryGetValue(model, out Stack<TrafficCar> pool)) _byModel[model] = pool = new Stack<TrafficCar>();
+            if (pool.Count > 0) return pool.Pop();
+            GameObject mesh = _c.Game.VehicleLibrary != null ? _c.Game.VehicleLibrary.CarMesh(model) : null;
+            TrafficCar t = mesh != null ? FromModel(mesh, model) : BoxCar();
+            t.Model = model;
+            return t;
+        }
 
-        /// <summary>TODO(art): primitive car until vehicle models exist (Phase 10 adds real vehicles).</summary>
-        private Transform BuildCar()
+        private TrafficCar FromModel(GameObject mesh, string model)
+        {
+            GameObject root = CarFactory.Model(transform, mesh, "Traffic " + model, out Transform[] wheels, out float radius, out Bounds body);
+            SetLayer(root, CityLayers.Vehicle);
+            var box = root.AddComponent<BoxCollider>();
+            box.center = body.center;
+            box.size = body.size;
+            var rb = root.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            return new TrafficCar { Root = root.transform, Body = rb, Wheels = wheels, Radius = radius, Beam = CarFactory.AddHeadlights(root.transform, body) };
+        }
+
+        private static void SetLayer(GameObject go, int layer)
+        {
+            go.layer = layer;
+            foreach (Transform child in go.transform) SetLayer(child.gameObject, layer);
+        }
+
+        /// <summary>Fallback without the car kit: the old primitive car.</summary>
+        private TrafficCar BoxCar()
         {
             Kit k = _c.Kit;
-            // Created far below the world: the origin is inside the apartment, and a collider appearing there
-            // (even for a frame) shoves the player.
             Transform car = Kit.Group(transform, "Car", new Vector3(0f, -100f, 0f));
-            Transform body = Kit.Group(car, "Body");
-            k.Box(body, "Lower", new Vector3(0f, 0.6f, 0f), new Vector3(1.8f, 0.62f, 4.4f), _c.P.Lit(Color.gray), collider: false);
-            k.Box(body, "Cabin", new Vector3(0f, 1.18f, -0.25f), new Vector3(1.6f, 0.58f, 2.3f), _c.P.Lit(Color.gray), collider: false);
-            Material glass = _c.P.Lit(new Color(0.1f, 0.12f, 0.15f), 0.9f);
-            k.Box(car, "Windshield", new Vector3(0f, 1.2f, 0.93f), new Vector3(1.5f, 0.48f, 0.04f), glass, collider: false);
-            k.Box(car, "Rear window", new Vector3(0f, 1.2f, -1.42f), new Vector3(1.5f, 0.45f, 0.04f), glass, collider: false);
-            k.Box(car, "Side windows", new Vector3(0f, 1.22f, -0.25f), new Vector3(1.62f, 0.4f, 2.1f), glass, collider: false);
-            Material tyre = _c.P.Lit(new Color(0.08f, 0.08f, 0.08f));
-            foreach (float x in new[] { -0.82f, 0.82f })
-            foreach (float z in new[] { -1.35f, 1.35f })
-            {
-                GameObject w = k.Cylinder(car, "Wheel", new Vector3(x, 0.34f, z), 0.68f, 0.26f, tyre);
-                w.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
-            }
-            foreach (float x in new[] { -0.65f, 0.65f })
-            {
-                k.Box(car, "Headlight", new Vector3(x, 0.72f, 2.21f), new Vector3(0.36f, 0.14f, 0.03f), _headlight, collider: false);
-                k.Box(car, "Taillight", new Vector3(x, 0.75f, -2.21f), new Vector3(0.3f, 0.12f, 0.03f), _taillight, collider: false);
-            }
-            var beam = new GameObject("Headlights");
-            beam.transform.SetParent(car, false);
-            beam.transform.localPosition = new Vector3(0f, 0.75f, 2.3f);
-            beam.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
-            var spot = beam.AddComponent<Light>();
-            spot.type = LightType.Spot;
-            spot.range = 20f;
-            spot.spotAngle = 70f;
-            spot.intensity = 24f;
-            spot.color = new Color(1f, 0.95f, 0.85f);
-            spot.shadows = LightShadows.None;
-            spot.enabled = false;
+            k.Box(car, "Lower", new Vector3(0f, 0.6f, 0f), new Vector3(1.8f, 0.62f, 4.4f), _c.P.Lit(Paints[_rng++ % Paints.Length], 0.45f), collider: false);
+            k.Box(car, "Cabin", new Vector3(0f, 1.18f, -0.25f), new Vector3(1.6f, 0.58f, 2.3f), _c.P.Lit(new Color(0.1f, 0.12f, 0.15f), 0.9f), collider: false);
             var box = car.gameObject.AddComponent<BoxCollider>();
             box.center = new Vector3(0f, 0.85f, 0f);
             box.size = new Vector3(1.8f, 1.5f, 4.4f);
             var rb = car.gameObject.AddComponent<Rigidbody>();
             rb.isKinematic = true;
-            rb.interpolation = RigidbodyInterpolation.None;
-            return car;
+            return new TrafficCar { Root = car, Body = rb, Wheels = new Transform[0], Radius = 0.34f };
         }
 
-        private void Paint(Transform car, int seed)
+        private int _rng;
+
+        private static readonly Color[] Paints =
         {
-            Material paint = _c.P.Lit(Paints[(seed & 0x7fffffff) % Paints.Length], 0.45f);
-            foreach (Renderer r in car.Find("Body").GetComponentsInChildren<Renderer>()) r.sharedMaterial = paint;
-        }
+            new Color(0.75f, 0.75f, 0.77f), new Color(0.1f, 0.1f, 0.11f), new Color(0.92f, 0.92f, 0.9f), new Color(0.55f, 0.08f, 0.07f),
+            new Color(0.12f, 0.22f, 0.42f), new Color(0.35f, 0.37f, 0.4f), new Color(0.2f, 0.32f, 0.25f), new Color(0.6f, 0.5f, 0.35f),
+        };
 
         private void UpdateSignals()
         {

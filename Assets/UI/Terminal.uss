@@ -368,6 +368,8 @@
 
 .store-card.owned { border-color: #34c77b; }
 
+.store-section { margin: 14px 0 6px 0; }
+
 .store-name {
     font-size: 16px;
     -unity-font-style: bold;

@@ -51,12 +51,15 @@ namespace OpeningBell.Vehicles
         public double TireCondition = 1;    // tyres or skate wheels, 0–1
         public double BatteryWh;
         public double BatteryCapacityWh;
+        public double FuelLiters;
+        public double FuelCapacity;
         public readonly List<string> Parts = new List<string>();
         public VehicleState State;
         public double X, Y, Z, Yaw;         // where it is when parked (world metres, degrees)
         public readonly List<ServiceRecord> History = new List<ServiceRecord>();
 
         public double BatteryFraction => BatteryCapacityWh > 0 ? BatteryWh / BatteryCapacityWh : 0;
+        public double FuelFraction => FuelCapacity > 0 ? FuelLiters / FuelCapacity : 0;
 
         /// <summary>
         /// What a buyer would pay: 20% off the lot, then ~1.5%/month and ~3% per 100 km, scaled by condition.
@@ -85,6 +88,7 @@ namespace OpeningBell.Vehicles
         private readonly VehicleCatalog _catalog;
         private readonly List<OwnedVehicle> _vehicles = new List<OwnedVehicle>();
         private int _nextId = 1;
+        private readonly HashSet<string> _sold = new HashSet<string>(StringComparer.Ordinal);
 
         public IReadOnlyList<OwnedVehicle> Vehicles => _vehicles;
         public VehicleCatalog Catalog => _catalog;
@@ -96,6 +100,9 @@ namespace OpeningBell.Vehicles
         public Fleet(VehicleCatalog catalog) => _catalog = catalog;
 
         public OwnedVehicle Find(string id) => _vehicles.Find(v => v.Id == id);
+
+        /// <summary>A classifieds listing that has already been bought (each car exists once).</summary>
+        public bool IsSold(string listingId) => _sold.Contains(listingId);
 
         public OwnedVehicle Carried => _vehicles.Find(v => v.State == VehicleState.Carried);
 
@@ -113,6 +120,8 @@ namespace OpeningBell.Vehicles
                 Purchased = now,
                 BatteryCapacityWh = model.Spec.BatteryWh,
                 BatteryWh = model.Spec.BatteryWh,
+                FuelCapacity = model.Kind == VehicleKind.Car ? model.Car.FuelCapacity : 0,
+                FuelLiters = model.Kind == VehicleKind.Car ? model.Car.FuelCapacity : 0,
                 X = x, Y = y, Z = z, Yaw = yaw,
             };
             if (model.Kind == VehicleKind.Skateboard)
@@ -161,6 +170,22 @@ namespace OpeningBell.Vehicles
         }
 
         public void SetBattery(OwnedVehicle v, double wh) => v.BatteryWh = Math.Max(0, Math.Min(v.BatteryCapacityWh, wh));
+
+        public void SetFuel(OwnedVehicle v, double liters) => v.FuelLiters = Math.Max(0, Math.Min(v.FuelCapacity, liters));
+
+        /// <summary>Buys a used vehicle from a listing: it arrives with its mileage, wear and whatever is in the tank.</summary>
+        public OwnedVehicle AddUsed(UsedListing listing, DateTime now, double x, double y, double z, double yaw)
+        {
+            OwnedVehicle v = Add(listing.ModelId, (decimal)listing.Price, now, x, y, z, yaw);
+            _sold.Add(listing.Id);
+            v.Odometer = listing.OdometerKm * 1000;
+            v.Condition = listing.Condition;
+            v.TireCondition = listing.TireCondition;
+            v.FuelLiters = v.FuelCapacity * listing.FuelFraction;
+            v.History[0].Detail = $"{v.Name} (used, {listing.OdometerKm:N0} km, from {listing.Seller})";
+            Changed?.Invoke(v);
+            return v;
+        }
 
         /// <summary>Charges for <paramref name="gameSeconds"/> at <paramref name="watts"/>, tapering above 80% like real packs.</summary>
         public void Charge(OwnedVehicle v, double watts, double gameSeconds)
@@ -212,6 +237,7 @@ namespace OpeningBell.Vehicles
         public FleetSaveData CaptureState()
         {
             var data = new FleetSaveData { NextId = _nextId };
+            data.Sold.AddRange(_sold);
             foreach (OwnedVehicle v in _vehicles)
             {
                 var d = new OwnedVehicleSaveData
@@ -220,6 +246,7 @@ namespace OpeningBell.Vehicles
                     PurchasePrice = v.PurchasePrice.ToString(CultureInfo.InvariantCulture), Purchased = v.Purchased.Ticks,
                     Odometer = v.Odometer, Condition = v.Condition, TireCondition = v.TireCondition,
                     BatteryWh = v.BatteryWh, BatteryCapacityWh = v.BatteryCapacityWh,
+                    FuelLiters = v.FuelLiters, FuelCapacity = v.FuelCapacity,
                     // A ride in progress is saved where it stands: boards back in hand, bikes parked under the rider.
                     State = (int)(v.State == VehicleState.Riding ? (v.Kind == VehicleKind.Skateboard ? VehicleState.Carried : VehicleState.Parked) : v.State),
                     X = v.X, Y = v.Y, Z = v.Z, Yaw = v.Yaw,
@@ -238,6 +265,8 @@ namespace OpeningBell.Vehicles
             _vehicles.Clear();
             LastRidden = null;
             _nextId = Math.Max(1, data.NextId);
+            _sold.Clear();
+            foreach (string id in data.Sold) _sold.Add(id);
             foreach (OwnedVehicleSaveData d in data.Vehicles)
             {
                 if (!_catalog.TryGetModel(d.ModelId, out _)) continue; // model retired from the catalog
@@ -247,6 +276,7 @@ namespace OpeningBell.Vehicles
                     PurchasePrice = decimal.Parse(d.PurchasePrice, CultureInfo.InvariantCulture), Purchased = new DateTime(d.Purchased),
                     Odometer = d.Odometer, Condition = d.Condition, TireCondition = d.TireCondition,
                     BatteryWh = d.BatteryWh, BatteryCapacityWh = d.BatteryCapacityWh,
+                    FuelLiters = d.FuelLiters, FuelCapacity = d.FuelCapacity,
                     State = (VehicleState)d.State, X = d.X, Y = d.Y, Z = d.Z, Yaw = d.Yaw,
                 };
                 v.Parts.AddRange(d.Parts);
@@ -263,6 +293,7 @@ namespace OpeningBell.Vehicles
     {
         public int NextId = 1;
         public List<OwnedVehicleSaveData> Vehicles = new List<OwnedVehicleSaveData>();
+        public List<string> Sold = new List<string>();
     }
 
     [Serializable]
@@ -271,7 +302,7 @@ namespace OpeningBell.Vehicles
         public string Id, ModelId, Name, PurchasePrice;
         public int Kind, State;
         public long Purchased;
-        public double Odometer, Condition, TireCondition, BatteryWh, BatteryCapacityWh, X, Y, Z, Yaw;
+        public double Odometer, Condition, TireCondition, BatteryWh, BatteryCapacityWh, FuelLiters, FuelCapacity, X, Y, Z, Yaw;
         public bool LastRidden;
         public List<string> Parts = new List<string>();
         public List<ServiceRecordSaveData> History = new List<ServiceRecordSaveData>();

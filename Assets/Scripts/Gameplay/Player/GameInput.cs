@@ -24,6 +24,8 @@ namespace OpeningBell.Gameplay
         public InputAction CameraToggle { get; private set; }
         /// <summary>Cycle e-bike assist level.</summary>
         public InputAction Assist { get; private set; }
+        /// <summary>Car handbrake.</summary>
+        public InputAction Handbrake { get; private set; }
         public InputAction Leave { get; private set; }
         public InputAction CloseMenu { get; private set; }
 
@@ -43,6 +45,7 @@ namespace OpeningBell.Gameplay
             Ride = _player.AddAction("Ride", InputActionType.Button, "<Keyboard>/r");
             CameraToggle = _player.AddAction("Camera", InputActionType.Button, "<Keyboard>/c");
             Assist = _player.AddAction("Assist", InputActionType.Button, "<Keyboard>/q");
+            Handbrake = _player.AddAction("Handbrake", InputActionType.Button, "<Keyboard>/space");
 
             // Esc means "back out one level": stand up when seated, close the menu when it's open.
             _workstation = new InputActionMap("Workstation");

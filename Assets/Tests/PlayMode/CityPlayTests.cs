@@ -356,6 +356,120 @@ namespace OpeningBell.Tests
             Assert.Less(Vector3.Distance(new Vector3(shown.transform.position.x, 0f, shown.transform.position.z), parkedAt), 0.01f);
         }
 
+        /// <summary>Drives toward <paramref name="target"/> with the keyboard (W, S near the end, A/D along the line).</summary>
+        private IEnumerator DriveTo(Vector3 target, string what, float timeout = 60f)
+        {
+            DriveController driver = _city.Driver;
+            Transform car = driver.Car.transform;
+            Vector3 from = car.position;
+            Vector3 line = target - from;
+            line.y = 0f;
+            float start = Time.realtimeSinceStartup, lastProgress = start, best = float.MaxValue;
+            while (true)
+            {
+                Assert.IsTrue(driver.IsDriving, $"still driving ({what})");
+                Vector3 p = car.position;
+                Vector3 to = target - p;
+                to.y = 0f;
+                float remaining = to.magnitude;
+                if (remaining < 2f)
+                {
+                    while (driver.Car.ForwardSpeed > 0.3f)
+                    {
+                        HoldKeys(Key.S);
+                        yield return null;
+                    }
+                    HoldKeys();
+                    yield break;
+                }
+                float t = Mathf.Clamp01(Vector3.Dot(p - from, line) / line.sqrMagnitude);
+                Vector3 aim = from + line * Mathf.Min(1f, t + 8f / line.magnitude) - p;
+                float error = Vector3.SignedAngle(car.forward, new Vector3(aim.x, 0f, aim.z), Vector3.up);
+                var keys = new List<Key>();
+                // Cruise ~30 km/h, brake to arrive.
+                bool slow = driver.Car.ForwardSpeed > Mathf.Min(8.5f, Mathf.Max(2f, remaining * 0.5f));
+                keys.Add(slow ? Key.S : Key.W);
+                if (error > 2f) keys.Add(Key.D);
+                else if (error < -2f) keys.Add(Key.A);
+                HoldKeys(keys.ToArray());
+                float now = Time.realtimeSinceStartup;
+                if (remaining < best - 0.5f)
+                {
+                    best = remaining;
+                    lastProgress = now;
+                }
+                if (now - lastProgress > 15f || now - start > timeout)
+                    Assert.Fail($"Stuck driving to {what}: at {p}, target {target}, speed {driver.Car.SpeedKmh:F0} km/h, gear {driver.Car.Gear}");
+                yield return null;
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator UsedCar_BoughtOnline_DrivenParkedFuelled_AndSaved()
+        {
+            UseSimulatedInput();
+            yield return Setup(8.25);
+            GameBootstrap game = Find<GameBootstrap>();
+
+            // Buy the used sedan from the classifieds (bank first: it's more than the bank holds).
+            Assert.IsNull(game.Economy.TransferFromBrokerage(3000m, game.Clock.Now));
+            TradingTerminal terminal = Find<TradingTerminal>();
+            yield return WaitUntil(() => terminal.Context != null && terminal.Context.BuyUsedCar != null, 3f, "classifieds wired");
+            OpeningBell.Vehicles.UsedListing listing = game.Vehicles.Catalog.Listings.First(l => l.Id == "used_sedan_1");
+            Assert.IsNull(terminal.Context.BuyUsedCar(listing), "bought");
+            OwnedVehicle car = game.Vehicles.Vehicles.Single();
+            Assert.AreEqual(VehicleKind.Car, car.Kind);
+            Assert.IsNotNull(terminal.Context.BuyUsedCar(listing), "each car sells once");
+            yield return null;
+            GameObject parked = _city.Fleet.Shown(car);
+            Assert.NotNull(parked, "left at the curb");
+            Assert.Less(Vector3.Distance(parked.transform.position, CityBuilder.CurbSpots[0]), 0.1f);
+
+            // Walk out to it and get in.
+            yield return Route("to the car", P(-1.8f, -1.9f), At("apartment_door_hall"), At("apartment_front_in"), At("apartment_front_out"),
+                P(6f, -7.25f), P(12f, -8.3f));
+            parked.GetComponent<ParkedVehicle>().Interact();
+            yield return WaitUntil(() => _city.Driver.IsDriving && _city.Driver.Car != null && !_city.Driver.Car.Body.isKinematic, 3f, "in the driver's seat");
+            yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "car-chase.png");
+
+            // Drive west along Maple, stop, get out.
+            double odometer = car.Odometer;
+            yield return DriveTo(P(-18f, -11.6f), "west on Maple");
+            Assert.Greater(car.Odometer - odometer, 20, "odometer");
+            Assert.Less(car.FuelLiters, 50 * listing.FuelFraction, "burned some fuel");
+            yield return TapKey(Key.E);
+            Assert.IsFalse(_city.Driver.IsDriving, "E gets out once stopped");
+            Assert.AreEqual(VehicleState.Parked, car.State);
+            Assert.IsTrue(parked.GetComponent<CarController>().Body.isKinematic, "parked cars stay put");
+            Assert.Greater(Vector3.Distance(_player.transform.position, parked.transform.position), 1f, "stepped out beside it");
+
+            // Fuel: park it at a pump and fill up.
+            Vector3 bay = At("fuel_bay_west");
+            parked.transform.SetPositionAndRotation(new Vector3(bay.x, 0f, bay.z), Quaternion.identity);
+            game.Vehicles.Park(car, bay.x, 0f, bay.z, 0f);
+            FuelPump pump = UnityEngine.Object.FindObjectsByType<FuelPump>(FindObjectsSortMode.None).OrderBy(x => Vector3.Distance(x.transform.position, bay)).First();
+            Assert.AreSame(car, pump.CarHere());
+            decimal bank = game.Economy.Bank.Balance;
+            double before = car.FuelLiters;
+            StringAssert.StartsWith("Fill up", pump.Prompt);
+            pump.Interact();
+            Assert.AreEqual(car.FuelCapacity, car.FuelLiters, 1e-9, "full tank");
+            Assert.AreEqual(bank - Trading.Money.RoundCents((decimal)(car.FuelCapacity - before) * FuelStation.PricePerLiter), game.Economy.Bank.Balance);
+
+            // Saved and restored exactly where it was left.
+            game.Save();
+            yield return SceneManager.LoadSceneAsync("Main");
+            yield return null;
+            yield return null;
+            GameBootstrap loaded = Find<GameBootstrap>();
+            OwnedVehicle again = loaded.Vehicles.Vehicles.Single();
+            Assert.AreEqual(car.Id, again.Id);
+            Assert.AreEqual(car.FuelCapacity, again.FuelLiters, 1e-6);
+            GameObject back = Find<CityBuilder>().Fleet.Shown(again);
+            Assert.NotNull(back);
+            Assert.Less(Vector3.Distance(new Vector3(back.transform.position.x, 0f, back.transform.position.z), new Vector3(bay.x, 0f, bay.z)), 0.05f);
+        }
+
         [UnityTest]
         public IEnumerator Streets_HaveMovingTrafficAndPeople_AndNonTenantsAreKeptOut()
         {

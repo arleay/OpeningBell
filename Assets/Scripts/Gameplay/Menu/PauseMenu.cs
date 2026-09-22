@@ -83,6 +83,8 @@ namespace OpeningBell.Gameplay
             IsOpen = true;
             _wasPaused = game.IsPaused;
             game.IsPaused = true;
+            // Physics too: a car mid-drive must not roll on under the menu. (UI and the clock use unscaled time.)
+            Time.timeScale = 0f;
             player.ControlEnabled = false;
             interactor.enabled = false;
             input.UseMenuControls();
@@ -101,6 +103,7 @@ namespace OpeningBell.Gameplay
             interactor.enabled = true;
             player.ControlEnabled = true;
             game.IsPaused = _wasPaused;
+            Time.timeScale = 1f;
         }
 
         private void SaveGame()

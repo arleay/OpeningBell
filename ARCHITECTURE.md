@@ -149,6 +149,41 @@ Log price = fair + deviation, per tick:
   - Chargers: at home (250 W, by the front door), the Calder Building (public) and the bike shop (fast, 600 W). They charge any e-bike parked within 2.5 m, by game time.
 - **Parked vehicles are world objects built from the fleet** (`FleetView`), never spawned from prefabs, so they reappear exactly where they were left after a reload.
 
+## Cars (Phase 10)
+
+- **Physics on a rigid body (`CarController`), maths pure (`CarPhysics`, `CarSpec`):**
+  - Four raycast wheels with spring/damper suspension, bump stops and anti-roll bars (they push the body, not just redistribute grip).
+  - Per-wheel tyre forces:
+    - Cornering from slip angle through a simplified magic-formula curve (peaks at the spec's slip angle, then slides at ~80%).
+    - Longitudinal from drive and brake torque.
+    - Both limited together by a friction circle on the wheel's actual suspension load. That is where weight transfer, understeer, power oversteer and wheelspin come from.
+  - Engine: torque curve, rev limiter, engine braking. Automatic gearbox with throttle-dependent shift points, kickdown and a torque converter (stall rpm, multiplication).
+  - Drivetrain: FWD/RWD/AWD torque split with open differentials. Aero drag and downforce. Speed-sensitive steering. Reverse on the brake at a standstill, handbrake on the rear.
+  - Tyre forces act a little above the contact patch (low roll centre): visible roll without tip-overs.
+  - Physics runs at 100 Hz.
+  - Test track (`CarPhysicsPlayTests`, 3 km from the city): 0–100 km/h sedan 9.9 s, hot hatch 6.3, SUV 9.7, V8 pickup 6.9 (with launch wheelspin), supercar 3.4; 100–0 about 45 m; slalom without rolling.
+- **Models:** Kenney Car Kit (CC0) in `Art/ThirdParty/Kenney/CarKit`.
+  - `CarFactory` scales them ×1.35 and lifts each wheel onto a pivot at its centre (spin, steer, suspension travel). It sizes the body collider from the body mesh (low friction) and adds the driver's eye point (`Seat`) and headlights.
+  - Suspension mounts are placed so the settled car sits exactly as modelled. `VehicleLibrary.carMeshes` references the models; `trafficMix` weights traffic.
+- **Driving (`DriveController`, on the player):**
+  - Entering: [E] at a parked car; the camera glides to the seat and the player is parented to it (controller off).
+  - Controls: W/S/A/D; S at a standstill is reverse; Space is the handbrake; C switches between the chase camera (spring follow, pulled in for walls) and the hood view.
+  - Getting out: E only below 2 m/s, into a clear spot (driver side first).
+  - Fuel burns by game time from delivered engine power (L/kWh) plus idle; an empty tank kills the engine. Hard hits cost condition (`Fleet.Impact`), and low condition costs power.
+  - `GameBootstrap.PlayerSavePosition` saves the player beside the car, not inside it.
+  - Engine sound is a synthesized loop pitched by rpm (TODO(audio)).
+- **Parked cars are real physics objects** built from the fleet (kinematic while parked), so you can drive off at once, and they reload where they were left.
+- **Traffic:**
+  - Traffic follows the player's car and queues behind parked ones: a separate "other cars" list, using the follow gap rather than the pedestrian gap. Pedestrians also wait for it.
+  - Lanes moved to 2 m off the centre line so a car at the kerb doesn't touch passing traffic.
+  - Traffic uses the car-kit models, moved with `MovePosition` so bumps with the player's car stay sane.
+  - People and cars are on separate physics layers that don't collide (people step aside, cars stop).
+- **Pausing** now also stops physics (`Time.timeScale = 0` while the menu is open; reset on new game and in test teardown).
+- **Getting a car before dealerships:**
+  - STORE → USED CARS lists private-seller cars (`UsedListing`: mileage, condition, tyres, fuel left). Each sells once (`Fleet.IsSold`, saved).
+  - The city (`CityBuilder.DeliverUsedCar`, via `TerminalContext.BuyUsedCar`) leaves the car at the kerb on Maple outside home.
+- **Fuel station:** Tidewater Fuel behind the Maple shops, with a driveway ramp off Exchange St, a canopy with night lights, and two pumps. `FuelPump` fills the car parked within 5 m at $1.65/L by card.
+
 ## Save / load
 
 - **Goal: exact resume.** Loading builds the simulation from the same definitions (catalog, config, news templates, seed), then overwrites runtime state. A loaded game continues tick-for-tick like the original. `SaveLoadTests.SavedGame_ResumesExactly_ThroughJson` saves mid-session with open orders and a queued scheduled headline, round-trips JSON, runs both two days on, and compares everything.

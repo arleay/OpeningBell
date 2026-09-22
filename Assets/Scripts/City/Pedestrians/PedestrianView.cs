@@ -139,6 +139,7 @@ namespace OpeningBell.City
         {
             NpcBody body = NpcBody.Create(_c.Kit, transform, "Pedestrian", _bodySeed++);
             body.transform.position = new Vector3(0f, -100f, 0f); // not at the origin (the apartment) even for a frame
+            foreach (Transform t in body.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = CityLayers.Pedestrian;
             var capsule = body.gameObject.AddComponent<CapsuleCollider>();
             capsule.center = new Vector3(0f, 0.9f, 0f);
             capsule.height = 1.8f;

@@ -9,6 +9,7 @@ namespace OpeningBell.Vehicles
         Skateboard,
         Bicycle,
         EBike,
+        Car,
     }
 
     /// <summary>
@@ -60,6 +61,25 @@ namespace OpeningBell.Vehicles
         /// <summary>Frame / deck colour (RGB 0–1).</summary>
         public float ColorR = 0.6f, ColorG = 0.6f, ColorB = 0.6f;
         public RideSpec Spec = new RideSpec();
+        /// <summary>Cars: physical spec.</summary>
+        public CarSpec Car = new CarSpec();
+        /// <summary>Cars: which 3D model to show (file name in the car kit, e.g. "sedan").</summary>
+        public string Mesh = "";
+    }
+
+    /// <summary>A used vehicle offered by a private seller (classifieds): a model plus its history.</summary>
+    [Serializable]
+    public sealed class UsedListing
+    {
+        public string Id = "";
+        public string ModelId = "";
+        public double Price;
+        public double OdometerKm;
+        public double Condition = 0.8;
+        public double TireCondition = 0.7;
+        public double FuelFraction = 0.4;
+        public string Seller = "";
+        public string Description = "";
     }
 
     public enum PartSlot
@@ -109,11 +129,14 @@ namespace OpeningBell.Vehicles
 
         public IReadOnlyCollection<VehicleModel> Models => _models.Values;
         public IReadOnlyCollection<PartSpec> Parts => _parts.Values;
+        public IReadOnlyList<UsedListing> Listings { get; }
         public decimal TuneUpPrice { get; }
         public decimal NewTiresPrice { get; }
 
-        public VehicleCatalog(IEnumerable<VehicleModel> models, IEnumerable<PartSpec> parts, decimal tuneUp, decimal newTires)
+        public VehicleCatalog(IEnumerable<VehicleModel> models, IEnumerable<PartSpec> parts, decimal tuneUp, decimal newTires,
+            IReadOnlyList<UsedListing> listings = null)
         {
+            Listings = listings ?? Array.Empty<UsedListing>();
             foreach (VehicleModel m in models)
                 if (!_models.ContainsKey(m.Id)) _models.Add(m.Id, m);
                 else throw new ArgumentException($"Duplicate vehicle model {m.Id}.");

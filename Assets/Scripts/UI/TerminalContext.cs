@@ -29,6 +29,9 @@ namespace OpeningBell.UI
         public OrderManager Orders => Game.Orders;
         public EconomySystem Economy => Game.Economy;
 
+        /// <summary>Buys a used car from a listing and has it delivered (the city decides where). Error message, or null.</summary>
+        public Func<Vehicles.UsedListing, string> BuyUsedCar { get; set; }
+
         public TerminalApp App { get; private set; } = TerminalApp.Broker;
         public event Action AppChanged;
 

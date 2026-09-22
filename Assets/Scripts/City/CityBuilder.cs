@@ -33,12 +33,14 @@ namespace OpeningBell.City
         public Desk OfficeDesk { get; private set; }
         public FleetView Fleet { get; private set; }
         public RideController Rider { get; private set; }
+        public DriveController Driver { get; private set; }
         public RoadNetwork Roads => _c.Roads;
 
         private void Awake()
         {
             if (!game.enabled) return; // bootstrap failed to start; nothing to hang the city on
 
+            CityLayers.Apply();
             var palette = new Palette(litTemplate, litEmissiveTemplate, glassTemplate, unlitTemplate, signTemplate);
             _c = new CityContext
             {
@@ -58,6 +60,7 @@ namespace OpeningBell.City
             OfficeDesk = desk;
             Shops.Build(_c);
             MobilityShops.Build(_c);
+            FuelStation.Build(_c);
 
             // Places (doors, benches) are registered by the builders above; the street pass adds benches too,
             // so gather everything first, then build the walk graph the markings and signals need.
@@ -75,26 +78,61 @@ namespace OpeningBell.City
             Traffic = new GameObject("Traffic").AddComponent<TrafficView>();
             Traffic.transform.SetParent(transform, false);
             Pedestrians.Configure(_c, peds, traffic);
-            Traffic.Configure(_c, traffic, signals, walkSignals, viewCamera, into =>
+            Traffic.Configure(_c, traffic, signals, walkSignals, viewCamera, (people, cars) =>
             {
                 Vector3 p = player.transform.position;
-                into.Add(new Vector2(p.x, p.z));
-                foreach (PedestrianSimulation.Walker w in peds.Walkers) into.Add(w.Position);
+                if (Driver != null && Driver.IsDriving) cars.Add(new Vector2(p.x, p.z));
+                else people.Add(new Vector2(p.x, p.z));
+                foreach (PedestrianSimulation.Walker w in peds.Walkers) people.Add(w.Position);
+                Fleet?.ParkedCarPositions(cars);
             });
 
             // Owned bikes and boards: parked ones in the world, riding on the player.
             Fleet = new GameObject("Fleet").AddComponent<FleetView>();
             Fleet.transform.SetParent(transform, false);
+            PlayerInteractor interactor = player.GetComponentInChildren<PlayerInteractor>();
+            if (interactor == null) interactor = FindAnyObjectByType<PlayerInteractor>();
             Rider = player.gameObject.AddComponent<RideController>();
-            Rider.Configure(game, player, player.GetComponentInChildren<PlayerInteractor>() ?? FindAnyObjectByType<PlayerInteractor>(), hud, _c.Kit, Fleet);
-            Fleet.Configure(game, _c.Kit, Rider);
+            Rider.Configure(game, player, interactor, hud, _c.Kit, Fleet);
+            Driver = player.gameObject.AddComponent<DriveController>();
+            Driver.Configure(game, player, interactor, hud, Fleet, () => _c.Night);
+            Fleet.Configure(game, _c.Kit, Rider, Driver);
         }
 
         private bool _lightsOn;
+        private OpeningBell.UI.TradingTerminal _terminal;
+
+        /// <summary>Where private sellers leave a car: the kerb on Maple outside 118 (north side, facing west with the traffic).</summary>
+        public static readonly Vector3[] CurbSpots =
+        {
+            new Vector3(14f, CityPlan.RoadY, -10.15f), new Vector3(20.5f, CityPlan.RoadY, -10.15f), new Vector3(27f, CityPlan.RoadY, -10.15f),
+            new Vector3(33.5f, CityPlan.RoadY, -10.15f), new Vector3(40f, CityPlan.RoadY, -10.15f),
+        };
+
+        /// <summary>Classifieds purchase: pay by card, the car appears at the first free kerb spot outside home.</summary>
+        public string DeliverUsedCar(OpeningBell.Vehicles.UsedListing listing)
+        {
+            OpeningBell.Vehicles.Fleet fleet = game.Vehicles;
+            if (fleet.IsSold(listing.Id)) return "That one's already sold.";
+            Vector3 spot = CurbSpots[0];
+            foreach (Vector3 s in CurbSpots)
+            {
+                bool taken = false;
+                foreach (OpeningBell.Vehicles.OwnedVehicle v in fleet.Vehicles)
+                    if (v.State == OpeningBell.Vehicles.VehicleState.Parked && new Vector2((float)v.X - s.x, (float)v.Z - s.z).magnitude < 3.5f) taken = true;
+                if (!taken) { spot = s; break; }
+            }
+            string error = game.Economy.Spend((decimal)listing.Price, "Used car", game.Clock.Now);
+            if (error != null) return error;
+            fleet.AddUsed(listing, game.Clock.Now, spot.x, spot.y, spot.z, 270);
+            return null;
+        }
 
         private void Update()
         {
             if (_c == null || daylight == null) return;
+            if (_terminal == null) _terminal = FindAnyObjectByType<OpeningBell.UI.TradingTerminal>();
+            if (_terminal != null && _terminal.Context != null && _terminal.Context.BuyUsedCar == null) _terminal.Context.BuyUsedCar = DeliverUsedCar;
             _c.Night = daylight.NightFactor;
             _c.P.ApplyNight(_c.Night);
             // Street lamps switch as a group, with a little hysteresis around dusk and dawn.

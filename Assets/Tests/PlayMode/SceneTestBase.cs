@@ -76,6 +76,7 @@ namespace OpeningBell.Tests
             // Disabled bootstraps skip their quit-time autosave, which would otherwise hit the real slot later.
             foreach (var game in Object.FindObjectsByType<GameBootstrap>(FindObjectsSortMode.None)) game.enabled = false;
             SaveSystem.DirectoryOverride = null;
+            Time.timeScale = 1f; // a test that ended in the pause menu must not freeze the next one
             if (Directory.Exists(_saveDirectory)) Directory.Delete(_saveDirectory, true);
         }
 

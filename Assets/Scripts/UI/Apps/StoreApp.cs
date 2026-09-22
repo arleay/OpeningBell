@@ -17,6 +17,8 @@ namespace OpeningBell.UI
         }
 
         private readonly List<Card> _cards = new List<Card>();
+        private readonly List<(OpeningBell.Vehicles.UsedListing Listing, Button Buy, VisualElement Root, Label Note)> _used =
+            new List<(OpeningBell.Vehicles.UsedListing, Button, VisualElement, Label)>();
         private readonly Label _funds, _status;
 
         public StoreApp(TerminalContext context) : base(context, "store-app")
@@ -45,6 +47,34 @@ namespace OpeningBell.UI
                 card.Buy = Ui.Button("BUY", () => Buy(id), "store-buy", card.Root, "buy-" + id);
                 _cards.Add(card);
             }
+
+            // Classifieds: used cars from private sellers, delivered to the curb outside home.
+            OpeningBell.Vehicles.Fleet fleet = context.Game.Vehicles;
+            if (fleet == null || fleet.Catalog.Listings.Count == 0) return;
+            Ui.Label("panel-title store-section", Root, "USED CARS · PRIVATE SELLERS");
+            var used = Ui.Box("store-grid", Root);
+            foreach (OpeningBell.Vehicles.UsedListing listing in fleet.Catalog.Listings)
+            {
+                if (!fleet.Catalog.TryGetModel(listing.ModelId, out OpeningBell.Vehicles.VehicleModel model)) continue;
+                VisualElement card = Ui.Box("app-card store-card", used);
+                Ui.Label("store-name", card, model.Name);
+                Ui.Label("muted store-category", card, $"USED · {listing.OdometerKm:N0} KM · CONDITION {listing.Condition:P0} · {listing.Seller.ToUpperInvariant()}");
+                Ui.Label("store-description", card, listing.Description);
+                Ui.Label("store-price", card, Fmt.Money((decimal)listing.Price));
+                Label note = Ui.Label("muted app-note", card);
+                OpeningBell.Vehicles.UsedListing chosen = listing;
+                Button buy = Ui.Button("BUY", () => BuyUsed(chosen), "store-buy", card, "buy-" + listing.Id);
+                _used.Add((listing, buy, card, note));
+            }
+        }
+
+        private void BuyUsed(OpeningBell.Vehicles.UsedListing listing)
+        {
+            string error = Context.BuyUsedCar == null ? "Cars can't be delivered here." : Context.BuyUsedCar(listing);
+            Ui.SetText(_status, error ?? "Bought. The seller left it at the curb on Maple St, outside your building. Keys are in the mailbox.");
+            _status.EnableInClassList("error", error != null);
+            _status.EnableInClassList("ok", error == null);
+            Refresh();
         }
 
         public override void Refresh()
@@ -60,6 +90,15 @@ namespace OpeningBell.UI
                 card.Buy.SetEnabled(!owned && balance >= price);
                 card.Root.EnableInClassList("owned", owned);
                 Ui.SetText(card.Note, owned || balance >= price ? "" : $"Need {Fmt.Money(price - balance)} more in the bank.");
+            }
+            foreach (var (listing, buy, root, note) in _used)
+            {
+                bool sold = Context.Game.Vehicles.IsSold(listing.Id);
+                decimal price = (decimal)listing.Price;
+                Ui.SetText(buy, sold ? "SOLD" : "BUY");
+                buy.SetEnabled(!sold && balance >= price);
+                root.EnableInClassList("owned", sold);
+                Ui.SetText(note, sold || balance >= price ? "" : $"Need {Fmt.Money(price - balance)} more in the bank.");
             }
         }
 

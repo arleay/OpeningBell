@@ -17,29 +17,34 @@ namespace OpeningBell.City
     /// <summary>A parked bike in the world: [E] to ride it. Shows its condition and charge.</summary>
     public sealed class ParkedVehicle : Interactable
     {
-        private RideController _rider;
         private GameBootstrap _game;
+        private string _verb;
+        private System.Func<bool> _canUse;
+        private System.Action<OwnedVehicle> _use;
 
         public OwnedVehicle Vehicle { get; private set; }
 
-        public void Configure(OwnedVehicle vehicle, RideController rider, GameBootstrap game)
+        public void Configure(OwnedVehicle vehicle, GameBootstrap game, string verb, System.Func<bool> canUse, System.Action<OwnedVehicle> use)
         {
             Vehicle = vehicle;
-            _rider = rider;
             _game = game;
+            _verb = verb;
+            _canUse = canUse;
+            _use = use;
         }
 
-        public override string Prompt => "Ride " + Vehicle.Name;
-        public override bool CanInteract => base.CanInteract && !_rider.IsRiding;
+        public override string Prompt => _verb + " " + Vehicle.Name;
+        public override bool CanInteract => base.CanInteract && _canUse();
         public override string Details => Describe(Vehicle, _game);
 
-        public override void Interact() => _rider.Mount(Vehicle);
+        public override void Interact() => _use(Vehicle);
 
         public static string Describe(OwnedVehicle v, GameBootstrap game)
         {
             var c = CultureInfo.InvariantCulture;
             string text = $"Condition {v.Condition:P0} · {(v.Kind == VehicleKind.Skateboard ? "wheels" : "tyres")} {v.TireCondition:P0} · {(v.Odometer / 1000).ToString("0.0", c)} km";
             if (v.BatteryCapacityWh > 0) text += $" · battery {v.BatteryFraction:P0}";
+            if (v.FuelCapacity > 0) text += $" · fuel {v.FuelFraction:P0}";
             return text + $"\nResale about ${v.ResaleValue(game.Clock.Now).ToString("N0", c)}";
         }
     }
@@ -53,18 +58,29 @@ namespace OpeningBell.City
         private GameBootstrap _game;
         private Kit _kit;
         private RideController _rider;
+        private DriveController _driver;
         private readonly Dictionary<OwnedVehicle, GameObject> _shown = new Dictionary<OwnedVehicle, GameObject>();
         private bool _dirty = true;
 
-        public void Configure(GameBootstrap game, Kit kit, RideController rider)
+        public void Configure(GameBootstrap game, Kit kit, RideController rider, DriveController driver)
         {
             _game = game;
             _kit = kit;
             _rider = rider;
+            _driver = driver;
             _game.Vehicles.Changed += _ => _dirty = true;
         }
 
         public GameObject Shown(OwnedVehicle v) => _shown.TryGetValue(v, out GameObject go) ? go : null;
+
+        /// <summary>Parked cars, for traffic to steer around or queue behind.</summary>
+        public void ParkedCarPositions(List<Vector2> into)
+        {
+            foreach (var pair in _shown)
+                if (pair.Key.Kind == VehicleKind.Car) into.Add(new Vector2(pair.Value.transform.position.x, pair.Value.transform.position.z));
+        }
+
+        private bool Busy => _rider.IsRiding || _driver.IsDriving;
 
         private void LateUpdate()
         {
@@ -73,8 +89,14 @@ namespace OpeningBell.City
             var keep = new HashSet<OwnedVehicle>();
             foreach (OwnedVehicle v in _game.Vehicles.Vehicles)
             {
-                if (v.State != VehicleState.Parked) continue;
+                // A car being driven keeps its object (it *is* the car); everything else parked gets one.
+                if (v.State != VehicleState.Parked && !(v.Kind == VehicleKind.Car && v.State == VehicleState.Riding)) continue;
                 keep.Add(v);
+                if (v.Kind == VehicleKind.Car && _shown.ContainsKey(v))
+                {
+                    if (v.State == VehicleState.Parked) _shown[v].GetComponent<CarController>().SetParked(true);
+                    continue; // physics owns its pose
+                }
                 if (!_shown.TryGetValue(v, out GameObject go)) _shown[v] = go = Build(v);
                 go.transform.SetPositionAndRotation(new Vector3((float)v.X, (float)v.Y, (float)v.Z), Quaternion.Euler(0f, (float)v.Yaw, 0f));
             }
@@ -91,6 +113,17 @@ namespace OpeningBell.City
         private GameObject Build(OwnedVehicle v)
         {
             _game.Vehicles.Catalog.TryGetModel(v.ModelId, out VehicleModel model);
+            if (model.Kind == VehicleKind.Car)
+            {
+                GameObject mesh = _game.VehicleLibrary != null ? _game.VehicleLibrary.CarMesh(model.Mesh) : null;
+                if (mesh != null)
+                {
+                    CarController car = CarFactory.BuildDrivable(transform, mesh, model.Car.Clone(), "Car " + v.Name + " " + v.Id);
+                    car.transform.SetPositionAndRotation(new Vector3((float)v.X, (float)v.Y, (float)v.Z), Quaternion.Euler(0f, (float)v.Yaw, 0f));
+                    car.gameObject.AddComponent<ParkedVehicle>().Configure(v, _game, "Drive", () => !Busy, x => _driver.Enter(x));
+                    return car.gameObject;
+                }
+            }
             var root = new GameObject("Parked " + v.Name + " " + v.Id);
             root.transform.SetParent(transform, false);
             root.transform.position = new Vector3((float)v.X, -100f, (float)v.Z); // never flash at the origin
@@ -99,7 +132,7 @@ namespace OpeningBell.City
             var box = root.AddComponent<BoxCollider>();
             box.center = new Vector3(0f, 0.5f, 0f);
             box.size = new Vector3(0.5f, 1f, Mathf.Max(0.6f, visual.Length));
-            root.AddComponent<ParkedVehicle>().Configure(v, _rider, _game);
+            root.AddComponent<ParkedVehicle>().Configure(v, _game, "Ride", () => !Busy, x => _rider.Mount(x));
             return root;
         }
     }
