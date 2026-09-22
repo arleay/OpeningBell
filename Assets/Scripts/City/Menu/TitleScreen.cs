@@ -35,6 +35,11 @@ namespace OpeningBell.City
         private GameObject _preview;
         private OpeningBell.PlayerLook _look;
         private bool _wantOpen;
+        private bool _dragging;
+        private float _dragX;
+        private float _idle = 99f; // seconds since the player last turned the character; starts spinning
+        private const float SpinResumeDelay = 2.5f;
+        private const float DragDegreesPerPixel = 0.5f;
 
         public bool Visible => _overlay != null && _overlay.style.display != DisplayStyle.None;
         public OpeningBell.PlayerLook Look => _look;
@@ -76,7 +81,46 @@ namespace OpeningBell.City
                 _overlay.BringToFront();
                 ShowMenu();
             }
-            if (Visible && _turntable != null) _turntable.Rotate(0f, 12f * Time.unscaledDeltaTime, 0f);
+            // The turntable spins on its own until the player grabs it; after they let go it waits a moment, then
+            // eases back in so it doesn't snatch the pose they just chose.
+            if (Visible && _turntable != null && !_dragging)
+            {
+                _idle += Time.unscaledDeltaTime;
+                float ease = Mathf.Clamp01((_idle - SpinResumeDelay) / 1.5f);
+                _turntable.Rotate(0f, 12f * ease * Time.unscaledDeltaTime, 0f);
+            }
+        }
+
+        /// <summary>Turns the character by hand (dragging the picture); the auto-spin pauses for a while after.</summary>
+        public void Turn(float degrees)
+        {
+            if (_turntable == null) return;
+            _turntable.Rotate(0f, degrees, 0f);
+            _idle = 0f;
+        }
+
+        private void OnPictureDown(PointerDownEvent e)
+        {
+            if (e.button != 0) return;
+            _dragging = true;
+            _dragX = e.position.x;
+            ((VisualElement)e.currentTarget).CapturePointer(e.pointerId);
+        }
+
+        private void OnPictureMove(PointerMoveEvent e)
+        {
+            if (!_dragging) return;
+            // Dragging right turns the model's front to the right, like grabbing it by the shoulder.
+            Turn(-(e.position.x - _dragX) * DragDegreesPerPixel);
+            _dragX = e.position.x;
+        }
+
+        private void OnPictureUp(PointerUpEvent e)
+        {
+            if (!_dragging) return;
+            _dragging = false;
+            _idle = 0f;
+            ((VisualElement)e.currentTarget).ReleasePointer(e.pointerId);
         }
 
         private void Close()
@@ -267,10 +311,23 @@ namespace OpeningBell.City
             root.Add(_overlay);
 
             // Left: the character on its stage.
-            var picture = new VisualElement { pickingMode = PickingMode.Ignore };
+            var picture = new VisualElement();
             picture.style.flexGrow = 1;
             picture.style.backgroundImage = Background.FromRenderTexture(GetStageTexture());
             picture.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+            picture.RegisterCallback<PointerDownEvent>(OnPictureDown);
+            picture.RegisterCallback<PointerMoveEvent>(OnPictureMove);
+            picture.RegisterCallback<PointerUpEvent>(OnPictureUp);
+            picture.RegisterCallback<PointerCaptureOutEvent>(_ => _dragging = false);
+            var hint = new Label("Drag to turn") { pickingMode = PickingMode.Ignore };
+            hint.style.position = Position.Absolute;
+            hint.style.bottom = 28;
+            hint.style.left = 0;
+            hint.style.right = 0;
+            hint.style.unityTextAlign = TextAnchor.MiddleCenter;
+            hint.style.fontSize = 14;
+            hint.style.color = new Color(1f, 1f, 1f, 0.4f);
+            picture.Add(hint);
             _overlay.Add(picture);
 
             // Right: the menus.

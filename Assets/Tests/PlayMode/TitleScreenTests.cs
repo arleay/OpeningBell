@@ -38,6 +38,15 @@ namespace OpeningBell.Tests
             title.Pick(1, 5);
             title.Pick(2, 3);
             for (int i = 0; i < 5; i++) yield return null;
+
+            // Turning by hand: the character shows its back, and the auto-spin holds off so the pose stays put.
+            Transform turntable = title.transform.Find("Title stage/Turntable");
+            float before = turntable.eulerAngles.y;
+            title.Turn(180f);
+            for (int i = 0; i < 5; i++) yield return null;
+            Assert.AreEqual(Mathf.Repeat(before + 180f, 360f), turntable.eulerAngles.y, 0.5f, "the manual turn holds");
+            yield return CaptureWithHud(player, hud, "title-creator-back.png");
+            title.Turn(-180f);
             yield return CaptureWithHud(player, hud, "title-creator.png");
 
             PlayerLook chosen = title.Look.Copy();
