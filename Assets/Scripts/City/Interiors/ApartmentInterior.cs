@@ -83,6 +83,12 @@ namespace OpeningBell.City
             coffeeBox.center = Vector3.Scale(coffeeBox.center, coffee.localScale);
             coffee.localScale = Vector3.one;
             Hide(coffee);
+            // A fruit plate by the coffee maker, a soda on the desk.
+            k.Prop(kitchen, "Plate", kitchen.InverseTransformPoint(room.TransformPoint(new Vector3(2.72f, CounterTop, -0.6f))), 0f, 0f, 0.24f);
+            k.Prop(kitchen, "Apple", kitchen.InverseTransformPoint(room.TransformPoint(new Vector3(2.68f, CounterTop + 0.01f, -0.63f))), 0.08f);
+            k.Prop(kitchen, "Orange", kitchen.InverseTransformPoint(room.TransformPoint(new Vector3(2.77f, CounterTop + 0.01f, -0.57f))), 0.075f);
+            k.Prop(kitchen, "Banana", kitchen.InverseTransformPoint(room.TransformPoint(new Vector3(2.74f, CounterTop + 0.01f, -0.64f))), 0f, 70f, 0.18f);
+            k.Prop(table, "Soda", table.InverseTransformPoint(room.TransformPoint(new Vector3(1.47f, DeskTop, 1.9f))), 0.16f);
             Put(k, room, coffee, "kitchenCoffeeMachine", new Vector3(2.72f, CounterTop, -0.85f), new Vector3(2.72f, CounterTop + 0.3f, -0.85f), 90f);
 
             // Living corner under the west window: a loveseat facing into the room (yaw 270), a coffee table and a

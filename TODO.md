@@ -35,6 +35,8 @@
 - [x] Small open town: the core now sits in an outer grid (Oak, Birch, Willow, Pine) of suburban house rows, lawns, a town field and green edges; the tall outer ring and skyline towers are gone and the town centre is low-rise. Traffic density scaled for ~3 km of road. Gallery: `art-town-aerial.png`, `art-town-street.png`, `art-mainstreet.png`
 - [x] Walkable houses in three tiers (starter, family, mansion with pool) replace the solid kit houses; pedestrians walk to house doors
 - [x] Round rotating minimap with icons (home, office, shops, fuel, parked cars)
+- [x] Title screen with Continue / New Game / Quit and a character creator (body, outfit, skin, hair and top colours, name) with a turntable preview; the look is saved
+- [x] Food props (Quaternius Ultimate Food Pack): stocked mart shelves and drinks fridge, café pastries, apartment fruit and soda
 - [ ] Art pass 2b: shop, lobby and office furniture (same `Kit.Fit` approach; `ModelSheet` for orientation/shelf heights), ground-floor trims on the enterable buildings, suburban houses for the outer ring
 - [ ] Then WORLD_SPEC Phase 11 (dealerships: used lot and standard dealer, test drives, resale) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
 
@@ -95,6 +97,7 @@
   - Minimap: no full-screen map or custom waypoints yet; the office icon shows even before the lease.
   - The town field is empty grass (room for a market or pitch later).
   - From high up, the ground's edge shows beyond the green edges.
+- Title / creator: no settings screen on the title (the pause menu has them); the name isn't shown anywhere yet; outfits come as whole characters (no separate tops/bottoms). The 2019 Animated Character Pack can't be used (its feet aren't parented to the legs, so no humanoid avatar), and the Universal Base Characters are unclothed bases for outfit packs we don't have.
 - Brawling:
   - No consequences (health, police, reputation) by design for now; the player can't be hurt.
   - Fighters ignore traffic (cars don't stop for them) and steer around obstacles only locally; no pathfinding.

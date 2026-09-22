@@ -159,6 +159,57 @@ namespace OpeningBell.Tests
             }
         }
 
+        /// <summary>
+        /// The camera view with the HUD on top. Screen capture never completes in batch mode (no frame is presented),
+        /// so the HUD panel renders into its own transparent texture and is laid over the camera image here.
+        /// </summary>
+        protected static IEnumerator CaptureWithHud(FirstPersonController player, InteractionHud hud, string file)
+        {
+            const int w = 1600, h = 900;
+            Camera camera = player.GetComponentInChildren<Camera>();
+            PanelSettings panel = hud.GetComponent<UIDocument>().panelSettings;
+            var world = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
+            var ui = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
+            RenderTexture previousTarget = panel.targetTexture;
+            bool previousClear = panel.clearColor;
+            Color previousClearValue = panel.colorClearValue;
+            camera.targetTexture = world;
+            panel.targetTexture = ui;
+            panel.clearColor = true;
+            panel.colorClearValue = new Color(0f, 0f, 0f, 0f);
+            for (int i = 0; i < 3; i++) yield return null;
+
+            Color[] bottom = ReadColors(world), top = ReadColors(ui);
+            for (int i = 0; i < bottom.Length; i++) bottom[i] = Color.Lerp(bottom[i], top[i], top[i].a);
+            var shot = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            shot.SetPixels(bottom);
+            shot.Apply();
+            string dir = Path.Combine(Application.dataPath, "..", "TestResults");
+            Directory.CreateDirectory(dir);
+            File.WriteAllBytes(Path.Combine(dir, file), shot.EncodeToPNG());
+
+            camera.targetTexture = null;
+            panel.targetTexture = previousTarget;
+            panel.clearColor = previousClear;
+            panel.colorClearValue = previousClearValue;
+            Object.Destroy(shot);
+            world.Release();
+            ui.Release();
+        }
+
+        private static Color[] ReadColors(RenderTexture source)
+        {
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = source;
+            var t = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+            t.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+            t.Apply();
+            RenderTexture.active = previous;
+            Color[] pixels = t.GetPixels();
+            Object.Destroy(t);
+            return pixels;
+        }
+
         private static void SavePng(RenderTexture source, string fileName)
         {
             var previous = RenderTexture.active;

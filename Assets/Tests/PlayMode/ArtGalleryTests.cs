@@ -54,6 +54,8 @@ namespace OpeningBell.Tests
             yield return Shot(_city.Anchors["calder_lobby"] + new Vector3(0f, 0f, -1.5f), 0f, 4f, "art-lobby.png");
             yield return Shot(_city.Anchors["coffee_front_out"] + new Vector3(0f, 0f, 3f), 0f, 4f, "art-coffee.png");
             yield return Shot(new Vector3(-20f, 0f, 20f), 45f, 0f, "art-park.png");
+            yield return Shot(new Vector3(116.9f, 0f, -1.2f), 40f, 12f, "art-mart.png");
+            yield return Shot(new Vector3(74.6f, 0f, 2.3f), 0f, 35f, "art-pastries.png");
             yield return Shot(new Vector3(60f, 45f, -70f), 20f, 32f, "art-aerial.png");
             yield return Shot(new Vector3(-10f, 120f, -230f), 0f, 32f, "art-town-aerial.png");
             yield return Shot(new Vector3(-60f, 0f, -7.5f), -90f, 2f, "art-town-street.png");

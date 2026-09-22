@@ -15,3 +15,4 @@
 | [Universal Animation Library](https://quaternius.itch.io/universal-animation-library) (Standard) | Quaternius | CC0 1.0 | People's animations (`Quaternius/Animations`) |
 
 CC0 needs no attribution; it's credited here anyway. The license text is kept next to each asset.
+- **Ultimate Food Pack** by Quaternius (CC0 1.0), quaternius.com: food and kitchen props in the Corner Mart, Half Past Nine and the apartment (`Assets/Art/ThirdParty/Quaternius/Props/Food`, a subset of 53 models).

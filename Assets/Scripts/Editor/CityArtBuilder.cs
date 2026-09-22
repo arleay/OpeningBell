@@ -83,7 +83,18 @@ namespace OpeningBell.EditorTools
                 }
             }
 
+            // Quaternius props (food), collected like the kits.
+            report.AppendLine("== Props");
+            foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { ArtImportRules.Props.TrimEnd('/') }).OrderBy(AssetDatabase.GUIDToAssetPath))
+            {
+                var model = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
+                if (!seen.Add(model.name)) continue;
+                models.Add(model);
+                report.AppendLine(Describe(model));
+            }
+
             var people = new List<GameObject>();
+            var labels = new List<string>();
             report.AppendLine("== People");
             foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { ArtImportRules.Characters.TrimEnd('/') }).OrderBy(AssetDatabase.GUIDToAssetPath))
             {
@@ -91,7 +102,11 @@ namespace OpeningBell.EditorTools
                 var animator = model.GetComponent<Animator>();
                 bool human = animator != null && animator.avatar != null && animator.avatar.isValid && animator.avatar.isHuman;
                 report.AppendLine(Describe(model) + (human ? " humanoid" : " NOT HUMANOID"));
-                if (human) people.Add(model);
+                if (!human) continue;
+                people.Add(model);
+                // "Men/Casual": the folder tells the body type apart (both sets have a Casual, a Suit...).
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                labels.Add(Path.GetFileName(Path.GetDirectoryName(path)) + "/" + model.name);
             }
 
             var (palettes, paletteNames) = Palettes(report);
@@ -103,7 +118,7 @@ namespace OpeningBell.EditorTools
                 art = ScriptableObject.CreateInstance<CityArt>();
                 AssetDatabase.CreateAsset(art, ArtPath);
             }
-            art.EditorSet(models.ToArray(), people.ToArray(), controller, walkSpeed, palettes, paletteNames);
+            art.EditorSet(models.ToArray(), people.ToArray(), controller, walkSpeed, palettes, paletteNames, labels.ToArray());
             EditorUtility.SetDirty(art);
             AssetDatabase.SaveAssets();
 

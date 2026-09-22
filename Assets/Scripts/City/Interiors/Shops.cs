@@ -45,6 +45,15 @@ namespace OpeningBell.City
             k.Box(root, "Espresso machine", new Vector3(70f, 1.2f, 7.25f), new Vector3(0.8f, 0.5f, 0.5f), c.P.Lit(new Color(0.7f, 0.7f, 0.72f), 0.8f), collider: false);
             k.Box(root, "Grinder", new Vector3(71.1f, 1.18f, 7.25f), new Vector3(0.25f, 0.45f, 0.3f), c.P.Lit(new Color(0.12f, 0.12f, 0.13f), 0.5f), collider: false);
             k.Box(root, "Menu board", new Vector3(71f, 2.5f, 7.72f), new Vector3(3.2f, 1.1f, 0.05f), c.P.Lit(new Color(0.1f, 0.1f, 0.1f)), collider: false);
+            // Pastries on plates at the end of the counter.
+            string[][] plates = { new[] { "Donut1", "Donut2" }, new[] { "Croissant", "Croissant" }, new[] { "Cupcake", "Donut3" } };
+            for (int i = 0; i < plates.Length; i++)
+            {
+                float px = 74f + i * 0.62f;
+                k.Prop(root, "Plate", new Vector3(px, 1.07f, 3.55f), 0f, 0f, 0.36f);
+                k.Prop(root, plates[i][0], new Vector3(px - 0.07f, 1.085f, 3.52f), 0.06f, 20f * i, plates[i][0].StartsWith("Cupcake") ? 0f : 0.12f);
+                k.Prop(root, plates[i][1], new Vector3(px + 0.08f, 1.085f, 3.6f), 0.06f, -30f * i, plates[i][1].StartsWith("Cupcake") ? 0f : 0.12f);
+            }
             k.Text(root, "COFFEE ........ 4.50\nPASTRY ........ 3.75", new Vector3(71f, 2.5f, 7.68f), 0f, 0.11f, new Color(0.95f, 0.93f, 0.85f));
             Material table = c.P.Lit(new Color(0.8f, 0.78f, 0.74f), 0.4f);
             foreach (Vector3 p in new[] { new Vector3(66.2f, 0f, -3.8f), new Vector3(69f, 0f, -3.8f), new Vector3(73.8f, 0f, -3.8f), new Vector3(76.2f, 0f, -1.2f) })
@@ -94,19 +103,49 @@ namespace OpeningBell.City
             k.Text(root, "CORNER MART", new Vector3((f.xMin + f.xMax) / 2f, 4.2f, f.yMin - 0.14f), 0f, 0.42f, new Color(1f, 0.95f, 0.85f));
             k.Text(root, "OPEN 6 AM – MIDNIGHT", new Vector3(doorX + 1.7f, 2.4f, f.yMin - 0.03f), 0f, 0.07f, new Color(0.95f, 0.93f, 0.88f));
 
-            // Shelves, fridges along the back, counter by the door.
+            // Shelves stocked on both faces, drink fridges along the back, counter by the door.
             Material shelf = c.P.Lit(new Color(0.55f, 0.57f, 0.6f), 0.4f);
-            Color[] goods = { new Color(0.8f, 0.2f, 0.15f), new Color(0.95f, 0.75f, 0.2f), new Color(0.2f, 0.45f, 0.75f), new Color(0.3f, 0.6f, 0.3f) };
+            // Per shelf level: what's on it and how tall each item stands (the food pack's models, sized to real goods).
+            (string[] Items, float Height)[] levels =
+            {
+                (new[] { "Bottle1", "Bottle2", "Bottle1", "Soda" }, 0.3f),
+                (new[] { "Jar_Large", "PeanutButter", "KetchupBottle", "MustardBottle", "MayoBottle" }, 0.2f),
+                (new[] { "Bread", "Cheese_Singles", "ChocolateBar", "Bread" }, 0.13f),
+            };
             for (int row = 0; row < 3; row++)
             {
                 float x = 118.2f + row * 2.6f;
-                k.Span(root, "Shelf", new Vector3(x - 0.4f, 0f, -0.5f), new Vector3(x + 0.4f, 1.6f, 4.5f), shelf);
-                for (int level = 0; level < 3; level++)
-                for (int i = 0; i < 4; i++)
-                    k.Box(root, "Goods", new Vector3(x, 0.45f + level * 0.5f, 0f + i * 1.1f), new Vector3(0.9f, 0.3f, 0.9f), c.P.Lit(goods[(row + level + i) % goods.Length]), collider: false);
+                k.Span(root, "Shelf", new Vector3(x - 0.3f, 0f, -0.5f), new Vector3(x + 0.3f, 1.6f, 4.5f), shelf);
+                for (int level = 0; level < levels.Length; level++)
+                {
+                    float y = 0.3f + level * 0.5f;
+                    foreach (float side in new[] { -1f, 1f })
+                    {
+                        k.Span(root, "Ledge", new Vector3(x + side * 0.3f - (side < 0f ? 0.28f : 0f), y - 0.03f, -0.5f),
+                            new Vector3(x + side * 0.3f + (side > 0f ? 0.28f : 0f), y, 4.5f), shelf, collider: false);
+                        var (items, height) = levels[level];
+                        int n = 0;
+                        for (float z = -0.35f; z < 4.4f; z += 0.24f, n++)
+                        {
+                            string item = items[(n + row) % items.Length];
+                            bool flat = item == "ChocolateBar" || item == "Cheese_Singles";
+                            k.Prop(root, item, new Vector3(x + side * 0.44f, y, z), height, side > 0f ? 90f : 270f, flat ? 0.16f : 0f);
+                        }
+                    }
+                }
             }
             k.Span(root, "Fridges", new Vector3(116f, 0f, 6f), new Vector3(126.2f, 2.2f, 6.75f), c.P.Lit(new Color(0.85f, 0.87f, 0.9f), 0.6f));
             k.Span(root, "Fridge glow", new Vector3(116.2f, 0.3f, 5.98f), new Vector3(126f, 2f, 6f), c.P.Unlit(new Color(0.8f, 0.9f, 1f)), collider: false);
+            // Drinks lined up behind the fridges' glass doors.
+            for (int level = 0; level < 3; level++)
+            {
+                float y = 0.35f + level * 0.58f;
+                k.Span(root, "Fridge shelf", new Vector3(116.2f, y - 0.02f, 5.74f), new Vector3(126f, y, 5.98f), shelf, collider: false);
+                int n = 0;
+                for (float fx = 116.35f; fx < 125.9f; fx += 0.16f, n++)
+                    k.Prop(root, level == 1 ? "Soda" : n % 3 == 0 ? "Bottle2" : "Bottle1", new Vector3(fx, y, 5.86f), level == 1 ? 0.2f : 0.3f);
+            }
+            k.Pane(root, "Fridge doors", new Vector3(116.2f, 0.25f, 5.68f), new Vector3(126f, 2.05f, 5.7f), new Color(0.75f, 0.85f, 0.95f, 0.2f));
             k.Span(root, "Counter", new Vector3(112.5f, 0f, -2.6f), new Vector3(116.5f, 1f, -1.9f), c.P.Lit(new Color(0.3f, 0.3f, 0.32f), 0.3f));
             k.Box(root, "Register", new Vector3(114f, 1.12f, -2.2f), new Vector3(0.4f, 0.25f, 0.35f), c.P.Lit(new Color(0.12f, 0.12f, 0.13f), 0.4f), collider: false);
             c.PointLight(root, new Vector3(116f, 4.4f, 0.5f), 10f, 1.2f, new Color(0.95f, 0.98f, 1f));

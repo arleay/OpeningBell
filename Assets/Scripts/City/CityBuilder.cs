@@ -40,6 +40,7 @@ namespace OpeningBell.City
         public RideController Rider { get; private set; }
         public DriveController Driver { get; private set; }
         public Minimap Minimap { get; private set; }
+        public TitleScreen Title { get; private set; }
         public RoadNetwork Roads => _c.Roads;
 
         private void Awake()
@@ -109,11 +110,16 @@ namespace OpeningBell.City
             if (art != null && art.HasPeople)
             {
                 body = player.gameObject.AddComponent<PlayerBody>();
-                body.Configure(player, art);
+                body.Configure(player, art, game.Look);
             }
             player.gameObject.AddComponent<PlayerFists>().Configure(player, body, Pedestrians);
             Minimap = gameObject.AddComponent<Minimap>();
             Minimap.Configure(_c, player, hud, Fleet);
+            if (art != null && art.HasPeople)
+            {
+                Title = gameObject.AddComponent<TitleScreen>();
+                Title.Configure(game, player, hud, art, body);
+            }
 
             // Last, so a renamed scene object costs only the furniture, not the city.
             ApartmentInterior.Dress(_c.Kit, apartment, workstation.transform);

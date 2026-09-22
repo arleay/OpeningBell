@@ -14,6 +14,8 @@ namespace OpeningBell.City
     {
         [SerializeField] private GameObject[] models = new GameObject[0];
         [SerializeField] private GameObject[] people = new GameObject[0];
+        [Tooltip("Per person: body folder and model, e.g. \"Women/Suit\" (names repeat across the sets).")]
+        [SerializeField] private string[] peopleLabels = new string[0];
         [Tooltip("Kit palette textures and their night-window masks, named \"Kit/file\" (e.g. CityCommercial/variation-a-glow).")]
         [SerializeField] private Texture2D[] palettes = new Texture2D[0];
         [SerializeField] private string[] paletteNames = new string[0];
@@ -26,6 +28,9 @@ namespace OpeningBell.City
         private readonly Dictionary<string, Bounds> _bounds = new Dictionary<string, Bounds>();
 
         public IReadOnlyList<GameObject> People => people;
+
+        /// <summary>"Men/Casual" style label for person <paramref name="i"/> (just the model name if unlabelled).</summary>
+        public string PeopleLabel(int i) => i < peopleLabels.Length ? peopleLabels[i] : people[i].name;
         public RuntimeAnimatorController PeopleAnimator => peopleAnimator;
         public float WalkClipSpeed => walkClipSpeed;
         public bool HasPeople => people.Length > 0 && peopleAnimator != null;
@@ -43,8 +48,8 @@ namespace OpeningBell.City
         }
 
         /// <summary>
-        /// Bounds of the model's meshes in its root's space, ignoring the root's own rotation and scale (which
-        /// <see cref="Kit.Model"/> replaces). Measured from the meshes rather than taken from the art report, because
+        /// Bounds of the model's meshes as <see cref="Kit.Model"/> places it before its yaw: the root's own rotation
+        /// kept (Blender exports stand up that way), its position and scale replaced. Measured from the meshes rather than taken from the art report, because
         /// some kit files scale their mesh child. Empty bounds when the model is missing.
         /// </summary>
         public Bounds ModelBounds(string name)
@@ -57,7 +62,7 @@ namespace OpeningBell.City
                 foreach (MeshFilter mf in root.GetComponentsInChildren<MeshFilter>(true))
                 {
                     if (mf.sharedMesh == null) continue;
-                    Matrix4x4 toRoot = root.transform.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                    Matrix4x4 toRoot = Matrix4x4.Rotate(root.transform.localRotation) * root.transform.worldToLocalMatrix * mf.transform.localToWorldMatrix;
                     Bounds mb = mf.sharedMesh.bounds;
                     for (int i = 0; i < 8; i++)
                     {
@@ -84,8 +89,9 @@ namespace OpeningBell.City
 
 #if UNITY_EDITOR
         public void EditorSet(GameObject[] modelList, GameObject[] peopleList, RuntimeAnimatorController animator, float walkSpeed,
-            Texture2D[] paletteList, string[] paletteNameList)
+            Texture2D[] paletteList, string[] paletteNameList, string[] peopleLabelList)
         {
+            peopleLabels = peopleLabelList;
             palettes = paletteList;
             paletteNames = paletteNameList;
             _palettes = null;

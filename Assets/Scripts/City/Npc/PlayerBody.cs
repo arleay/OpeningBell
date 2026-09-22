@@ -15,17 +15,18 @@ namespace OpeningBell.City
         private const float SetBack = 0.12f;
         /// <summary>How far ahead of the eyes a punch lands, metres.</summary>
         private const float FistReach = 0.45f;
-        private const string Look = "Casual2";
+        private const string DefaultLook = "Casual2";
 
         private static readonly int SpeedParam = Animator.StringToHash("Speed");
         private static readonly int Idle = Animator.StringToHash("Idle"), Walk = Animator.StringToHash("Walk"), Jog = Animator.StringToHash("Jog");
         private static readonly int PunchJab = Animator.StringToHash("PunchJab"), PunchCross = Animator.StringToHash("PunchCross");
 
         private FirstPersonController _player;
+        private CityArt _art;
         private CharacterController _controller;
         private GameObject _model;
         private Animator _animator;
-        private float _walkClipSpeed, _jogClipSpeed = 4.83f;
+        private float _walkClipSpeed, _jogClipSpeed;
         private int _state;
         private float _upperUntil, _upperWeight;
         private float _punchStart = -99f, _punchLand;
@@ -34,18 +35,29 @@ namespace OpeningBell.City
 
         public bool Visible => _model != null && _model.activeSelf;
 
-        public void Configure(FirstPersonController player, CityArt art)
+        public void Configure(FirstPersonController player, CityArt art, OpeningBell.PlayerLook look)
         {
             _player = player;
             _controller = player.GetComponent<CharacterController>();
+            _art = art;
+            SetLook(look);
+        }
+
+        /// <summary>Rebuilds the body as the creator's choice (null: the default casual look).</summary>
+        public void SetLook(OpeningBell.PlayerLook look)
+        {
             GameObject source = null;
-            foreach (GameObject p in art.People)
-                if (p.name == Look) { source = p; break; }
-            if (source == null && art.People.Count > 0) source = art.People[0];
-            if (source == null || art.PeopleAnimator == null) return;
+            if (look != null && _art.People.Count > 0) source = _art.People[CharacterStyle.ModelIndex(_art, look)];
+            if (source == null)
+                foreach (GameObject p in _art.People)
+                    if (p.name == DefaultLook) { source = p; break; }
+            if (source == null && _art.People.Count > 0) source = _art.People[0];
+            if (source == null || _art.PeopleAnimator == null) return;
+            if (_model != null) Destroy(_model);
 
             _model = Instantiate(source, transform, false);
             _model.name = "PlayerBody";
+            CharacterStyle.Apply(_model, look);
             // Scale so the eyes land at the camera: they sit about 0.1 m above the head bone.
             Vector3 head = source.GetComponent<Animator>().GetBoneTransform(HumanBodyBones.Head)?.position ?? new Vector3(0f, 1.62f, 0f);
             float eyes = _player.CameraPivot.localPosition.y;
@@ -53,11 +65,11 @@ namespace OpeningBell.City
             _model.transform.localScale = Vector3.one * scale;
             _model.transform.localPosition = new Vector3(0f, 0f, -SetBack);
             _animator = _model.GetComponent<Animator>();
-            _animator.runtimeAnimatorController = art.PeopleAnimator;
+            _animator.runtimeAnimatorController = _art.PeopleAnimator;
             _animator.applyRootMotion = false;
             _animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-            _walkClipSpeed = art.WalkClipSpeed * scale;
-            _jogClipSpeed *= scale;
+            _walkClipSpeed = _art.WalkClipSpeed * scale;
+            _jogClipSpeed = 4.83f * scale;
             _state = Idle;
             _model.AddComponent<IKRelay>().Body = this;
             _head = _animator.GetBoneTransform(HumanBodyBones.Head);

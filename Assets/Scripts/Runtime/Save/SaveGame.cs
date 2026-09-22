@@ -31,6 +31,23 @@ namespace OpeningBell
         public PlayerSaveData Player = new PlayerSaveData();
         public bool HasVehicles;
         public global::OpeningBell.Vehicles.FleetSaveData Vehicles = new global::OpeningBell.Vehicles.FleetSaveData();
+        public bool HasLook;
+        public PlayerLook Look = new PlayerLook();
+    }
+
+    /// <summary>
+    /// The player's character from the creator: which character model (index into the art library's people, with its
+    /// label to catch a reordered library) and tint choices (0 = the model's own colour).
+    /// </summary>
+    [Serializable]
+    public sealed class PlayerLook
+    {
+        public string Name = "Alex";
+        public int Model;
+        public string ModelLabel = "";
+        public int Skin, Hair, Top;
+
+        public PlayerLook Copy() => (PlayerLook)MemberwiseClone();
     }
 
     [Serializable]

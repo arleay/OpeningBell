@@ -68,6 +68,15 @@ namespace OpeningBell
         /// <summary>Set by <see cref="StartNewGame"/> so the reloaded scene ignores the (deleted) save.</summary>
         private static bool _forceNewGame;
 
+        /// <summary>The look chosen in the character creator before a new game reloads the scene.</summary>
+        public static PlayerLook PendingLook { get; set; }
+
+        /// <summary>The player's character; null until chosen (a new game shows the creator).</summary>
+        public PlayerLook Look { get; set; }
+
+        /// <summary>True when this session continued a save rather than starting fresh.</summary>
+        public bool Continued { get; private set; }
+
         /// <summary>Player-controlled fast-forward on top of the base time scales (learning aid; difficulty may lock it later).</summary>
         public float SpeedMultiplier { get; set; } = 1f;
 
@@ -128,9 +137,16 @@ namespace OpeningBell
                     Array.Empty<global::OpeningBell.Vehicles.PartSpec>(), 0m, 0m));
             if (save != null && save.HasVehicles) Vehicles.RestoreState(save.Vehicles);
 
+            if (save == null && PendingLook != null)
+            {
+                Look = PendingLook;
+                PendingLook = null;
+            }
             if (save != null)
             {
                 TradingState.Restore(save.Trading, Account, Orders, Days);
+                Continued = true;
+                if (save.HasLook) Look = save.Look;
                 if (save.HasPlayer) PlacePlayer(save.Player);
                 Debug.Log($"Loaded save '{saveSlot}' (day {Days.DayNumber}, {Clock.Now:ddd MMM d HH:mm}).");
             }
@@ -153,6 +169,8 @@ namespace OpeningBell
                 Inbox = Inbox.CaptureState(),
                 HasVehicles = true,
                 Vehicles = Vehicles.CaptureState(),
+                HasLook = Look != null,
+                Look = Look ?? new PlayerLook(),
             };
             if (player != null)
             {

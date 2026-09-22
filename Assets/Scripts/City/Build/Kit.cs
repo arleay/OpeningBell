@@ -82,7 +82,8 @@ namespace OpeningBell.City
             GameObject go = Object.Instantiate(prefab, parent, false);
             go.name = model;
             go.transform.localPosition = position;
-            go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            // Keep the file's own root rotation (Blender exports stand up with a -90° X root); yaw turns it about y.
+            go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f) * prefab.transform.localRotation;
             go.transform.localScale = scale;
             return go;
         }
@@ -116,6 +117,13 @@ namespace OpeningBell.City
             go.transform.localPosition = bottom - Quaternion.Euler(0f, yaw, 0f) * Vector3.Scale(b.center, scale) + Vector3.up * (b.extents.y * scale.y);
             return go;
         }
+
+        /// <summary>
+        /// A small prop (the Quaternius food) standing on <paramref name="bottom"/>, scaled to <paramref name="height"/>
+        /// (or, for flat things like chocolate, to <paramref name="width"/> across). No collider; null when missing.
+        /// </summary>
+        public GameObject Prop(Transform parent, string model, Vector3 bottom, float height, float yaw = 0f, float width = 0f) =>
+            Fit(parent, model, bottom, width > 0f ? new Vector3(width, 0f, 0f) : new Vector3(0f, height, 0f), yaw);
 
         /// <summary>A box collider around a model's own bounds, for furniture the player shouldn't walk through.</summary>
         public void Solid(GameObject model)

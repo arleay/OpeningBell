@@ -12,12 +12,14 @@ namespace OpeningBell.EditorTools
         public const string Characters = "Assets/Art/ThirdParty/Quaternius/Characters/";
         public const string Animations = "Assets/Art/ThirdParty/Quaternius/Animations/";
         public const string Kenney = "Assets/Art/ThirdParty/Kenney/";
+        /// <summary>Quaternius static props (food): no rig, readable meshes like the Kenney kits.</summary>
+        public const string Props = "Assets/Art/ThirdParty/Quaternius/Props/";
 
         /// <summary>One-shot clips that staff play on repeat while working.</summary>
         private static readonly string[] AlsoLooped = { "Interact", "PickUp_Table", "Fixing_Kneeling" };
 
         /// <summary>Bump when a rule changes: Unity re-imports what this postprocessor touched.</summary>
-        public override uint GetVersion() => 5;
+        public override uint GetVersion() => 8;
 
         private void OnPreprocessModel()
         {
@@ -31,7 +33,7 @@ namespace OpeningBell.EditorTools
                 importer.importAnimation = assetPath.StartsWith(Animations);
                 importer.materialImportMode = ModelImporterMaterialImportMode.ImportViaMaterialDescription;
             }
-            else if (assetPath.StartsWith(Kenney) && !assetPath.Contains("/CarKit/"))
+            else if ((assetPath.StartsWith(Kenney) && !assetPath.Contains("/CarKit/")) || assetPath.StartsWith(Props))
             {
                 importer.animationType = ModelImporterAnimationType.None;
                 importer.importAnimation = false;
