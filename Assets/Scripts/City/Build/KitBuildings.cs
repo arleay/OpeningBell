@@ -158,15 +158,17 @@ namespace OpeningBell.City
                     variant = "variation-a";
                     tint = seed % 2 == 0 ? Color.white : new Color(0.9f, 0.82f, 0.78f);
                     break;
+                // The kit's whites blow out in full sun under the grade; knock them back a touch.
                 case FacadeStyle.Stucco:
                     variant = "colormap";
-                    tint = new Color(1f, 0.94f, 0.82f);
+                    tint = new Color(0.94f, 0.88f, 0.77f);
                     break;
                 case FacadeStyle.Townhouse:
                     variant = "variation-b";
                     break;
                 default:
                     variant = seed % 3 == 0 ? "variation-b" : "colormap";
+                    tint = new Color(0.86f, 0.87f, 0.89f);
                     break;
             }
             Texture2D palette = art.Palette("CityCommercial/" + variant) ?? art.Palette("CityCommercial/colormap");
