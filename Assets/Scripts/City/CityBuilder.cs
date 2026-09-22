@@ -90,9 +90,18 @@ namespace OpeningBell.City
             Fleet.Configure(game, _c.Kit, Rider);
         }
 
+        private bool _lightsOn;
+
         private void Update()
         {
-            if (_c != null && daylight != null) _c.P.ApplyNight(daylight.NightFactor);
+            if (_c == null || daylight == null) return;
+            _c.Night = daylight.NightFactor;
+            _c.P.ApplyNight(_c.Night);
+            // Street lamps switch as a group, with a little hysteresis around dusk and dawn.
+            bool on = _lightsOn ? _c.Night > 0.3f : _c.Night > 0.6f;
+            if (on == _lightsOn) return;
+            _lightsOn = on;
+            foreach (Light light in _c.NightLights) light.enabled = on;
         }
 
         private void OnDestroy() => _c?.P.Dispose();

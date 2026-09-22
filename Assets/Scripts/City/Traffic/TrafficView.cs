@@ -39,11 +39,11 @@ namespace OpeningBell.City
             _camera = camera;
             _peopleSource = people;
             _off = c.P.Unlit(new Color(0.12f, 0.12f, 0.12f));
-            _red = c.P.Unlit(new Color(1f, 0.15f, 0.1f));
-            _yellow = c.P.Unlit(new Color(1f, 0.75f, 0.1f));
-            _green = c.P.Unlit(new Color(0.2f, 1f, 0.45f));
-            _walk = c.P.Unlit(new Color(0.95f, 0.95f, 0.9f));
-            _wait = c.P.Unlit(new Color(1f, 0.5f, 0.1f));
+            _red = c.P.Glow(new Color(1f, 0.15f, 0.1f));
+            _yellow = c.P.Glow(new Color(1f, 0.75f, 0.1f));
+            _green = c.P.Glow(new Color(0.2f, 1f, 0.45f));
+            _walk = c.P.Glow(new Color(0.95f, 0.95f, 0.9f), 1.6f);
+            _wait = c.P.Glow(new Color(1f, 0.5f, 0.1f), 1.6f);
             _headlight = c.P.Lamp(new Color(0.75f, 0.75f, 0.7f), new Color(1f, 0.97f, 0.85f));
             _taillight = c.P.Lamp(new Color(0.45f, 0.08f, 0.06f), new Color(1f, 0.12f, 0.08f));
 
@@ -128,6 +128,9 @@ namespace OpeningBell.City
                 }
                 t.SetPositionAndRotation(new Vector3(car.Position.x, CityPlan.RoadY, car.Position.y),
                     Quaternion.LookRotation(new Vector3(car.Heading.x, 0f, car.Heading.y)));
+                Light beam = t.GetComponentInChildren<Light>(true);
+                bool night = _c.Night > 0.5f;
+                if (beam.enabled != night) beam.enabled = night;
             }
             _remove.Clear();
             foreach (var pair in _shown)
@@ -180,6 +183,18 @@ namespace OpeningBell.City
                 k.Box(car, "Headlight", new Vector3(x, 0.72f, 2.21f), new Vector3(0.36f, 0.14f, 0.03f), _headlight, collider: false);
                 k.Box(car, "Taillight", new Vector3(x, 0.75f, -2.21f), new Vector3(0.3f, 0.12f, 0.03f), _taillight, collider: false);
             }
+            var beam = new GameObject("Headlights");
+            beam.transform.SetParent(car, false);
+            beam.transform.localPosition = new Vector3(0f, 0.75f, 2.3f);
+            beam.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
+            var spot = beam.AddComponent<Light>();
+            spot.type = LightType.Spot;
+            spot.range = 20f;
+            spot.spotAngle = 70f;
+            spot.intensity = 24f;
+            spot.color = new Color(1f, 0.95f, 0.85f);
+            spot.shadows = LightShadows.None;
+            spot.enabled = false;
             var box = car.gameObject.AddComponent<BoxCollider>();
             box.center = new Vector3(0f, 0.85f, 0f);
             box.size = new Vector3(1.8f, 1.5f, 4.4f);

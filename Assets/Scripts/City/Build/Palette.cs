@@ -59,15 +59,21 @@ namespace OpeningBell.City
             return _cache[key] = m;
         }
 
-        /// <summary>A light that is <paramref name="off"/> by day and <paramref name="on"/> at night.</summary>
-        public Material Lamp(Color off, Color on)
+        /// <summary>
+        /// A light that is <paramref name="off"/> by day and <paramref name="on"/> at night. The night colour is
+        /// pushed into HDR (× <paramref name="glow"/>) so bloom picks it up.
+        /// </summary>
+        public Material Lamp(Color off, Color on, float glow = 3f)
         {
-            string key = $"lamp{off}{on}";
+            string key = $"lamp{off}{on}{glow}";
             if (_cache.TryGetValue(key, out Material m)) return m;
             m = new Material(_unlit) { name = "City Lamp", color = off };
-            _lamps.Add((m, off, on));
+            _lamps.Add((m, off, on * glow));
             return _cache[key] = m;
         }
+
+        /// <summary>Always-on glowing surface (signal lenses): HDR so it blooms.</summary>
+        public Material Glow(Color color, float glow = 2.2f) => Unlit(color * glow);
 
         public Material Glass(Color tint)
         {

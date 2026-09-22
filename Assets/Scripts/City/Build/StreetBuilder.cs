@@ -191,6 +191,21 @@ namespace OpeningBell.City
             k.Cylinder(light, "Pole", new Vector3(0f, 3f, 0f), 0.14f, 6f, pole, collider: true);
             k.Box(light, "Arm", new Vector3(0f, 5.9f, 0.7f), new Vector3(0.08f, 0.08f, 1.5f), pole, collider: false);
             k.Box(light, "Lamp", new Vector3(0f, 5.8f, 1.35f), new Vector3(0.32f, 0.12f, 0.55f), lamp, collider: false);
+            // A real pool of light on the pavement at night (Forward+ handles dozens of these).
+            var pool = new GameObject("Light pool");
+            pool.transform.SetParent(light, false);
+            pool.transform.localPosition = new Vector3(0f, 5.7f, 1.35f);
+            pool.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            var spot = pool.AddComponent<Light>();
+            spot.type = LightType.Spot;
+            spot.range = 15f;
+            spot.spotAngle = 115f;
+            spot.innerSpotAngle = 60f;
+            spot.intensity = 30f; // URP falls off with distance²: the lamp is ~5.7 m up
+            spot.color = new Color(1f, 0.84f, 0.6f);
+            spot.shadows = LightShadows.None;
+            spot.enabled = false;
+            c.NightLights.Add(spot);
         }
 
         private static void Tree(Kit k, Transform parent, Vector2 p, Material bark, Material leaves)

@@ -32,6 +32,7 @@ namespace OpeningBell.Gameplay
         [SerializeField] private float fogEnd = 380f;
 
         private Material _windowMaterial;
+        private static readonly int SkyExposure = Shader.PropertyToID("_Exposure");
 
         /// <summary>0 in daylight, 1 at night; eases across dawn and dusk. Street lights and lit windows follow it.</summary>
         public float NightFactor { get; private set; }
@@ -41,6 +42,10 @@ namespace OpeningBell.Gameplay
             _windowMaterial = window.material;
             if (sun == null) return;
             RenderSettings.sun = sun;
+            // A runtime copy: we change its exposure every frame and must not touch the asset.
+            if (RenderSettings.skybox != null) RenderSettings.skybox = new Material(RenderSettings.skybox);
+            // Sky above, horizon around, ground below: low-poly shapes read much better with a gradient ambient.
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogStartDistance = fogStart;
@@ -74,8 +79,13 @@ namespace OpeningBell.Gameplay
             sun.color = warm;
             sun.intensity = sunIntensity * daylight;
             sun.enabled = daylight > 0f;
-            RenderSettings.ambientLight = Color.Lerp(nightAmbient, dayAmbient, daylight);
+            Color ambient = Color.Lerp(nightAmbient, dayAmbient, daylight);
+            RenderSettings.ambientSkyColor = ambient * 1.15f;
+            RenderSettings.ambientEquatorColor = ambient * 0.9f;
+            RenderSettings.ambientGroundColor = new Color(ambient.r * 0.62f, ambient.g * 0.58f, ambient.b * 0.52f);
             RenderSettings.fogColor = Color.Lerp(nightAmbient * 0.6f, sky, 0.75f);
+            // The procedural sky has no night of its own: dim it so evenings read blue, not brown.
+            if (RenderSettings.skybox != null) RenderSettings.skybox.SetFloat(SkyExposure, Mathf.Lerp(0.18f, 1.25f, Mathf.Clamp01(daylight * 1.5f)));
         }
 
         private static Gradient DefaultSky()

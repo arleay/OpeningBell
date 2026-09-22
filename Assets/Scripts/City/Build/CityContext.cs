@@ -28,6 +28,11 @@ namespace OpeningBell.City
 
         public bool IsTenant => Game.Economy.Owns(OfficeLeaseId);
 
+        /// <summary>0 day … 1 night (from the daylight cycle, updated every frame).</summary>
+        public float Night;
+        /// <summary>Real lights that only burn at night (street lamps).</summary>
+        public readonly List<Light> NightLights = new List<Light>();
+
         public void Anchor(string name, Vector3 p) => Anchors[name] = p;
 
         public void Place(Vector3 p, PlaceKind kind, string tag) => Places.Add((new Vector2(p.x, p.z), kind, tag));
@@ -40,7 +45,8 @@ namespace OpeningBell.City
             var light = go.AddComponent<Light>();
             light.type = LightType.Point;
             light.range = range;
-            light.intensity = intensity;
+            // Callers give a "feel" intensity; URP attenuates with distance², so scale for ~3 m ceilings.
+            light.intensity = intensity * 4.5f;
             light.color = color;
             light.shadows = LightShadows.None;
             return light;
