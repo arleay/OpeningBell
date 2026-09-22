@@ -3,38 +3,33 @@ using UnityEngine;
 namespace OpeningBell.City
 {
     /// <summary>
-    /// The town around the core: rows of Kenney suburban houses (<see cref="CityPlan.HouseRows"/>) set back behind
-    /// front lawns, each with a driveway, a back fence and a tree or two in the yard, plus the open town field. One
-    /// box collider per house. Without the suburban kit the lots stay lawn.
+    /// The town around the core: rows of walkable houses (<see cref="CityPlan.HouseRows"/>, built by
+    /// <see cref="HouseBuilder"/>) set back behind front lawns, each with a driveway, side and back fences and yard
+    /// trees, plus the open town field. Every house's front door is a place pedestrians walk to and from.
     /// </summary>
     public static class TownBuilder
     {
-        /// <summary>Kit houses are ~1.3 units wide; ×8 gives 9–14 m houses with ~3 m storeys.</summary>
-        private const float Scale = 8f;
-        private const float LotWidth = 17f, Setback = 6.5f, YardDepth = 30f;
-
-        private static readonly string[] Houses =
-        {
-            "building-type-a", "building-type-b", "building-type-c", "building-type-d", "building-type-e", "building-type-f",
-            "building-type-g", "building-type-h", "building-type-i", "building-type-j", "building-type-k", "building-type-l",
-            "building-type-m", "building-type-n", "building-type-o", "building-type-p", "building-type-q", "building-type-r",
-            "building-type-s", "building-type-t", "building-type-u",
-        };
-
-        private static readonly string[] Palettes = { "colormap", "variation-a", "variation-b", "variation-c" };
         private static readonly string[] Trees = { "tree_oak", "tree_default", "tree_fat", "tree_detailed", "tree_oak_dark", "tree_default_dark" };
 
-        public static void Build(CityContext c)
+        private static float LotWidth(HouseTier t) => t switch { HouseTier.Starter => 17f, HouseTier.Family => 21f, _ => 42f };
+        private static float Setback(HouseTier t) => t switch { HouseTier.Starter => 6.5f, HouseTier.Family => 7f, _ => 9f };
+        /// <summary>From the kerb to the back fence; blocks are ~79 m deep inside the sidewalks, so two rows fit back to back.</summary>
+        private static float YardDepth(HouseTier t) => t switch { HouseTier.Starter => 30f, HouseTier.Family => 32f, _ => 39f };
+        private static float DoorX(HouseTier t) => t switch { HouseTier.Starter => -2f, HouseTier.Family => 3.2f, _ => 0f };
+
+        public static void Build(CityContext c, Transform player)
         {
             Kit k = c.Kit;
-            if (k.Art == null || k.Art.Model(Houses[0]) == null) return;
             Transform root = Kit.Group(c.Static, "Town");
+            var lights = root.gameObject.AddComponent<HouseLights>();
+            lights.Configure(player);
             var rng = new System.Random(2210);
             Material drive = c.P.Lit(new Color(0.55f, 0.55f, 0.53f), 0.05f);
             Material fence = c.P.Lit(new Color(0.86f, 0.84f, 0.78f), 0.1f);
             float sw = CityPlan.SidewalkWidth;
+            int houseNumber = 0;
 
-            foreach (var (blockName, x0, x1, facesNorth) in CityPlan.HouseRows)
+            foreach (var (blockName, x0, x1, facesNorth, tier) in CityPlan.HouseRows)
             {
                 Rect block = CityPlan.Block(blockName);
                 Transform row = Kit.Group(root, blockName + (facesNorth ? " north" : " south"));
@@ -42,25 +37,33 @@ namespace OpeningBell.City
                 float kerb = facesNorth ? block.yMax - sw : block.yMin + sw;
                 float inward = facesNorth ? -1f : 1f;
                 float start = Mathf.Max(x0, block.xMin) + sw + 2f, end = Mathf.Min(x1, block.xMax) - sw - 2f;
-                int lots = Mathf.Max(1, Mathf.FloorToInt((end - start) / LotWidth));
+                int lots = Mathf.Max(1, Mathf.FloorToInt((end - start) / LotWidth(tier)));
                 float width = (end - start) / lots;
-                float back = kerb + inward * YardDepth;
+                Vector2 size = HouseBuilder.Footprint(tier);
+                float setback = Setback(tier), back = kerb + inward * YardDepth(tier);
 
                 for (int i = 0; i < lots; i++)
                 {
                     float cx = start + width * (i + 0.5f);
-                    House(c, row, rng, cx, kerb + inward * Setback, facesNorth);
-                    // Driveway from the sidewalk to the side of the house.
+                    // The house faces the street: local -z towards the kerb.
+                    float front = kerb + inward * setback;
+                    Transform house = Kit.Group(row, $"House {++houseNumber} {tier}", new Vector3(cx, 0f, front + inward * size.y / 2f), facesNorth ? 180f : 0f);
+                    HouseBuilder.Build(c, house, tier, rng, lights);
+                    c.Place(house.TransformPoint(new Vector3(DoorX(tier), 0f, -size.y / 2f - 1.5f)), PlaceKind.Door, "house");
+
+                    // Driveway from the sidewalk up the side of the lot.
                     float side = rng.Next(2) == 0 ? -1f : 1f;
                     float dx = cx + side * (width / 2f - 2.2f);
-                    k.Span(row, "Driveway", new Vector3(dx - 1.5f, -0.02f, Mathf.Min(kerb, kerb + inward * (Setback + 7f))),
-                        new Vector3(dx + 1.5f, 0.015f, Mathf.Max(kerb, kerb + inward * (Setback + 7f))), drive, collider: false);
-                    // Side fence between this lot and the next, from behind the house to the back fence.
+                    float driveEnd = kerb + inward * (setback + 8f);
+                    k.Span(row, "Driveway", new Vector3(dx - 1.5f, -0.02f, Mathf.Min(kerb, driveEnd)), new Vector3(dx + 1.5f, 0.015f, Mathf.Max(kerb, driveEnd)), drive, collider: false);
+                    // Side fence between lots, from behind the houses to the back fence.
+                    float fenceFrom = kerb + inward * (setback + size.y + 1.5f);
                     if (i < lots - 1)
-                        k.Span(row, "Fence", new Vector3(start + width * (i + 1) - 0.05f, 0f, Mathf.Min(back, kerb + inward * 17f)),
-                            new Vector3(start + width * (i + 1) + 0.05f, 1.2f, Mathf.Max(back, kerb + inward * 17f)), fence);
-                    // A tree in the back yard, sometimes one out front.
-                    YardTree(c, row, rng, new Vector2(cx + (float)(rng.NextDouble() - 0.5) * width * 0.6f, kerb + inward * (22f + (float)rng.NextDouble() * 5f)));
+                        k.Span(row, "Fence", new Vector3(start + width * (i + 1) - 0.05f, 0f, Mathf.Min(back, fenceFrom)),
+                            new Vector3(start + width * (i + 1) + 0.05f, 1.2f, Mathf.Max(back, fenceFrom)), fence);
+                    // A tree in the back yard (clear of a mansion's pool), sometimes one out front.
+                    float yard = tier == HouseTier.Mansion ? width * 0.42f : (float)(rng.NextDouble() - 0.5) * width * 0.6f;
+                    YardTree(c, row, rng, new Vector2(cx + yard, back - inward * 3f));
                     if (rng.NextDouble() < 0.35)
                         YardTree(c, row, rng, new Vector2(cx - side * width * 0.3f, kerb + inward * 2.5f), small: true);
                 }
@@ -72,22 +75,6 @@ namespace OpeningBell.City
             for (int i = 0; i < 9; i++)
                 YardTree(c, root, rng, new Vector2(Mathf.Lerp(field.xMin + 4f, field.xMax - 4f, (float)rng.NextDouble()),
                     Mathf.Lerp(field.yMin + 4f, field.yMax - 4f, (float)rng.NextDouble())));
-        }
-
-        private static void House(CityContext c, Transform parent, System.Random rng, float cx, float front, bool facesNorth)
-        {
-            string name = Houses[rng.Next(Houses.Length)];
-            Bounds b = c.Kit.Art.ModelBounds(name);
-            // Kit houses face +z; turn them to the street. The front face goes on the setback line.
-            float yaw = facesNorth ? 0f : 180f;
-            float dir = facesNorth ? 1f : -1f;
-            var at = new Vector3(cx - dir * b.center.x * Scale, 0f, front - dir * b.max.z * Scale);
-            GameObject house = c.Kit.Model(parent, name, at, yaw, Scale);
-            string variant = Palettes[rng.Next(Palettes.Length)];
-            Material m = c.P.KitPalette(c.Kit.Art.Palette("CitySuburban/" + variant) ?? c.Kit.Art.Palette("CitySuburban/colormap"),
-                c.Kit.Art.Palette("CitySuburban/" + variant + "-glow"), new Color(0.95f, 0.94f, 0.92f));
-            foreach (Renderer r in house.GetComponentsInChildren<Renderer>()) r.sharedMaterial = m;
-            c.Kit.Solid(house);
         }
 
         private static void YardTree(CityContext c, Transform parent, System.Random rng, Vector2 p, bool small = false)

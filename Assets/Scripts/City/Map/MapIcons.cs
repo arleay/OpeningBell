@@ -1,0 +1,83 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace OpeningBell.City
+{
+    public enum MapIcon { Home, Office, Coffee, Mart, Fuel, Bike, Skate, Car }
+
+    /// <summary>
+    /// Minimap icons drawn in code: a coloured round badge with a white 12×12 pixel glyph, doubled up to 32×32
+    /// (point filtered so it stays crisp). No image assets to import.
+    /// </summary>
+    public static class MapIcons
+    {
+        private static readonly Dictionary<MapIcon, Texture2D> Cache = new Dictionary<MapIcon, Texture2D>();
+
+        private static readonly Dictionary<MapIcon, (Color Badge, string[] Glyph)> Designs = new Dictionary<MapIcon, (Color, string[])>
+        {
+            [MapIcon.Home] = (new Color(0.2f, 0.6f, 0.3f), new[]
+            {
+                ".....##.....", "....####....", "...######...", "..########..", ".##########.", "############",
+                "..########..", "..###..###..", "..###..###..", "..###..###..", "..###..###..", "............",
+            }),
+            [MapIcon.Office] = (new Color(0.2f, 0.42f, 0.8f), new[]
+            {
+                "............", "############", "#..........#", "#..#...#...#", "#..##.##...#", "#...#.#.##.#",
+                "#.........##", "############", ".....##.....", "....####....", "..########..", "............",
+            }),
+            [MapIcon.Coffee] = (new Color(0.55f, 0.36f, 0.22f), new[]
+            {
+                "...#..#.....", "..#..#......", "...#..#.....", "............", "#########...", "#########...",
+                "##########..", "#########.#.", "##########..", "#########...", ".#######....", "............",
+            }),
+            [MapIcon.Mart] = (new Color(0.85f, 0.45f, 0.15f), new[]
+            {
+                "##..........", ".#..........", ".##########.", ".#########..", ".#########..", ".########...",
+                ".#.........." , ".#########..", "............", "..##....##..", "..##....##..", "............",
+            }),
+            [MapIcon.Fuel] = (new Color(0.8f, 0.2f, 0.2f), new[]
+            {
+                "#######.....", "#.....#.#...", "#.....#..#..", "#.....#...#.", "#######...#.", "#######...#.",
+                "#######..##.", "#######..#..", "#######..#..", "#######.##..", "#######.....", "#########...",
+            }),
+            [MapIcon.Bike] = (new Color(0.15f, 0.6f, 0.65f), new[]
+            {
+                "............", ".......##...", "...#####....", "....#..#....", "...#....#...", ".###....###.",
+                "#...#..#...#", "#...#.#....#", "#...#......#", ".###......##", "............", "............",
+            }),
+            [MapIcon.Skate] = (new Color(0.55f, 0.3f, 0.7f), new[]
+            {
+                "............", "............", "............", "............", "#..........#", "############",
+                ".##########.", "..#......#..", ".###....###.", ".###....###.", "............", "............",
+            }),
+            [MapIcon.Car] = (new Color(0.9f, 0.75f, 0.1f), new[]
+            {
+                "............", "............", "...######...", "..#......#..", ".#........#.", "############",
+                "############", "############", ".##......##.", "............", "............", "............",
+            }),
+        };
+
+        public static Texture2D Get(MapIcon icon)
+        {
+            if (Cache.TryGetValue(icon, out Texture2D t) && t != null) return t;
+            var (badge, glyph) = Designs[icon];
+            const int size = 32;
+            t = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "MapIcon " + icon };
+            var pixels = new Color32[size * size];
+            Color32 edge = new Color(1f, 1f, 1f, 0.95f), fill = badge, white = Color.white, clear = new Color(0f, 0f, 0f, 0f);
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(size / 2f, size / 2f));
+                Color32 c = d > 15.5f ? clear : d > 14f ? edge : fill;
+                // Glyph: 12×12 doubled to 24×24, centred; the strings are written top row first.
+                int gx = (x - 4) / 2, gy = 11 - (y - 4) / 2;
+                if (x >= 4 && y >= 4 && gx < 12 && gy >= 0 && glyph[gy].Length > gx && glyph[gy][gx] == '#') c = white;
+                pixels[y * size + x] = c;
+            }
+            t.SetPixels32(pixels);
+            t.Apply();
+            return Cache[icon] = t;
+        }
+    }
+}

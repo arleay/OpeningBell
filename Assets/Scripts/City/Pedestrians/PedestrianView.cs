@@ -39,18 +39,18 @@ namespace OpeningBell.City
             Sync(0f);
         }
 
-        /// <summary>People out and about by hour.</summary>
+        /// <summary>People out and about by hour, across the whole town (house doors to shops and back).</summary>
         public static int TargetCount(double hour)
         {
-            if (hour < 5.5) return 2;
-            if (hour < 7) return 8;
-            if (hour < 9.5) return 22;
-            if (hour < 12) return 14;
-            if (hour < 13.5) return 20;
-            if (hour < 16.5) return 14;
-            if (hour < 19) return 22;
-            if (hour < 22) return 10;
-            return 4;
+            if (hour < 5.5) return 3;
+            if (hour < 7) return 12;
+            if (hour < 9.5) return 32;
+            if (hour < 12) return 22;
+            if (hour < 13.5) return 30;
+            if (hour < 16.5) return 22;
+            if (hour < 19) return 32;
+            if (hour < 22) return 15;
+            return 6;
         }
 
         /// <summary>What a walk signal shows: WALK while the crossed road is red, with time left to cross.</summary>

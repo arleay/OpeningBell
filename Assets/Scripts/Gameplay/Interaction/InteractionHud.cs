@@ -19,6 +19,9 @@ namespace OpeningBell.Gameplay
         private long _clockMinute = -1;
         private string _shownPrompt, _shownDetails;
 
+        /// <summary>The HUD's root, for other overlays (the minimap); null until the HUD has started.</summary>
+        public VisualElement Root => _root;
+
         public string PromptText => _prompt.style.display == DisplayStyle.None ? "" : _prompt.text;
         public string ClockText => _clock.text;
         public string ToastText => _toast.style.display == DisplayStyle.None ? "" : _toast.text;
@@ -107,8 +110,8 @@ namespace OpeningBell.Gameplay
 
             _clock = new Label { pickingMode = PickingMode.Ignore, name = "hud-clock" };
             _clock.style.position = Position.Absolute;
-            _clock.style.top = 18;
-            _clock.style.right = 24;
+            _clock.style.top = 238; // under the minimap
+            _clock.style.right = 20;
             _clock.style.color = new Color(1f, 1f, 1f, 0.85f);
             _clock.style.fontSize = 18;
             _clock.style.unityFontStyleAndWeight = FontStyle.Bold;

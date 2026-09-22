@@ -133,25 +133,26 @@ namespace OpeningBell.City
         };
 
         /// <summary>
-        /// Rows of houses (front yards, driveways, back fences): along the north or south side of a block from X0 to
-        /// X1, facing the street on that side.
+        /// Rows of walkable houses (<see cref="HouseBuilder"/>): along the north or south side of a block from X0 to X1,
+        /// facing the street on that side. Starter homes nearest the core, family homes further out, mansions on Birch.
         /// </summary>
-        public static readonly (string Block, float X0, float X1, bool FacesNorth)[] HouseRows =
+        public static readonly (string Block, float X0, float X1, bool FacesNorth, HouseTier Tier)[] HouseRows =
         {
-            ("Willow Park", -135f, -50f, false), ("Willow Park", -135f, -50f, true),
-            ("Pine Hill", -230f, -145f, false), ("Pine Hill", -230f, -145f, true),
-            ("Willow South", -135f, -50f, false), ("Willow South", -135f, -50f, true),
-            ("Pine South", -230f, -145f, false), ("Pine South", -230f, -145f, true),
-            ("Willow North", -135f, -50f, false), ("Willow North", -135f, -50f, true),
-            ("Pine North", -230f, -145f, false), ("Pine North", -230f, -145f, true),
+            ("Willow Park", -135f, -50f, false, HouseTier.Starter), ("Willow Park", -135f, -50f, true, HouseTier.Starter),
+            ("Willow South", -135f, -50f, false, HouseTier.Starter), ("Willow South", -135f, -50f, true, HouseTier.Starter),
+            ("Willow North", -135f, -50f, false, HouseTier.Family), ("Willow North", -135f, -50f, true, HouseTier.Family),
+            ("Pine Hill", -230f, -145f, false, HouseTier.Family), ("Pine Hill", -230f, -145f, true, HouseTier.Family),
+            ("Pine South", -230f, -145f, false, HouseTier.Starter), ("Pine South", -230f, -145f, true, HouseTier.Starter),
+            ("Pine North", -230f, -145f, false, HouseTier.Family), ("Pine North", -230f, -145f, true, HouseTier.Mansion),
             // Opposite the apartment on Maple (the main street's shops take over east of First), and along Oak
-            ("Southside", -40f, 55f, true), ("Southside", -40f, 210f, false),
-            // Along Grove up to the town field, and all along Birch
-            ("Northside", -40f, 125f, false), ("Northside", -40f, 210f, true),
+            ("Southside", -40f, 55f, true, HouseTier.Starter), ("Southside", -40f, 210f, false, HouseTier.Starter),
+            // Along Grove up to the town field; Birch has family homes, then the mansions
+            ("Northside", -40f, 125f, false, HouseTier.Starter), ("Northside", -40f, 60f, true, HouseTier.Family),
+            ("Northside", 60f, 210f, true, HouseTier.Mansion),
         };
 
         /// <summary>The open field on Grove (the rest of Northside's frontage): grass and a few trees, no buildings.</summary>
-        public static readonly Rect TownField = Rect.MinMaxRect(128f, 78.5f, 206.5f, 118f);
+        public static readonly Rect TownField = Rect.MinMaxRect(128f, 78.5f, 206.5f, 112f);
 
         public static Rect Block(string name)
         {

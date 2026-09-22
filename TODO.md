@@ -33,6 +33,8 @@
 - [x] Art pass 2a: apartment furnished with the Kenney Furniture Kit (`ApartmentInterior`): kit beds, desks, chairs, keyboard/mouse, desk lamp with a base, kitchenette (sink, drawers, fridge, microwave, wall cabinets, bin), loveseat, coffee table, rug, plant, bookcase, nightstands, coat rack, ceiling lamp, window trim. Upgrade variants and interactables unchanged. Gallery shots `art-apartment*.png`
 - [x] Player body and brawling: first-person body (legs, hands, shadow; head hidden from the camera), punches steered into view with IK, NPC reactions (stagger, knockdown and get-up), flee or fight back, chase with lost-sight/distance give-up, bystanders scatter. `CombatPlayTests` writes `combat-*.png`
 - [x] Small open town: the core now sits in an outer grid (Oak, Birch, Willow, Pine) of suburban house rows, lawns, a town field and green edges; the tall outer ring and skyline towers are gone and the town centre is low-rise. Traffic density scaled for ~3 km of road. Gallery: `art-town-aerial.png`, `art-town-street.png`, `art-mainstreet.png`
+- [x] Walkable houses in three tiers (starter, family, mansion with pool) replace the solid kit houses; pedestrians walk to house doors
+- [x] Round rotating minimap with icons (home, office, shops, fuel, parked cars)
 - [ ] Art pass 2b: shop, lobby and office furniture (same `Kit.Fit` approach; `ModelSheet` for orientation/shelf heights), ground-floor trims on the enterable buildings, suburban houses for the outer ring
 - [ ] Then WORLD_SPEC Phase 11 (dealerships: used lot and standard dealer, test drives, resale) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
 
@@ -89,7 +91,8 @@
   - Pedestrians still walk through each other (no local avoidance beyond the simulation's rules).
   - The UAL root-motion file used to measure walk speed isn't in the project; `CityArtBuilder` keeps the measured 0.95 m/s.
 - Town:
-  - Houses are outside-only (no interiors), and pedestrians still only walk between the core's doors and benches, so the new streets are quiet on foot.
+  - Houses: no locks or owners yet (every front door opens), interior doors are open doorways, family bedrooms are big and sparse, and nobody lives inside. Property purchase (Phase 14) can build on them.
+  - Minimap: no full-screen map or custom waypoints yet; the office icon shows even before the lease.
   - The town field is empty grass (room for a market or pitch later).
   - From high up, the ground's edge shows beyond the green edges.
 - Brawling:

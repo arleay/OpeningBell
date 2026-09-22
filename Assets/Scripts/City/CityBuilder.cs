@@ -39,6 +39,7 @@ namespace OpeningBell.City
         public FleetView Fleet { get; private set; }
         public RideController Rider { get; private set; }
         public DriveController Driver { get; private set; }
+        public Minimap Minimap { get; private set; }
         public RoadNetwork Roads => _c.Roads;
 
         private void Awake()
@@ -60,7 +61,7 @@ namespace OpeningBell.City
             _c.Dynamic = Kit.Group(transform, "Dynamic");
 
             ShellBuilder.Build(_c);
-            TownBuilder.Build(_c);
+            TownBuilder.Build(_c, player.transform);
             ApartmentBuilding.Build(_c);
             CalderBuilding.Build(_c, out Desk desk);
             OfficeDesk = desk;
@@ -111,6 +112,8 @@ namespace OpeningBell.City
                 body.Configure(player, art);
             }
             player.gameObject.AddComponent<PlayerFists>().Configure(player, body, Pedestrians);
+            Minimap = gameObject.AddComponent<Minimap>();
+            Minimap.Configure(_c, player, hud, Fleet);
 
             // Last, so a renamed scene object costs only the furniture, not the city.
             ApartmentInterior.Dress(_c.Kit, apartment, workstation.transform);
