@@ -30,7 +30,8 @@
 ## Next
 - [ ] **Play the build yourself:** buy the $3,900 used sedan (transfer from brokerage first), drive to work, fill up at Tidewater Fuel
 - [ ] **Debug panel** (spec §42, part of the §45 vertical slice; still missing): set cash/time, teleport to city spots, grant equipment or vehicles, seed/FPS/tick time. Dev builds only
-- [ ] Art pass 2: interiors with the Kenney Furniture Kit (apartment first: bed, desk, chairs, kitchen, sofa, plants; keep the upgrade variants and interactables), shop and lobby furniture, ground-floor trims on the enterable buildings, suburban houses for the outer ring
+- [x] Art pass 2a: apartment furnished with the Kenney Furniture Kit (`ApartmentInterior`): kit beds, desks, chairs, keyboard/mouse, desk lamp with a base, kitchenette (sink, drawers, fridge, microwave, wall cabinets, bin), loveseat, coffee table, rug, plant, bookcase, nightstands, coat rack, ceiling lamp, window trim. Upgrade variants and interactables unchanged. Gallery shots `art-apartment*.png`
+- [ ] Art pass 2b: shop, lobby and office furniture (same `Kit.Fit` approach; `ModelSheet` for orientation/shelf heights), ground-floor trims on the enterable buildings, suburban houses for the outer ring
 - [ ] Then WORLD_SPEC Phase 11 (dealerships: used lot and standard dealer, test drives, resale) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
 
 ## Later phases (do not start early)
@@ -48,7 +49,7 @@
 - Polish leftovers: audio is synthesized placeholder; no main/title menu (the game continues or starts from the pause menu); emails time-stamp at delivery (a skipped-past 8:20 email shows the skip time)
 - The Close button outside regular hours posts a limit at the bid. It may not fill if the bid drops
 - UI refresh allocates strings every 0.1s. Fine now; profile in Phase 8
-- Apartment is placeholder primitives: no light switches or appliance interactions yet (spec §5 lists them; add when a phase needs them). The desk lamp shade floats (no stand)
+- Apartment: no light switches or appliance interactions yet (spec §5 lists them; add when a phase needs them). Monitors, PC tower and the espresso machine are still primitives (the kit has no fitting models). Walls and floor are flat colour; the ceiling lamp's canopy renders dark from below
 - City (Phase 9):
   - Pedestrians have no physics: they can clip through cars that have stopped on a crosswalk.
   - Shop items (coffee, pastry, energy drink, sandwich) cost money but have no effect until psychology/needs exist.
@@ -79,7 +80,7 @@
   - The engine sound is one synthesized loop.
   - Traffic cars don't honk or react to being hit.
 - Art pass 1:
-  - Interiors, ground floors of the enterable buildings, lamp posts, signals and signs are still primitives.
+  - Shop/lobby/office interiors, ground floors of the enterable buildings, lamp posts, signals and signs are still primitives.
   - Kenney buildings are stretched to fit lots (up to ~25% wider, deeper rows); side walls at row ends show it.
   - Kit night windows all glow together (the palette can't vary per window); the procedural parking garage still scatters.
   - People have one animation set: no sitting-down transition, no per-person clothing colours, and the Typing pose uses the UAL "Interact" loop. Riders use the driving loop (no pedalling).

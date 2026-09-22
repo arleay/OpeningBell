@@ -23,6 +23,7 @@ namespace OpeningBell.City
 
         private Dictionary<string, GameObject> _byName;
         private Dictionary<string, Texture2D> _palettes;
+        private readonly Dictionary<string, Bounds> _bounds = new Dictionary<string, Bounds>();
 
         public IReadOnlyList<GameObject> People => people;
         public RuntimeAnimatorController PeopleAnimator => peopleAnimator;
@@ -39,6 +40,35 @@ namespace OpeningBell.City
                     if (m != null) _byName[m.name] = m;
             }
             return _byName.TryGetValue(name, out GameObject found) ? found : null;
+        }
+
+        /// <summary>
+        /// Bounds of the model's meshes in its root's space, ignoring the root's own rotation and scale (which
+        /// <see cref="Kit.Model"/> replaces). Measured from the meshes rather than taken from the art report, because
+        /// some kit files scale their mesh child. Empty bounds when the model is missing.
+        /// </summary>
+        public Bounds ModelBounds(string name)
+        {
+            if (_bounds.TryGetValue(name, out Bounds cached)) return cached;
+            GameObject root = Model(name);
+            Bounds b = default;
+            bool any = false;
+            if (root != null)
+                foreach (MeshFilter mf in root.GetComponentsInChildren<MeshFilter>(true))
+                {
+                    if (mf.sharedMesh == null) continue;
+                    Matrix4x4 toRoot = root.transform.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                    Bounds mb = mf.sharedMesh.bounds;
+                    for (int i = 0; i < 8; i++)
+                    {
+                        Vector3 corner = mb.center + Vector3.Scale(mb.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                        Vector3 p = toRoot.MultiplyPoint3x4(corner);
+                        if (any) b.Encapsulate(p);
+                        else b = new Bounds(p, Vector3.zero);
+                        any = true;
+                    }
+                }
+            return _bounds[name] = b;
         }
 
         /// <summary>A kit palette texture by "Kit/file" name, or null.</summary>
@@ -64,6 +94,7 @@ namespace OpeningBell.City
             peopleAnimator = animator;
             walkClipSpeed = walkSpeed;
             _byName = null;
+            _bounds.Clear();
         }
 #endif
     }

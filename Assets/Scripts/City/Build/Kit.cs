@@ -90,6 +90,57 @@ namespace OpeningBell.City
         public GameObject Model(Transform parent, string model, Vector3 position, float yaw, float scale = 1f) =>
             Model(parent, model, position, yaw, Vector3.one * scale);
 
+        /// <summary>
+        /// The art model scaled into a box in the parent's space: <paramref name="bottom"/> is the middle of the box's
+        /// floor, <paramref name="size"/> its extent along the parent's axes, and a size of 0 leaves that axis free.
+        /// The scale is uniform (the largest that fits the given axes) unless <paramref name="stretch"/>, which fills each
+        /// given axis exactly (free axes then take the smallest of those scales). <paramref name="yaw"/> must be a
+        /// multiple of 90° so the box stays axis-aligned. Kenney furniture faces -z at yaw 0. Null when the model is missing.
+        /// </summary>
+        public GameObject Fit(Transform parent, string model, Vector3 bottom, Vector3 size, float yaw = 0f, bool stretch = false)
+        {
+            if (Art == null || Art.Model(model) == null) return null;
+            Bounds b = Art.ModelBounds(model);
+            bool quarter = Mathf.RoundToInt(yaw / 90f) % 2 != 0;
+            Vector3 extent = quarter ? new Vector3(b.size.z, b.size.y, b.size.x) : b.size; // along the parent's axes
+            float smallest = float.MaxValue;
+            for (int i = 0; i < 3; i++)
+                if (size[i] > 0f) smallest = Mathf.Min(smallest, size[i] / extent[i]);
+            Vector3 scale = Vector3.one * smallest;
+            if (stretch)
+                for (int i = 0; i < 3; i++)
+                    if (size[i] > 0f) scale[i] = size[i] / extent[i];
+            if (quarter) scale = new Vector3(scale.z, scale.y, scale.x); // back to the model's own axes
+
+            GameObject go = Model(parent, model, Vector3.zero, yaw, scale);
+            go.transform.localPosition = bottom - Quaternion.Euler(0f, yaw, 0f) * Vector3.Scale(b.center, scale) + Vector3.up * (b.extents.y * scale.y);
+            return go;
+        }
+
+        /// <summary>A box collider around a model's own bounds, for furniture the player shouldn't walk through.</summary>
+        public void Solid(GameObject model)
+        {
+            if (model == null) return;
+            Bounds b = Art.ModelBounds(model.name);
+            var box = model.AddComponent<BoxCollider>();
+            box.center = b.center;
+            box.size = b.size;
+        }
+
+        /// <summary>Swaps one of a model's materials by name (kit materials are named "wood", "carpet"...). Returns the model.</summary>
+        public static GameObject Recolor(GameObject model, string material, Material with)
+        {
+            if (model == null || with == null) return model;
+            foreach (Renderer r in model.GetComponentsInChildren<Renderer>(true))
+            {
+                Material[] mats = r.sharedMaterials;
+                for (int i = 0; i < mats.Length; i++)
+                    if (mats[i] != null && mats[i].name == material) mats[i] = with;
+                r.sharedMaterials = mats;
+            }
+            return model;
+        }
+
         public GameObject Box(Transform parent, string name, Vector3 center, Vector3 size, Material m, bool collider = true, float yaw = 0f)
         {
             GameObject go = MeshObject(parent, name, _cube, m, center, size, Quaternion.Euler(0f, yaw, 0f));

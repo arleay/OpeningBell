@@ -17,6 +17,8 @@ namespace OpeningBell.City
         [SerializeField] private WorkstationController workstation;
         [SerializeField] private DaylightCycle daylight;
         [SerializeField] private Camera viewCamera;
+        [Tooltip("The scene-authored apartment room, furnished from the art library.")]
+        [SerializeField] private Transform apartment;
 
         [Header("Material templates (their shader variants ship in builds)")]
         [SerializeField] private Material litTemplate;
@@ -101,6 +103,9 @@ namespace OpeningBell.City
             Driver.Configure(game, player, interactor, hud, Fleet, () => _c.Night);
             Fleet.Configure(game, _c.Kit, Rider, Driver);
             player.gameObject.AddComponent<Footsteps>().Configure(player);
+
+            // Last, so a renamed scene object costs only the furniture, not the city.
+            ApartmentInterior.Dress(_c.Kit, apartment, workstation.transform);
         }
 
         private bool _lightsOn;

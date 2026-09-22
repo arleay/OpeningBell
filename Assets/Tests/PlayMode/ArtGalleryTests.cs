@@ -61,5 +61,34 @@ namespace OpeningBell.Tests
             for (int i = 0; i < 10; i++) yield return null;
             yield return Shot(new Vector3(6f, 0f, -7.25f), 90f, 0f, "art-night.png");
         }
+
+        [UnityTest]
+        public IEnumerator Apartment_IsFurnished_AndPhotographed()
+        {
+            yield return LoadMain();
+            _player = Find<FirstPersonController>();
+            GameBootstrap game = Find<GameBootstrap>();
+            Transform room = GameObject.Find("Apartment").transform;
+            Transform frame = room.Find("Bed/Bed_Basic/Frame");
+            Assert.IsNotNull(room.Find("Bed/Bed_Basic/bedSingle"), "the bed is a kit model");
+            Assert.IsFalse(frame.GetComponent<MeshRenderer>().enabled, "its primitive is hidden");
+            Assert.IsTrue(frame.GetComponent<BoxCollider>().enabled, "but still solid");
+            Assert.IsNotNull(room.Find("loungeSofa"), "a sofa was added");
+
+            yield return Shot(new Vector3(-1.9f, 0f, -2f), 40f, 10f, "art-apartment.png");
+            yield return Shot(new Vector3(2.05f, 0f, -1.85f), -75f, 12f, "art-apartment-living.png");
+            yield return Shot(new Vector3(0.8f, 0f, 0.5f), 0f, 14f, "art-apartment-desk.png");
+
+            // Every upgrade bought: each appears in its slot, dressed.
+            System.DateTime now = game.Clock.Now;
+            Assert.IsNull(game.Economy.TransferFromBrokerage(9000m, now));
+            foreach (OpeningBell.Economy.StoreItem item in game.Economy.Catalog)
+                if (!string.IsNullOrEmpty(item.Slot)) Assert.IsNull(game.Economy.Buy(item.Id, now), item.Id);
+            yield return null;
+            Assert.IsNotNull(room.Find("Bed/Bed_Queen/bedDouble"), "the queen bed is a kit model");
+            Assert.IsTrue(room.Find("Bed/Bed_Queen").gameObject.activeInHierarchy, "and it's the one showing");
+            yield return Shot(new Vector3(-1.9f, 0f, -2f), 40f, 10f, "art-apartment-upgraded.png");
+            yield return Shot(new Vector3(0.8f, 0f, 0.5f), 0f, 14f, "art-apartment-desk-upgraded.png");
+        }
     }
 }

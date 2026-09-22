@@ -7539,6 +7539,7 @@ MonoBehaviour:
   workstation: {fileID: 1210450959}
   daylight: {fileID: 1152444858}
   viewCamera: {fileID: 1851494570}
+  apartment: {fileID: 1945202101}
   litTemplate: {fileID: 2100000, guid: e6f3d6c6b53e698409a21119b5b324bc, type: 2}
   litEmissiveTemplate: {fileID: 2100000, guid: 4404b8dfa569dd74dbafdce91b01cea6, type: 2}
   glassTemplate: {fileID: 2100000, guid: 328d7be35bd5ff8469ecf9a6be1963f5, type: 2}
