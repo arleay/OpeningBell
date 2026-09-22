@@ -36,6 +36,8 @@ namespace OpeningBell.City
         private Transform _head;
         /// <summary>A Tiny costume body: big mitts on short arms, so fists are shrunk and thrown further out.</summary>
         private bool _tiny;
+        /// <summary>The head bone's forward offset from the feet in the model's rest pose, metres (scaled).</summary>
+        private float _restHeadZ;
 
         public bool Visible => _model != null && _model.activeSelf;
 
@@ -67,6 +69,7 @@ namespace OpeningBell.City
             float eyes = _player.CameraPivot.localPosition.y;
             float scale = Mathf.Clamp(eyes / (head.y + 0.1f), 0.8f, 1.1f);
             _model.transform.localScale = Vector3.one * scale;
+            _restHeadZ = head.z * scale;
             _model.transform.localPosition = new Vector3(0f, 0f, -SetBack);
             _animator = _model.GetComponent<Animator>();
             _animator.runtimeAnimatorController = _art.PeopleAnimator;
@@ -107,9 +110,16 @@ namespace OpeningBell.City
             // A real head pivots at the neck, so looking down carries the eyes forward over the chest. The camera
             // pivots in place instead, so the body slides back to match: looking at your feet shows chest, belly and
             // shoes from the front rather than the top of your own shoulders and the cut-off neck.
+            // The shift pins the head bone (the cut-off neck) at a fixed spot behind the eyes, measured from this
+            // frame's pose: walking and jogging lean the torso forward, which would otherwise carry the neck back
+            // under the camera.
             float pitch = Mathf.DeltaAngle(0f, _player.CameraPivot.localEulerAngles.x);
             float down = Mathf.Clamp01(pitch / 85f);
-            _model.transform.localPosition = new Vector3(0f, 0f, -(SetBack + LookDownShift * Mathf.Sin(down * Mathf.PI * 0.5f)));
+            float headTarget = _restHeadZ - (SetBack + LookDownShift * Mathf.Sin(down * Mathf.PI * 0.5f));
+            float headNow = transform.InverseTransformPoint(_head.position).z;
+            Vector3 at = _model.transform.localPosition;
+            at.z = Mathf.Clamp(at.z + headTarget - headNow, -0.8f, 0.2f);
+            _model.transform.localPosition = at;
 
             Vector3 v = _controller.velocity;
             v.y = 0f;
