@@ -223,7 +223,7 @@ namespace OpeningBell.City
                 MakeLayer("forest", new Color(0.22f, 0.24f, 0.16f), new Color(0.16f, 0.18f, 0.12f), 6f),
                 MakeLayer("gravel", new Color(0.45f, 0.43f, 0.4f), new Color(0.36f, 0.35f, 0.33f), 4f),
                 MakeLayer("sand", new Color(0.66f, 0.6f, 0.48f), new Color(0.58f, 0.53f, 0.43f), 6f),
-                MakeLayer("rock", new Color(0.42f, 0.41f, 0.4f), new Color(0.32f, 0.32f, 0.33f), 10f),
+                MakeLayer("rock", new Color(0.33f, 0.32f, 0.3f), new Color(0.25f, 0.25f, 0.25f), 10f),
                 MakeLayer("mud", new Color(0.31f, 0.27f, 0.22f), new Color(0.25f, 0.22f, 0.18f), 5f),
             };
             int res = data.alphamapResolution;
@@ -248,7 +248,7 @@ namespace OpeningBell.City
                 // Beaches and river mud near the water; rock on steep slopes and under water.
                 if (h < 0.6f && h > -6f) w[(int)Layer.Sand] = 2f * Smooth((0.6f - h) / 1.5f) * (wz < 0f ? 1f : 0f);
                 if (Mathf.Abs(wz - TownTerrain.River(wx)) < TownTerrain.RiverHalfWidth + 12f || TownTerrain.InCanal(wx, wz)) w[(int)Layer.Mud] = 2.5f;
-                w[(int)Layer.Rock] = Smooth((steep - 28f) / 12f) * 4f;
+                w[(int)Layer.Rock] = Smooth((steep - 36f) / 14f) * 4f;
                 float sum = 0f;
                 foreach (float f in w) sum += f;
                 for (int l = 0; l < 6; l++) maps[z, x, l] = w[l] / Mathf.Max(1e-4f, sum);

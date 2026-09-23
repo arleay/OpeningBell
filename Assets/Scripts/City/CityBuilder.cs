@@ -73,6 +73,7 @@ namespace OpeningBell.City
             BusinessPlan.AddPads(_c);
             Industrial.AddPads(_c);
             MechanicShop.AddPads(_c);
+            Residential.AddPads(_c);
             ShellBuilder.Build(_c);
             TownBuilder.Build(_c, player.transform);
             ApartmentBuilding.Build(_c);
@@ -86,6 +87,7 @@ namespace OpeningBell.City
             BusinessPlan.Build(_c);
             Industrial.Build(_c);
             Mechanic = MechanicShop.Build(_c);
+            Residential.BuildApartments(_c);
 
             // Places (doors, benches) are registered by the builders above; the street pass adds benches too,
             // so gather everything first, then build the walk graph the markings and signals need.

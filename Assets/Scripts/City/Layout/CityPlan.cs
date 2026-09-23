@@ -79,14 +79,17 @@ namespace OpeningBell.City
         /// <summary>+1: houses on the left of From→To; -1: on the right.</summary>
         public readonly int Side;
         public readonly HouseTier Tier;
+        /// <summary>Lot depth from the sidewalk to the back fence; 0 for the tier's usual depth.</summary>
+        public readonly float Depth;
 
-        public Frontage(string street, Vector2 from, Vector2 to, int side, HouseTier tier)
+        public Frontage(string street, Vector2 from, Vector2 to, int side, HouseTier tier, float depth = 0f)
         {
             Street = street;
             From = from;
             To = to;
             Side = side;
             Tier = tier;
+            Depth = depth;
         }
     }
 
@@ -319,8 +322,8 @@ namespace OpeningBell.City
             new Shell(170.5f, -45f, 206.5f, -22.5f, 9f, FacadeStyle.Townhouse, storefront: true),
         };
 
-        private static Frontage F(string street, float x0, float z0, float x1, float z1, int side, HouseTier tier) =>
-            new Frontage(street, P(x0, z0), P(x1, z1), side, tier);
+        private static Frontage F(string street, float x0, float z0, float x1, float z1, int side, HouseTier tier, float depth = 0f) =>
+            new Frontage(street, P(x0, z0), P(x1, z1), side, tier, depth);
 
         /// <summary>Walkable houses (<see cref="HouseBuilder"/>): working-class south of the rail line, families on the
         /// slope north of Grove, bigger homes up on Ridge Rd, mansions on Crest Rd.</summary>
@@ -339,12 +342,23 @@ namespace OpeningBell.City
             F("RIDGE RD", -20, 302, 60, 305, 1, HouseTier.Family), F("RIDGE RD", 60, 305, 140, 300, 1, HouseTier.Family),
             F("CREST RD", 650, 312, 595, 345, -1, HouseTier.Mansion), F("CREST RD", 595, 345, 525, 358, -1, HouseTier.Mansion),
             F("CREST RD", 615, 180, 655, 228, 1, HouseTier.Mansion),
-            // South of the rail line: small houses
-            F("FOUNDRY ST", -250, -160, -140, -160, 1, HouseTier.Starter), F("FOUNDRY ST", -140, -160, -45, -160, 1, HouseTier.Starter),
-            F("FOUNDRY ST", -140, -160, -45, -160, -1, HouseTier.Starter), F("FOUNDRY ST", -45, -160, 55, -160, -1, HouseTier.Starter),
-            F("FOUNDRY ST", -45, -160, 55, -160, 1, HouseTier.Starter), F("FOUNDRY ST", 55, -160, 135, -160, 1, HouseTier.Starter),
-            F("GULL ST", -45, -215, 20, -205, -1, HouseTier.Starter), F("GULL ST", 20, -205, 80, -218, -1, HouseTier.Starter),
-            F("GULL ST", 80, -218, 135, -212, -1, HouseTier.Starter),
+            // More of Grove Hill: north of Birch, both sides of Alder Way, the outer side of Hillcrest, up Pine Rd.
+            F("BIRCH ST", -140, 150, -45, 160, 1, HouseTier.Family, 26f), F("BIRCH ST", 45, 168, 135, 160, 1, HouseTier.Family, 26f),
+            F("BIRCH ST", 135, 160, 215, 160, 1, HouseTier.Family, 26f),
+            F("HILLCREST DR", -25, 210, 25, 245, 1, HouseTier.Family, 24f), F("HILLCREST DR", 95, 262, 160, 252, 1, HouseTier.Family, 24f),
+            F("ALDER WAY", -120, 205, -100, 250, -1, HouseTier.Family, 22f), F("ALDER WAY", -120, 205, -100, 250, 1, HouseTier.Family, 22f),
+            // South of the rail line: small houses on small lots, older and plainer the nearer the Foundry.
+            F("FOUNDRY ST", -250, -160, -140, -160, 1, HouseTier.Starter, 22f), F("FOUNDRY ST", -140, -160, -45, -160, 1, HouseTier.Starter, 22f),
+            F("FOUNDRY ST", -45, -160, 55, -160, 1, HouseTier.Starter, 22f), F("FOUNDRY ST", 55, -160, 135, -160, 1, HouseTier.Starter, 22f),
+            F("FOUNDRY ST", 135, -160, 215, -160, 1, HouseTier.Starter, 22f),
+            F("FOUNDRY ST", -140, -160, -45, -160, -1, HouseTier.Starter, 15f), F("FOUNDRY ST", -45, -160, 55, -160, -1, HouseTier.Starter, 15f),
+            F("FOUNDRY ST", 55, -160, 135, -160, -1, HouseTier.Starter, 15f), F("FOUNDRY ST", 135, -160, 215, -160, -1, HouseTier.Starter, 15f),
+            F("GULL ST", -45, -215, 20, -205, 1, HouseTier.Starter, 14f), F("GULL ST", 20, -205, 80, -218, 1, HouseTier.Starter, 14f),
+            F("GULL ST", 80, -218, 135, -212, 1, HouseTier.Starter, 14f), F("GULL ST", 135, -212, 215, -215, 1, HouseTier.Starter, 14f),
+            F("GULL ST", -45, -215, 20, -205, -1, HouseTier.Starter, 22f), F("GULL ST", 20, -205, 80, -218, -1, HouseTier.Starter, 22f),
+            F("GULL ST", 80, -218, 135, -212, -1, HouseTier.Starter, 22f), F("GULL ST", 135, -212, 215, -215, -1, HouseTier.Starter, 22f),
+            F("TERN LN", -250, -215, -190, -222, 1, HouseTier.Starter, 20f), F("TERN LN", -250, -215, -190, -222, -1, HouseTier.Starter, 18f),
+            F("FOUNDRY ST", -250, -160, -140, -160, -1, HouseTier.Starter, 20f),
         };
 
         /// <summary>District names for the map and for places you've discovered.</summary>

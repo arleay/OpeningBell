@@ -111,6 +111,9 @@ namespace OpeningBell.Tests
                 (new Vector3(-230f, 30f, -60f), 235f, 22f, "foundry-overview.png"),
                 (new Vector3(-470f, 2f, -150f), 250f, 4f, "foundry-cannery.png"),
                 (new Vector3(-350f, 5f, -236f), 60f, 6f, "foundry-freight.png"),
+                (new Vector3(-10f, 1.7f, -158f), 90f, 4f, "res-foundry-st.png"),
+                (new Vector3(-60f, 16f, 185f), 60f, 10f, "res-hill.png"),
+                (new Vector3(100f, 12f, -50f), 200f, 10f, "res-walkups.png"),
             };
             // The camera flies alone (the player's body would be in the shot).
             _player.PlaceAt(new Vector3(0f, 0.2f, -5f), 0f, 0f);
