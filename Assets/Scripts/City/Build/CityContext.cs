@@ -30,6 +30,8 @@ namespace OpeningBell.City
         /// <summary>Walkways off the sidewalks (park paths, towpath, pier): points as (x, height, z).</summary>
         public readonly List<Vector3[]> WalkPaths = new List<Vector3[]>();
         public Terrain Terrain;
+        /// <summary>What each named place is to the townspeople (home, work, shop, food, night out…) and when it's open.</summary>
+        public readonly Dictionary<string, (PlaceCategory Category, Hours? Hours)> PlaceInfo = new Dictionary<string, (PlaceCategory, Hours?)>();
         /// <summary>Parking bays in lots (kerbside spots are found from the streets): position, yaw, kind.</summary>
         public readonly List<(Vector3 P, float Yaw, ParkingKind Kind)> ParkingSpots = new List<(Vector3, float, ParkingKind)>();
         /// <summary>The player's vehicles in the world and their driving (set once the city is built; shops use them at runtime).</summary>

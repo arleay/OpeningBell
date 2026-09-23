@@ -55,6 +55,13 @@ namespace OpeningBell.Gameplay
 
         private void Update() => Apply();
 
+        /// <summary>Set by the weather: fog distance multiplier, share of sunlight that gets through, how grey the sky and ambient go.</summary>
+        public float FogScale { get; set; } = 1f;
+        public float SunScale { get; set; } = 1f;
+        public float Grey { get; set; }
+        /// <summary>A lightning flash (0–1, decays): the ambient spikes.</summary>
+        public float Flash { get; set; }
+
         private void Apply()
         {
             double hours = game.Clock.Now.TimeOfDay.TotalHours;
@@ -76,16 +83,23 @@ namespace OpeningBell.Gameplay
             float daylight = up ? Mathf.Clamp01(elevation / 6f) : 0f;
             NightFactor = 1f - Mathf.Clamp01(up ? elevation / 3f : 0f);
             Color warm = Color.Lerp(new Color(1f, 0.62f, 0.38f), new Color(1f, 0.96f, 0.9f), Mathf.Clamp01(elevation / 25f));
-            sun.color = warm;
-            sun.intensity = sunIntensity * daylight;
-            sun.enabled = daylight > 0f;
+            sun.color = Color.Lerp(warm, new Color(0.85f, 0.88f, 0.92f), Grey);
+            sun.intensity = sunIntensity * daylight * SunScale;
+            sun.enabled = daylight > 0f && SunScale > 0.02f;
             Color ambient = Color.Lerp(nightAmbient, dayAmbient, daylight);
+            // Overcast: flatter, greyer light (a little brighter in the shadows, much less sun).
+            float lum = ambient.grayscale;
+            ambient = Color.Lerp(ambient, new Color(lum, lum * 1.02f, lum * 1.06f) * 1.08f, Grey) + Color.white * Flash * 0.8f;
             RenderSettings.ambientSkyColor = ambient * 1.15f;
             RenderSettings.ambientEquatorColor = ambient * 0.9f;
             RenderSettings.ambientGroundColor = new Color(ambient.r * 0.62f, ambient.g * 0.58f, ambient.b * 0.52f);
-            RenderSettings.fogColor = Color.Lerp(nightAmbient * 0.6f, sky, 0.75f);
-            // The procedural sky has no night of its own: dim it so evenings read blue, not brown.
-            if (RenderSettings.skybox != null) RenderSettings.skybox.SetFloat(SkyExposure, Mathf.Lerp(0.18f, 1.25f, Mathf.Clamp01(daylight * 1.5f)));
+            Color fog = Color.Lerp(nightAmbient * 0.6f, sky, 0.75f);
+            RenderSettings.fogColor = Color.Lerp(fog, new Color(fog.grayscale, fog.grayscale, fog.grayscale * 1.04f), Grey);
+            RenderSettings.fogStartDistance = fogStart * FogScale;
+            RenderSettings.fogEndDistance = fogEnd * FogScale;
+            // The procedural sky has no night of its own: dim it so evenings read blue, not brown; clouds dim it too.
+            if (RenderSettings.skybox != null)
+                RenderSettings.skybox.SetFloat(SkyExposure, Mathf.Lerp(0.18f, 1.25f, Mathf.Clamp01(daylight * 1.5f)) * Mathf.Lerp(1f, 0.55f, Grey));
         }
 
         private static Gradient DefaultSky()

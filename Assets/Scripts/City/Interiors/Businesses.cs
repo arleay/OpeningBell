@@ -155,24 +155,54 @@ namespace OpeningBell.City
             // Inside.
             Interior(c, root, b, rng);
             Light lamp = c.PointLight(root, new Vector3(0f, top - 0.8f, d * 0.45f), Mathf.Max(8f, w * 0.8f), 1.1f, new Color(1f, 0.93f, 0.82f));
-            root.gameObject.AddComponent<OpenLights>().Configure(c, hours, lamp);
+            // OPEN / CLOSED sign in the door glass; it says BACK SOON while the only member of staff is on a break.
+            Transform doorSign = Kit.Group(dyn, "Door sign", new Vector3(doorX + 1.3f, 1.55f, Wall / 2f - 0.08f)); // in the window by the door
+            Renderer signPanel = k.Box(doorSign, "Panel", Vector3.zero, new Vector3(0.42f, 0.16f, 0.02f), c.P.Unlit(new Color(0.1f, 0.1f, 0.1f)), collider: false).GetComponent<Renderer>();
+            TextMesh signText = k.Text(doorSign, "CLOSED", new Vector3(0f, 0f, -0.015f), 0f, 0.06f, Color.white);
 
-            // Staff behind the counter; they come and go by the back corner.
+            // Staff behind the counter; they come and go by the back corner. Long days get a lunch break.
             var (look, greeting, talk, sells) = Staff[b.Trade];
             var station = new Vector3(hw > 4f ? hw * 0.4f : 0f, 0f, d - 1.7f);
             var route = new List<Vector3> { station, new Vector3(hw - 0.9f, 0f, d - 1.7f), new Vector3(hw - 0.9f, 0f, d - 0.6f) };
             var lines = new Queue<string>(talk);
-            StaffNpc staff = StaffNpc.Create(k, dyn, StaffTitle(b.Trade), seed, b.Brand, new WorkSchedule { Shift = hours }, route, 180f,
+            int openHours = ((hours.Close - hours.Open) + 24 * 60) % (24 * 60);
+            var schedule = new WorkSchedule { Shift = hours };
+            if (openHours >= 10 * 60 && openHours < 20 * 60 && seed % 3 == 0)
+            {
+                schedule.Break = Hours.Of(13 + (seed % 2) * 0.5, 13.5 + (seed % 2) * 0.5);
+                schedule.HasBreak = true;
+            }
+            StaffNpc staff = StaffNpc.Create(k, dyn, StaffTitle(b.Trade), seed, b.Brand, schedule, route, 180f,
                 new[] { NpcPose.Stand, NpcPose.Phone, NpcPose.Typing }, () => greeting,
                 () => { string l = lines.Dequeue(); lines.Enqueue(l); return l; },
                 c.Game, c.Hud, c.Player, look: look);
             for (int i = 0; i < sells.Length; i++)
                 Counter(c, root, new Vector3(station.x - 0.6f + i * 1.2f, 1.02f, d - 2.45f), sells[i].Item, sells[i].Price, staff, sells[i].Thanks);
+            root.gameObject.AddComponent<OpenLights>().Configure(c, hours, lamp, staff, signPanel, signText, neon ? name : null,
+                c.P.Glow(new Color(0.2f, 0.9f, 0.35f), 1.4f), c.P.Glow(new Color(1f, 0.7f, 0.15f), 1.2f), c.P.Unlit(new Color(0.1f, 0.1f, 0.1f)),
+                c.P.Sign(new Color(0.16f, 0.16f, 0.18f)));
 
             Vector3 outdoor = root.TransformPoint(new Vector3(doorX, 0f, -0.8f));
             c.Place(outdoor, PlaceKind.Door, b.Name);
+            c.PlaceInfo[b.Name] = (CategoryOf(b.Trade), hours);
+            if (CategoryOf(b.Trade) == PlaceCategory.Night || b.Trade == Trade.Diner || b.Trade == Trade.Pizza)
+            {
+                // A spot out front where people stand around (smoking, talking, waiting for a ride).
+                string standTag = "outside " + b.Name;
+                c.Place(root.TransformPoint(new Vector3(doorX + 2.6f, 0f, -1.3f)), PlaceKind.Stand, standTag);
+                c.PlaceInfo[standTag] = (PlaceCategory.Stand, hours);
+            }
             c.Anchor("biz_" + b.Name.ToLowerInvariant().Replace(' ', '_').Replace("'", ""), root.TransformPoint(new Vector3(doorX, 0f, -2f)));
         }
+
+        public static PlaceCategory CategoryOf(Trade t) => t switch
+        {
+            Trade.Diner or Trade.Bakery or Trade.Restaurant or Trade.FastFood or Trade.Pizza => PlaceCategory.Food,
+            Trade.Bar or Trade.Nightclub or Trade.Arcade => PlaceCategory.Night,
+            Trade.MotelOffice => PlaceCategory.Home,
+            Trade.Gym => PlaceCategory.Leisure,
+            _ => PlaceCategory.Shop,
+        };
 
         private static string StaffTitle(Trade t) => t switch
         {
@@ -447,21 +477,42 @@ namespace OpeningBell.City
         }
     }
 
-    /// <summary>A shop's lights: on while it's open (and a dim night-light while shut), so closed shops look closed.</summary>
+    /// <summary>
+    /// A shop's open / closed look (TOWN_SPEC A12): lights up while open (a dim night-light while shut), the door
+    /// sign reading OPEN, CLOSED or BACK SOON (staff on a break), and neon names that go dark after hours.
+    /// </summary>
     public sealed class OpenLights : MonoBehaviour
     {
         private CityContext _c;
         private Hours _hours;
         private Light _light;
+        private StaffNpc _staff;
+        private Renderer _panel;
+        private TextMesh _text;
+        private TextMesh _neon;
+        private Material _open, _back, _closed, _neonOn, _neonOff;
         private float _full;
         private float _timer;
 
-        public void Configure(CityContext c, Hours hours, Light light)
+        public enum State { Open, Break, Closed }
+        public State Now { get; private set; } = (State)(-1);
+
+        public void Configure(CityContext c, Hours hours, Light light, StaffNpc staff = null, Renderer panel = null, TextMesh text = null,
+            TextMesh neon = null, Material open = null, Material back = null, Material closed = null, Material neonOff = null)
         {
+            _neonOff = neonOff;
             _c = c;
             _hours = hours;
             _light = light;
             _full = light.intensity;
+            _staff = staff;
+            _panel = panel;
+            _text = text;
+            _neon = neon;
+            _open = open;
+            _back = back;
+            _closed = closed;
+            if (neon != null) _neonOn = neon.GetComponent<MeshRenderer>().sharedMaterial;
         }
 
         private void Update()
@@ -470,7 +521,17 @@ namespace OpeningBell.City
             if (_timer > 0f || _c == null) return;
             _timer = 1f;
             bool open = _hours.Contains(_c.Game.Clock.Now);
+            State state = !open ? State.Closed : _staff != null && !_staff.AtStation ? State.Break : State.Open;
+            if (state == Now) return;
+            Now = state;
             _light.intensity = open ? _full : _full * 0.12f;
+            if (_panel != null)
+            {
+                _panel.sharedMaterial = state == State.Open ? _open : state == State.Break ? _back : _closed;
+                _text.text = state == State.Open ? "OPEN" : state == State.Break ? "BACK SOON" : "CLOSED";
+                _text.color = state == State.Closed ? new Color(0.85f, 0.85f, 0.85f) : new Color(0.05f, 0.05f, 0.05f);
+            }
+            if (_neon != null && _neonOff != null) _neon.GetComponent<MeshRenderer>().sharedMaterial = open ? _neonOn : _neonOff;
         }
     }
 }

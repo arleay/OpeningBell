@@ -21,7 +21,20 @@ namespace OpeningBell.City
         private void Update()
         {
             Keyboard k = Keyboard.current;
-            if (_game == null || k == null || !k.f9Key.wasPressedThisFrame) return;
+            if (_game == null || k == null) return;
+            if (k.f8Key.wasPressedThisFrame)
+            {
+                // F8: next weather (the forecast resumes with the next six-hour spell).
+                WeatherSystem weather = FindAnyObjectByType<WeatherSystem>();
+                if (weather != null)
+                {
+                    Weather next = (Weather)(((int)weather.Current + 1) % System.Enum.GetValues(typeof(Weather)).Length);
+                    WeatherSystem.Forced = next;
+                    weather.Set(next);
+                    _phone?.Notify(PhoneAppId.News, "Weather", next.ToString());
+                }
+            }
+            if (!k.f9Key.wasPressedThisFrame) return;
             decimal amount = k.shiftKey.isPressed ? 100000m : 10000m;
             _game.Economy.DevDeposit(amount, _game.Clock.Now);
             if (_phone != null)

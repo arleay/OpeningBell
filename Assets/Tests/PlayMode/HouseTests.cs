@@ -33,10 +33,11 @@ namespace OpeningBell.Tests
             for (int i = 0; i < 10; i++) yield return null;
 
             Transform[] houses = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Where(t => t.name.StartsWith("House ")).ToArray();
+            // Kenney kit houses (one box collider, no interior) are scenery; the walkable ones are built room by room.
             Assert.Greater(houses.Length, 40, "the town has houses");
             foreach (HouseTier tier in new[] { HouseTier.Starter, HouseTier.Family, HouseTier.Mansion })
             {
-                Transform house = houses.Where(h => h.name.EndsWith(" " + tier)).OrderBy(h => h.position.sqrMagnitude).FirstOrDefault();
+                Transform house = houses.Where(h => h.name.EndsWith(" " + tier) && h.GetComponent<BoxCollider>() == null).OrderBy(h => h.position.sqrMagnitude).FirstOrDefault();
                 Assert.IsNotNull(house, $"a {tier} house");
                 Vector2 size = HouseBuilder.Footprint(tier);
                 float doorX = tier == HouseTier.Starter ? -2f : tier == HouseTier.Family ? 3.2f : 0f;
@@ -48,7 +49,9 @@ namespace OpeningBell.Tests
                 yield return new WaitForSeconds(1f);
                 Vector3 outside = house.TransformPoint(new Vector3(doorX, 1.2f, -size.y / 2f - 1.2f));
                 Vector3 inside = house.TransformPoint(new Vector3(doorX, 1.2f, -size.y / 2f + 1.6f));
-                Assert.IsFalse(Physics.Linecast(outside, inside, ~0, QueryTriggerInteraction.Ignore), $"{tier}: the doorway is clear once the door is open");
+                bool blocked = Physics.Linecast(outside, inside, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore);
+                string what = blocked ? hit.collider.name + " at " + hit.point : "";
+                Assert.IsFalse(blocked, $"{tier}: the doorway is clear once the door is open ({what})");
 
                 string name = tier.ToString().ToLowerInvariant();
                 yield return Shot(house, new Vector3(doorX - 2f, 0f, -size.y / 2f - 9f), 12f, -6f, $"house-{name}-outside.png");

@@ -17,6 +17,8 @@ namespace OpeningBell.City
             Waiting,
             Sitting,
             Arrived,
+            /// <summary>Hanging around at a stand (a bus stop, outside a bar).</summary>
+            Standing,
         }
 
         public sealed class Walker
@@ -56,6 +58,25 @@ namespace OpeningBell.City
         /// <summary>When true, walkers heading out prefer doors (the city wants fewer people).</summary>
         public bool Thinning { get; set; }
 
+        /// <summary>The city's idea of where someone goes next (by the hour, what's open, what's close); null: anywhere.</summary>
+        public Func<SidewalkGraph.Node, System.Random, bool, SidewalkGraph.Node> PickTarget;
+
+        private readonly Dictionary<SidewalkGraph.Node, int> _standing = new Dictionary<SidewalkGraph.Node, int>();
+
+        /// <summary>Walkers at (or heading for) a stand: it holds two, who face each other.</summary>
+        public int AtStand(SidewalkGraph.Node stand) => _standing.TryGetValue(stand, out int n) ? n : 0;
+
+        private void Release(Walker w)
+        {
+            if (w.Bench == null) return;
+            if (w.Bench.Kind == PlaceKind.Stand) _standing[w.Bench] = Mathf.Max(0, AtStand(w.Bench) - 1);
+            else _benchTaken.Remove(w.Bench);
+            w.Bench = null;
+        }
+
+        private bool Free(SidewalkGraph.Node n) =>
+            n.Kind == PlaceKind.Door || (n.Kind == PlaceKind.Stand ? AtStand(n) < 2 : !_benchTaken.Contains(n));
+
         public IReadOnlyList<Walker> Walkers => _walkers;
         public SidewalkGraph Graph => _graph;
 
@@ -92,14 +113,19 @@ namespace OpeningBell.City
 
         public void Remove(Walker w)
         {
-            if (w.Bench != null) _benchTaken.Remove(w.Bench);
+            Release(w);
             _walkers.Remove(w);
         }
 
         private bool PlanFrom(Walker w, SidewalkGraph.Node from)
         {
             SidewalkGraph.Node target = null;
-            if (!Thinning && _rng.NextDouble() < 0.3)
+            for (int i = 0; PickTarget != null && target == null && i < 3; i++)
+            {
+                SidewalkGraph.Node t = PickTarget(from, _rng, Thinning);
+                if (t != null && t != from && Free(t)) target = t;
+            }
+            if (target == null && !Thinning && _rng.NextDouble() < 0.3)
             {
                 SidewalkGraph.Node bench = _benches.Count > 0 ? _benches[_rng.Next(_benches.Count)] : null;
                 if (bench != null && bench != from && !_benchTaken.Contains(bench)) target = bench;
@@ -112,9 +138,10 @@ namespace OpeningBell.City
             if (target == null) return false;
             List<SidewalkGraph.Node> route = _graph.Route(from, target);
             if (route == null || route.Count < 2) return false;
-            if (w.Bench != null) _benchTaken.Remove(w.Bench);
-            w.Bench = target.Kind == PlaceKind.Bench ? target : null;
-            if (w.Bench != null) _benchTaken.Add(w.Bench);
+            Release(w);
+            w.Bench = target.Kind == PlaceKind.Bench || target.Kind == PlaceKind.Stand ? target : null;
+            if (w.Bench != null && w.Bench.Kind == PlaceKind.Stand) _standing[w.Bench] = AtStand(w.Bench) + 1;
+            else if (w.Bench != null) _benchTaken.Add(w.Bench);
             w.Route = route;
             w.Leg = 0;
             w.S = 0f;
@@ -132,6 +159,7 @@ namespace OpeningBell.City
                 switch (w.State)
                 {
                     case WalkerState.Sitting:
+                    case WalkerState.Standing:
                         w.Timer -= dt;
                         if (w.Timer <= 0f && !PlanFrom(w, w.Destination)) w.Timer = 5f;
                         break;
@@ -212,6 +240,13 @@ namespace OpeningBell.City
             {
                 w.State = WalkerState.Sitting;
                 w.Timer = 25f + 45f * (float)_rng.NextDouble();
+            }
+            else if (w.Destination.Kind == PlaceKind.Stand)
+            {
+                // Two at a stand stand a pace apart.
+                if (AtStand(w.Destination) > 1) w.Position += RoadNetwork.RightOf(w.Heading) * 0.9f;
+                w.State = WalkerState.Standing;
+                w.Timer = 30f + 60f * (float)_rng.NextDouble();
             }
             else
             {

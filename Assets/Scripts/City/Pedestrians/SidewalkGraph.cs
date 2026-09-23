@@ -8,6 +8,8 @@ namespace OpeningBell.City
         Walkway,
         Door,
         Bench,
+        /// <summary>Somewhere to stand around a while: a bus stop, outside a bar. Two can share it (and talk).</summary>
+        Stand,
     }
 
     /// <summary>

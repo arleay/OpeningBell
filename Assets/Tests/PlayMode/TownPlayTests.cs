@@ -109,5 +109,28 @@ namespace OpeningBell.Tests
             Assert.Less(player.transform.position.x, 300f, "back on the bank");
             Assert.IsNotNull(city.Anchors["station_platform"], "the station is built");
         }
+
+        /// <summary>A rainy day: wet roads cost grip, fewer people are out, traffic eases off; clearing up restores it.</summary>
+        [UnityTest]
+        public IEnumerator Rain_WetsTheRoads_AndEmptiesTheStreets()
+        {
+            WeatherSystem.Forced = Weather.Rain;
+            yield return LoadMain();
+            var city = Find<CityBuilder>();
+            var player = Find<FirstPersonController>();
+            for (int i = 0; i < 5; i++) yield return null;
+            Assert.AreEqual(Weather.Rain, city.Weather.Current);
+            Assert.Greater(city.Weather.Wetness, 0.9f, "soaked");
+            Assert.Less(CarController.WeatherGrip, 0.85f, "wet roads grip less");
+            Assert.Less(city.Pedestrians.Outdoors, 0.8f, "fewer people out");
+            Assert.Less(city.Traffic.Simulation.SpeedFactor, 0.95f, "drivers slow down");
+            player.PlaceAt(new Vector3(60f, 0f, -20f), -90f, 4f);
+            yield return CaptureCamera(player.GetComponentInChildren<Camera>(), "town-rain.png");
+
+            WeatherSystem.Forced = Weather.Clear;
+            city.Weather.Set(Weather.Clear);
+            Assert.AreEqual(1f, CarController.WeatherGrip, 1e-4, "dry again");
+            Assert.AreEqual(1f, city.Pedestrians.Outdoors, 1e-4);
+        }
     }
 }

@@ -32,8 +32,8 @@ namespace OpeningBell.City
             _sim.MayCross = MayCross;
 
             // Start with the street already busy, people spread along their routes.
-            int target = TargetCount(_c.Game.Clock.Now.TimeOfDay.TotalHours);
-            for (int i = 0; i < target; i++) _sim.Spawn();
+            int target = Target();
+            for (int i = 0; i < target; i++) _sim.Spawn(NearPlayer);
             for (int i = 0; i < 240; i++) _sim.Step(0.25f, new Vector2(9999f, 9999f));
             RemoveArrived();
             Sync(0f);
@@ -79,7 +79,7 @@ namespace OpeningBell.City
             _sim.Step(dt, flat, velocity);
             RemoveArrived();
 
-            int target = TargetCount(_c.Game.Clock.Now.TimeOfDay.TotalHours);
+            int target = Target();
             _sim.Thinning = _sim.Walkers.Count > target;
             _spawnTimer -= dt;
             if (_spawnTimer <= 0f && _sim.Walkers.Count < target)
@@ -87,9 +87,38 @@ namespace OpeningBell.City
                 // Far below target (after a time skip): several step out at once.
                 _spawnTimer = 0.8f;
                 int missing = target - _sim.Walkers.Count;
-                for (int i = 0; i < Mathf.Clamp(missing / 4, 1, 4); i++) _sim.Spawn();
+                for (int i = 0; i < Mathf.Clamp(missing / 4, 1, 4); i++) _sim.Spawn(NearPlayer);
             }
+            // People who've wandered far from the player are dropped (someone else steps out nearby).
+            _gone.Clear();
+            foreach (PedestrianSimulation.Walker w in _sim.Walkers)
+                if ((w.Position - flat).sqrMagnitude > Radius * Radius) _gone.Add(w);
+            foreach (PedestrianSimulation.Walker w in _gone) Drop(w);
             Sync(Time.time);
+        }
+
+        /// <summary>People are simulated within this distance of the player.</summary>
+        public const float Radius = 360f;
+
+        /// <summary>Weather keeps people in (1 = fair; the weather sets it lower in rain).</summary>
+        public float Outdoors = 1f;
+
+        private int Target() => Mathf.RoundToInt(TargetCount(_c.Game.Clock.Now.TimeOfDay.TotalHours) * Outdoors);
+
+        private bool NearPlayer(Vector2 door)
+        {
+            Vector3 p = _c.Player.position;
+            float d2 = (door - new Vector2(p.x, p.z)).sqrMagnitude;
+            return d2 > 20f * 20f && d2 < 260f * 260f;
+        }
+
+        private void Drop(PedestrianSimulation.Walker w)
+        {
+            _sim.Remove(w);
+            if (!_shown.TryGetValue(w, out NpcBody body)) return;
+            body.gameObject.SetActive(false);
+            _pool.Push(body);
+            _shown.Remove(w);
         }
 
         private void RemoveArrived()
@@ -120,9 +149,12 @@ namespace OpeningBell.City
                     _shown[w] = body;
                 }
                 bool sitting = w.State == PedestrianSimulation.WalkerState.Sitting;
-                Vector2 facing = sitting ? BenchFacing(w) : w.Heading;
+                bool standing = w.State == PedestrianSimulation.WalkerState.Standing;
+                Vector2 facing = sitting ? BenchFacing(w) : standing ? StandFacing(w) : w.Heading;
                 body.transform.SetPositionAndRotation(new Vector3(w.Position.x, w.Y, w.Position.y), Quaternion.LookRotation(new Vector3(facing.x, 0f, facing.y)));
-                NpcPose pose = sitting ? NpcPose.Sit : w.State == PedestrianSimulation.WalkerState.Walking && w.Blocked <= 0f ? NpcPose.Walk : NpcPose.Stand;
+                // Hanging around: on the phone, drinking, or just standing (talking, if someone's with them).
+                NpcPose idle = (w.Seed & 3) switch { 0 => NpcPose.Phone, 1 => NpcPose.Drink, _ => NpcPose.Stand };
+                NpcPose pose = sitting ? NpcPose.Sit : standing ? idle : w.State == PedestrianSimulation.WalkerState.Walking && w.Blocked <= 0f ? NpcPose.Walk : NpcPose.Stand;
                 body.Animate(pose, time, w.Speed / 1.35f);
             }
         }
@@ -151,6 +183,18 @@ namespace OpeningBell.City
         {
             foreach (NpcBody body in _shown.Values)
                 if ((body.transform.position - at).sqrMagnitude < radius * radius) into.Add(body);
+        }
+
+        /// <summary>At a stand: face whoever else is there, else look out at the street.</summary>
+        private Vector2 StandFacing(PedestrianSimulation.Walker w)
+        {
+            foreach (PedestrianSimulation.Walker other in _sim.Walkers)
+                if (other != w && other.State == PedestrianSimulation.WalkerState.Standing && other.Destination == w.Destination)
+                {
+                    Vector2 d = other.Position - w.Position;
+                    if (d.sqrMagnitude > 1e-3f) return d.normalized;
+                }
+            return BenchFacing(w);
         }
 
         /// <summary>Sit facing away from the bench back, i.e. away from the ring point it hangs off.</summary>

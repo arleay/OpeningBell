@@ -121,6 +121,45 @@ namespace OpeningBell.Tests
                 Assert.Greater(car.Odometer, 1500f, $"car {car.Id} barely moved (gridlock?)");
         }
 
+        /// <summary>People go to work in the morning, eat at lunch, go out at night, and only where it's open and close by.</summary>
+        [Test]
+        public void Routines_FollowTheDay_AndOpeningHours()
+        {
+            Assert.Greater(Routines.Weight(PlaceCategory.Work, 8), Routines.Weight(PlaceCategory.Night, 8));
+            Assert.Greater(Routines.Weight(PlaceCategory.Food, 12.5), Routines.Weight(PlaceCategory.Work, 12.5));
+            Assert.Greater(Routines.Weight(PlaceCategory.Night, 22), Routines.Weight(PlaceCategory.Shop, 22));
+            Assert.Greater(Routines.Weight(PlaceCategory.Home, 3), Routines.Weight(PlaceCategory.Food, 3));
+
+            RoadNetwork roads = RoadNetwork.FromPlan();
+            var places = new List<(Vector2, PlaceKind, string)>
+            {
+                (new Vector2(6f, -5.9f), PlaceKind.Door, "home"),
+                (new Vector2(71f, -6.3f), PlaceKind.Door, "coffee"),
+                (new Vector2(90f, -6.3f), PlaceKind.Door, "bar"),
+                (new Vector2(2000f, 0f), PlaceKind.Door, "far away bar"),
+            };
+            SidewalkGraph g = SidewalkGraph.Build(roads, places);
+            var known = new Dictionary<string, (PlaceCategory, Hours?)>
+            {
+                ["home"] = (PlaceCategory.Home, null), ["coffee"] = (PlaceCategory.Food, Hours.Of(6, 20)),
+                ["bar"] = (PlaceCategory.Night, Hours.Of(16, 2)), ["far away bar"] = (PlaceCategory.Night, null),
+            };
+            var now = new DateTime(2026, 3, 2, 8, 0, 0);
+            var routines = new Routines(g, known, () => now);
+            var rng = new System.Random(1);
+            SidewalkGraph.Node home = g.FindPlace("home");
+            for (int i = 0; i < 50; i++)
+            {
+                SidewalkGraph.Node pick = routines.Pick(home, rng, false);
+                Assert.AreNotEqual("bar", pick.Tag, "the bar's shut at 8 AM");
+                Assert.AreNotEqual("far away bar", pick.Tag, "not across town");
+            }
+            now = new DateTime(2026, 3, 2, 23, 0, 0);
+            int bar = 0;
+            for (int i = 0; i < 50; i++) if (routines.Pick(home, rng, false)?.Tag == "bar") bar++;
+            Assert.Greater(bar, 20, "at 11 PM the open bar is the place to be");
+        }
+
         [Test]
         public void DeliveryVans_StopForAWhile_ThenCarryOn()
         {

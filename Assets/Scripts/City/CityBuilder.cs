@@ -45,6 +45,7 @@ namespace OpeningBell.City
         public MechanicShop Mechanic { get; private set; }
         public Forest Woods { get; private set; }
         public ParkedCars Parked { get; private set; }
+        public WeatherSystem Weather { get; private set; }
         public Minimap Minimap { get; private set; }
         public Phone Phone { get; private set; }
         public TitleScreen Title { get; private set; }
@@ -94,6 +95,8 @@ namespace OpeningBell.City
             Residential.BuildApartments(_c);
             Waterfront.Build(_c);
             Outskirts.Build(_c);
+            StreetProps.BusStops(_c);
+            RegisterPlaces();
 
             // Places (doors, benches) are registered by the builders above; the street pass adds benches too,
             // so gather everything first, then build the walk graph the markings and signals need.
@@ -109,6 +112,8 @@ namespace OpeningBell.City
 
             var traffic = new TrafficSimulation(_c.Roads, seed: 3301);
             var peds = new PedestrianSimulation(walks, seed: 3302);
+            var routines = new Routines(walks, _c.PlaceInfo, () => game.Clock.Now);
+            peds.PickTarget = routines.Pick;
             Pedestrians = new GameObject("Pedestrians").AddComponent<PedestrianView>();
             Pedestrians.transform.SetParent(transform, false);
             Traffic = new GameObject("Traffic").AddComponent<TrafficView>();
@@ -122,6 +127,8 @@ namespace OpeningBell.City
                 foreach (PedestrianSimulation.Walker w in peds.Walkers) people.Add(w.Position);
                 Fleet?.ParkedCarPositions(cars);
             });
+
+            Weather = WeatherSystem.Build(_c, daylight, Pedestrians, Traffic, viewCamera);
 
             // Owned bikes and boards: parked ones in the world, riding on the player.
             Fleet = new GameObject("Fleet").AddComponent<FleetView>();
@@ -157,6 +164,23 @@ namespace OpeningBell.City
 
             // Last, so a renamed scene object costs only the furniture, not the city.
             ApartmentInterior.Dress(_c.Kit, apartment, workstation.transform);
+        }
+
+        /// <summary>The hand-built places (the businesses register themselves): what they are and when they're open.</summary>
+        private void RegisterPlaces()
+        {
+            _c.PlaceInfo["118 Maple"] = (PlaceCategory.Home, null);
+            _c.PlaceInfo["Calder Building"] = (PlaceCategory.Work, Hours.Of(7, 19));
+            _c.PlaceInfo["City Hall"] = (PlaceCategory.Work, Hours.Of(9, 17));
+            _c.PlaceInfo["Corner Mart"] = (PlaceCategory.Shop, Shops.MartHours);
+            _c.PlaceInfo["Half Past Nine"] = (PlaceCategory.Food, Shops.CoffeeHours);
+            _c.PlaceInfo["Curbside Skate"] = (PlaceCategory.Shop, MobilityShops.SkateHours);
+            _c.PlaceInfo["Hillside Cycles"] = (PlaceCategory.Shop, MobilityShops.BikeHours);
+            _c.PlaceInfo["Westgate Motors"] = (PlaceCategory.Shop, Dealerships.DealerHours);
+            _c.PlaceInfo[MechanicShop.Name] = (PlaceCategory.Shop, MechanicShop.ShopHours);
+            _c.PlaceInfo["Port Kell Freight"] = (PlaceCategory.Work, Hours.Of(6, 18));
+            _c.PlaceInfo["Silver Tide Casino"] = (PlaceCategory.Night, null);
+            _c.PlaceInfo["Harborview Tower"] = (PlaceCategory.Home, null);
         }
 
         private bool _lightsOn;
@@ -195,12 +219,24 @@ namespace OpeningBell.City
             if (_terminal != null && _terminal.Context != null && _terminal.Context.BuyUsedCar == null) _terminal.Context.BuyUsedCar = DeliverUsedCar;
             _c.Night = daylight.NightFactor;
             _c.P.ApplyNight(_c.Night);
-            // Street lamps switch as a group, with a little hysteresis around dusk and dawn.
+            // Street lamps switch as a group, with a little hysteresis around dusk and dawn. Only the ones near the
+            // player actually burn (the lamp heads glow everywhere; the pools of light don't reach that far anyway).
             bool on = _lightsOn ? _c.Night > 0.3f : _c.Night > 0.6f;
-            if (on == _lightsOn) return;
+            _lightTimer -= Time.deltaTime;
+            if (on == _lightsOn && (!on || _lightTimer > 0f)) return;
+            _lightTimer = 0.75f;
             _lightsOn = on;
-            foreach (Light light in _c.NightLights) light.enabled = on;
+            Vector3 p = player.transform.position;
+            foreach (Light light in _c.NightLights)
+            {
+                bool want = on && (light.transform.position - p).sqrMagnitude < NightLightRadius * NightLightRadius;
+                if (light.enabled != want) light.enabled = want;
+            }
         }
+
+        /// <summary>Real night lights (street lamps, canopies, floodlights) burn within this distance of the player.</summary>
+        public const float NightLightRadius = 190f;
+        private float _lightTimer;
 
         private void OnDestroy() => _c?.P.Dispose();
 

@@ -64,6 +64,12 @@ namespace OpeningBell.City
 
         private static readonly string[] Commercial = { "MAPLE ST", "EXCHANGE ST", "HARBOR AVE", "QUAY ST", "NEON ROW", "BAYVIEW AVE", "FIRST ST", "CANAL ST", "GROVE ST" };
 
+        /// <summary>
+        /// Maple's south kerb outside the apartment is a loading zone: bought cars are delivered to
+        /// <see cref="CityBuilder.CurbSpots"/> and the player needs room to pull away west.
+        /// </summary>
+        private static readonly Rect HomeKerb = new Rect(-35f, -12.5f, 85f, 5f);
+
         /// <summary>Kerb spots every 6.5 m on streets and industrial roads, clear of junctions, driveways, ramps and bridges.</summary>
         private void FindKerbs()
         {
@@ -84,6 +90,7 @@ namespace OpeningBell.City
                         if (s.IsBridge && t > s.BridgeFrom - 4f && t < s.BridgeTo + 4f) continue;
                         Vector2 p2 = s.At(t) + s.Left * side * lateral;
                         if (mouths.Exists(m => Vector2.Distance(m, s.At(t)) < 9f)) continue;
+                        if (HomeKerb.Contains(p2)) continue;
                         float y = s.GradeAt(t) + CityPlan.RoadY;
                         var centre = new Vector3(p2.x, y + 0.9f, p2.y);
                         // Right-hand traffic: cars on a side face the way its lane runs.

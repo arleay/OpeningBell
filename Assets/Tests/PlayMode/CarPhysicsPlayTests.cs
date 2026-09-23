@@ -22,6 +22,13 @@ namespace OpeningBell.Tests
         /// <summary>Far from the city: earlier tests may leave Main loaded, and its buildings sit around the origin.</summary>
         private static readonly Vector3 Origin = new Vector3(0f, 0f, 3000f);
 
+        [SetUp]
+        public void DryRoads()
+        {
+            WeatherSystem.Forced = Weather.Clear;
+            CarController.WeatherGrip = 1f;
+        }
+
         [TearDown]
         public void Clean()
         {

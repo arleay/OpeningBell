@@ -25,6 +25,8 @@ namespace OpeningBell.Tests
         {
             _saveDirectory = Path.Combine(Path.GetTempPath(), "OpeningBellTests", Guid.NewGuid().ToString("N"));
             SaveSystem.DirectoryOverride = _saveDirectory;
+            // Fair weather unless a test asks otherwise: screenshots and driving stay comparable.
+            OpeningBell.City.WeatherSystem.Forced = OpeningBell.City.Weather.Clear;
         }
 
         private UnityEngine.InputSystem.Keyboard _keyboard;
