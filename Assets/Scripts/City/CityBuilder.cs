@@ -79,6 +79,7 @@ namespace OpeningBell.City
             Residential.AddPads(_c);
             Waterfront.AddPads(_c);
             Outskirts.AddPads(_c);
+            Rooftops.AddPads(_c);
             ShellBuilder.Build(_c);
             TownBuilder.Build(_c, player.transform);
             ApartmentBuilding.Build(_c);
@@ -96,6 +97,7 @@ namespace OpeningBell.City
             Waterfront.Build(_c);
             Outskirts.Build(_c);
             StreetProps.BusStops(_c);
+            Rooftops.Build(_c);
             RegisterPlaces();
 
             // Places (doors, benches) are registered by the builders above; the street pass adds benches too,
@@ -104,6 +106,9 @@ namespace OpeningBell.City
             var walkSignals = new List<WalkSignal>();
             var benchesAndStreets = new StreetPass(_c);
             SidewalkGraph walks = benchesAndStreets.Build(signals, walkSignals);
+            // Ladders and clutter after the ground, lamps, trees and benches are in, so they can fit round them.
+            Rooftops.Ladders(_c);
+            StreetProps.Clutter(_c);
             // The woods last: they fill whatever ground is left.
             Woods = Forest.Build(_c, viewCamera);
             Parked = ParkedCars.Build(_c, viewCamera);

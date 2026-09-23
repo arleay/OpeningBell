@@ -181,7 +181,7 @@ namespace OpeningBell.City
 
         /// <summary>
         /// A zigzag fire escape on an end wall: landings every storey joined by steep stairs, a ladder up to the roof
-        /// (the stairs are ramps you can walk up). Local x runs along the wall, -z away from it.
+        /// (the stairs are ramps you can walk up; the ladder climbs). Local x runs along the wall, -z away from it.
         /// </summary>
         public static void FireEscape(CityContext c, Transform parent, Vector3 at, float yaw, float height)
         {
@@ -202,12 +202,8 @@ namespace OpeningBell.City
                 GameObject stair = k.Box(f, "Stair", new Vector3(dir * (run / 2f - 1f), y + storey / 2f, -landing / 2f), new Vector3(len, 0.08f, 0.9f), metal);
                 stair.transform.localRotation = Quaternion.Euler(0f, 0f, dir * Mathf.Atan2(storey, run) * Mathf.Rad2Deg);
             }
-            // Ladder to the roof.
-            float top = floors * storey;
-            k.Box(f, "Ladder", new Vector3(2.6f, (top + height) / 2f + 0.5f, -0.2f), new Vector3(0.5f, height - top + 1f, 0.05f), metal);
-            GameObject climb = k.Box(f, "Ladder ramp", new Vector3(2.6f, (top + height) / 2f + 0.5f, -0.6f), new Vector3(0.6f, 0.05f, height - top + 1.5f), metal);
-            climb.transform.localRotation = Quaternion.Euler(-70f, 0f, 0f);
-            climb.GetComponent<Renderer>().enabled = false;
+            // Ladder from the top landing to the roof.
+            Rooftops.FireEscapeLadder(c, f, floors * storey, height);
         }
 
         /// <summary>Grove Terrace: five storeys of newer flats north of downtown, balconies, a lobby, parking behind.</summary>

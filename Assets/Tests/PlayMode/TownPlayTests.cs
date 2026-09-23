@@ -110,6 +110,57 @@ namespace OpeningBell.Tests
             Assert.IsNotNull(city.Anchors["station_platform"], "the station is built");
         }
 
+        /// <summary>Up a service ladder onto a roof and back down; a car drives up the parkade's first ramp to deck 1.</summary>
+        [UnityTest]
+        public IEnumerator Ladders_ReachTheRoofs_AndTheParkadeRampsDrive()
+        {
+            yield return LoadMain();
+            var player = Find<FirstPersonController>();
+            Ladder[] ladders = Object.FindObjectsByType<Ladder>(FindObjectsSortMode.None);
+            TestContext.WriteLine("Ladders at " + string.Join(", ", ladders.Select(l => l.Foot.ToString("F0"))));
+            Assert.GreaterOrEqual(ladders.Length, 4, "ladders on alley walls and the walk-ups' fire escapes");
+            Ladder ladder = ladders.Where(l => l.Foot.y < 1f).OrderBy(l => l.Foot.sqrMagnitude).First();
+            player.PlaceAt(ladder.Foot, 0f);
+            yield return null;
+            Assert.AreEqual("Climb up", ladder.Prompt);
+            ladder.Interact();
+            yield return WaitUntil(() => !ladder.Climbing, 15f, "the climb up");
+            for (int i = 0; i < 20; i++) yield return null; // no roof under the feet would drop the player now
+            Assert.AreEqual(ladder.Roof.y, player.transform.position.y, 0.3f, "standing on the roof");
+            player.PlaceAt(player.transform.position, player.transform.eulerAngles.y + 150f, 10f);
+            yield return CaptureCamera(player.GetComponentInChildren<Camera>(), "rooftop.png");
+            Assert.AreEqual("Climb down", ladder.Prompt);
+            ladder.Interact();
+            yield return WaitUntil(() => !ladder.Climbing, 15f, "the climb down");
+            Assert.AreEqual(ladder.Foot.y, player.transform.position.y, 0.3f, "back in the alley");
+
+            // The parkade: straight up the first ramp from the entrance.
+            Rect r = Rooftops.Parkade;
+            float y0 = StreetMap.Plan.StreetGrade(r.center);
+            var library = UnityEditor.AssetDatabase.LoadAssetAtPath<VehicleLibrary>("Assets/ScriptableObjects/Vehicles/VehicleLibrary.asset");
+            Assert.IsTrue(library.CreateCatalog().TryGetModel("car_sedan", out OpeningBell.Vehicles.VehicleModel m));
+            CarController car = CarFactory.BuildDrivable(null, library.CarMesh(m.Mesh), m.Car.Clone(), "car_sedan");
+            car.transform.SetPositionAndRotation(new Vector3(r.xMin + 27f, y0 + 0.4f, r.yMin + 2f), Quaternion.identity);
+            car.SetParked(false);
+            car.EngineOn = true;
+            yield return new WaitForSeconds(1f);
+            car.Throttle = 0.45f;
+            float deadline = Time.time + 20f;
+            while (car.transform.position.z < r.yMin + 38f && Time.time < deadline)
+            {
+                if (car.SpeedKmh > 20f) car.Throttle = 0f;
+                else car.Throttle = 0.45f;
+                yield return new WaitForFixedUpdate();
+            }
+            car.Throttle = 0f;
+            car.Brake = 1f;
+            player.PlaceAt(car.transform.position + new Vector3(-6f, 1f, 3f), 110f, 8f);
+            yield return CaptureCamera(player.GetComponentInChildren<Camera>(), "parkade-deck1.png");
+            Assert.Greater(car.transform.position.z, r.yMin + 36f, "drove the length of the ramp");
+            Assert.AreEqual(y0 + Rooftops.Decks[1], car.transform.position.y, 0.6f, "on deck 1");
+            Object.Destroy(car.gameObject);
+        }
+
         /// <summary>A rainy day: wet roads cost grip, fewer people are out, traffic eases off; clearing up restores it.</summary>
         [UnityTest]
         public IEnumerator Rain_WetsTheRoads_AndEmptiesTheStreets()

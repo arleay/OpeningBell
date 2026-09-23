@@ -153,7 +153,7 @@ namespace OpeningBell.City
             return g;
         }
 
-        private static void Pallets(CityContext c, Transform parent, Vector3 at, int count, System.Random rng)
+        internal static void Pallets(CityContext c, Transform parent, Vector3 at, int count, System.Random rng)
         {
             Material wood = c.P.Lit(new Color(0.6f, 0.48f, 0.32f), 0.05f);
             for (int i = 0; i < count; i++)
@@ -209,7 +209,7 @@ namespace OpeningBell.City
             mesh.Build(parent, "Chain-link", ChainLink(c), collider: false);
         }
 
-        private static void Graffiti(CityContext c, Transform parent, Vector3 at, float yaw, System.Random rng)
+        internal static void Graffiti(CityContext c, Transform parent, Vector3 at, float yaw, System.Random rng)
         {
             string[] tags = { "KELL CREW", "RUST", "NO WAY", "SK8", "WHY", "DOC", "ZERO", "FOUNDRY 4 LIFE", "B00M", "SAGE" };
             Color[] spray = { new Color(0.9f, 0.2f, 0.5f), new Color(0.2f, 0.8f, 0.9f), new Color(1f, 0.85f, 0.2f), new Color(0.3f, 0.9f, 0.3f), Color.white, new Color(0.9f, 0.4f, 0.1f) };
@@ -217,7 +217,7 @@ namespace OpeningBell.City
             t.transform.localRotation *= Quaternion.Euler(0f, 0f, (float)(rng.NextDouble() - 0.5) * 16f);
         }
 
-        private static void ElectricalBox(CityContext c, Transform parent, Vector3 at, float yaw)
+        internal static void ElectricalBox(CityContext c, Transform parent, Vector3 at, float yaw)
         {
             Transform g = Kit.Group(parent, "Electrical box", at, yaw);
             c.Kit.Box(g, "Cabinet", new Vector3(0f, 0.75f, 0f), new Vector3(1.1f, 1.5f, 0.5f), c.P.Lit(new Color(0.3f, 0.42f, 0.34f), 0.3f));

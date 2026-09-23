@@ -114,6 +114,8 @@ namespace OpeningBell.Tests
                 (new Vector3(-10f, 1.7f, -158f), 90f, 4f, "res-foundry-st.png"),
                 (new Vector3(-60f, 16f, 185f), 60f, 10f, "res-hill.png"),
                 (new Vector3(100f, 12f, -50f), 200f, 10f, "res-walkups.png"),
+                (new Vector3(-245f, 1.7f, 16f), 90f, 3f, "clutter-alley.png"),
+                (new Vector3(-170f, 1.7f, -48f), 90f, 3f, "clutter-alley-south.png"),
                 (new Vector3(302.5f, -2.3f, -40f), 0f, 3f, "water-towpath.png"),
                 (new Vector3(40f, 8f, -262f), 160f, 12f, "water-pier.png"),
                 (new Vector3(250f, 10f, -262f), 200f, 14f, "water-marina.png"),

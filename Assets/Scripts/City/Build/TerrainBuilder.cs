@@ -270,7 +270,11 @@ namespace OpeningBell.City
                         + Mathf.PerlinNoise(Mathf.Sin(fy) * 6f + 30f, Mathf.Cos(fx) * 6f + 40f) * 0.4f;
                 // Fine speckle over the soft blotches; low contrast so the tiling doesn't show.
                 float fine = Mathf.Abs(Mathf.Sin(x * 12.9898f + y * 78.233f) * 43758.5453f) % 1f * 0.25f; // per-pixel, so it tiles
-                pixels[y * size + x] = Color.Lerp(a, b, Mathf.Clamp01(0.5f + (n - 0.5f) * 0.55f + fine - 0.12f));
+                Color32 px = Color.Lerp(a, b, Mathf.Clamp01(0.5f + (n - 0.5f) * 0.55f + fine - 0.12f));
+                // URP's terrain shader takes smoothness from the diffuse alpha when a layer has no mask map: keep it
+                // matte, or the ground mirrors the sky (pale by day, glowing blue-white at night).
+                px.a = 10;
+                pixels[y * size + x] = px;
             }
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, true) { name = "terrain-" + name, wrapMode = TextureWrapMode.Repeat, anisoLevel = 4 };
             texture.SetPixels32(pixels);

@@ -62,7 +62,7 @@ namespace OpeningBell.City
         private void Add(Vector3 p, float yaw, ParkingKind kind) =>
             _spots.Add(new Spot { P = p, Yaw = yaw, Kind = kind, Index = _spots.Count });
 
-        private static readonly string[] Commercial = { "MAPLE ST", "EXCHANGE ST", "HARBOR AVE", "QUAY ST", "NEON ROW", "BAYVIEW AVE", "FIRST ST", "CANAL ST", "GROVE ST" };
+        internal static readonly string[] Commercial = { "MAPLE ST", "EXCHANGE ST", "HARBOR AVE", "QUAY ST", "NEON ROW", "BAYVIEW AVE", "FIRST ST", "CANAL ST", "GROVE ST" };
 
         /// <summary>
         /// Maple's south kerb outside the apartment is a loading zone: bought cars are delivered to
