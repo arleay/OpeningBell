@@ -83,16 +83,18 @@ namespace OpeningBell.Trading
             Submit(ticker, side, limitPrice > 0m ? OrderType.StopLimit : OrderType.Stop, quantity, limitPrice, stopPrice, gtc, 0);
 
         /// <summary>
-        /// Protects shares already held with a take-profit (sell limit) and/or a stop-loss (sell stop), linked so
-        /// that when one fills the other shrinks by the same amount (OCO). Both are good until cancelled. Returns
-        /// the orders created (either may be rejected; check their status).
+        /// Protects an open position with a take-profit (limit) and/or a stop-loss (stop) on the closing side, linked
+        /// so that when one fills the other shrinks by the same amount (OCO). A long's legs sell (TP above, SL below);
+        /// a short's legs buy (TP below, SL above). Both are good until cancelled. Returns the orders created (either
+        /// may be rejected; check their status).
         /// </summary>
         public List<Order> SubmitBracket(string ticker, long quantity, decimal takeProfit, decimal stopLoss)
         {
             long group = _nextOcoGroup++;
+            OrderSide side = _account.Portfolio.QuantityOf(ticker) < 0 ? OrderSide.Buy : OrderSide.Sell;
             var created = new List<Order>();
-            if (takeProfit > 0m) created.Add(Submit(ticker, OrderSide.Sell, OrderType.Limit, quantity, takeProfit, 0m, true, group));
-            if (stopLoss > 0m) created.Add(Submit(ticker, OrderSide.Sell, OrderType.Stop, quantity, 0m, stopLoss, true, group));
+            if (takeProfit > 0m) created.Add(Submit(ticker, side, OrderType.Limit, quantity, takeProfit, 0m, true, group));
+            if (stopLoss > 0m) created.Add(Submit(ticker, side, OrderType.Stop, quantity, 0m, stopLoss, true, group));
             return created;
         }
 
@@ -201,22 +203,28 @@ namespace OpeningBell.Trading
                 if (stopProblem != null) return stopProblem;
             }
 
-            if (order.Side == OrderSide.Buy)
+            if (order.Side == OrderSide.Buy) order.ReservePrice = ReservePrice(order, quote);
+
+            // Protective orders (brackets) only ever close: they may not open a position the other way.
+            if (order.OcoGroup != 0)
             {
-                order.ReservePrice = ReservePrice(order, quote);
-                decimal required = RequiredMargin(order.Ticker, order.Quantity);
+                long closable = AvailableToClose(order.Ticker, order.OcoGroup);
+                if (!Closes(order.Ticker, order.Side) || order.Quantity > closable)
+                    return closable <= 0 || !Closes(order.Ticker, order.Side)
+                        ? "No open position to protect."
+                        : $"Only {closable} contract{(closable == 1 ? "" : "s")} to protect.";
+            }
+
+            // Selling more than you hold opens a short, buying more than you're short opens a long: only the contracts
+            // that open new exposure post margin.
+            long opening = OpeningQuantity(order.Ticker, order.Side, order.Quantity);
+            if (opening > 0)
+            {
+                decimal required = RequiredMargin(order.Ticker, opening);
                 if (required > _account.BuyingPower)
                     return string.Format(CultureInfo.InvariantCulture,
-                        "Insufficient buying power: {0} contract{1} need ${2:N2} margin, available ${3:N2}.",
-                        order.Quantity, order.Quantity == 1 ? "" : "s", required, _account.BuyingPower);
-            }
-            else
-            {
-                long available = AvailableToSell(order.Ticker, order.OcoGroup);
-                if (order.Quantity > available)
-                    return available <= 0
-                        ? "No contracts to sell. Short selling is not available."
-                        : $"Only {available} contract{(available == 1 ? "" : "s")} to sell. Short selling is not available.";
+                        "Insufficient buying power: {0} new contract{1} need ${2:N2} margin, available ${3:N2}.",
+                        opening, opening == 1 ? "" : "s", required, _account.BuyingPower);
             }
 
             return null;
@@ -244,9 +252,7 @@ namespace OpeningBell.Trading
             {
                 if (!order.IsOpen) break;
 
-                long quantity = execution.Quantity;
-                if (order.Side == OrderSide.Buy)
-                    quantity = AffordableQuantity(order, execution.Price, quantity);
+                long quantity = AffordableQuantity(order, execution.Price, execution.Quantity);
 
                 if (quantity <= 0)
                 {
@@ -277,7 +283,10 @@ namespace OpeningBell.Trading
             UpdateReservation(order);
 
             if (order.OcoGroup != 0) ShrinkSiblings(order, quantity);
-            if (order.Side == OrderSide.Sell) FitProtectiveOrders(order.Ticker);
+            FitProtectiveOrders(order.Ticker);
+            // The position changed, so how much of each other working order would open new exposure changed too.
+            foreach (Order o in _open)
+                if (o.Ticker == order.Ticker) UpdateReservation(o);
 
             OrderFilled?.Invoke(fill);
             OrderUpdated?.Invoke(order);
@@ -296,19 +305,37 @@ namespace OpeningBell.Trading
         }
 
         /// <summary>
-        /// After the position shrinks (a manual sale), protective orders can't be for more shares than are left:
-        /// good-until-cancelled sells are trimmed, and cancelled if nothing is left to protect.
+        /// After the position shrinks or flips, protective (good-until-cancelled) orders can't be for more contracts than
+        /// are left, and never on the side that would open a new position: they are trimmed, or cancelled when nothing
+        /// is left to protect.
         /// </summary>
         private void FitProtectiveOrders(string ticker)
         {
             long held = _account.Portfolio.QuantityOf(ticker);
-            var protective = _open.FindAll(o => o.Gtc && o.Side == OrderSide.Sell && o.Ticker == ticker && o.RemainingQuantity > held);
+            var protective = _open.FindAll(o => o.Gtc && o.Ticker == ticker);
             foreach (Order o in protective)
             {
-                o.ReduceTo(o.FilledQuantity + held);
-                if (o.RemainingQuantity <= 0) Close(o, OrderStatus.Cancelled, "No shares left to protect.");
+                long cap = Closes(ticker, o.Side) ? Math.Abs(held) : 0;
+                if (o.RemainingQuantity <= cap) continue;
+                o.ReduceTo(o.FilledQuantity + cap);
+                if (o.RemainingQuantity <= 0) Close(o, OrderStatus.Cancelled, "No position left to protect.");
                 else OrderUpdated?.Invoke(o);
             }
+        }
+
+        /// <summary>True if an order on this side reduces the current position (sell a long, buy back a short).</summary>
+        private bool Closes(string ticker, OrderSide side)
+        {
+            long held = _account.Portfolio.QuantityOf(ticker);
+            return side == OrderSide.Sell ? held > 0 : held < 0;
+        }
+
+        /// <summary>Contracts of an order that would open new exposure (beyond closing what's held on the other side).</summary>
+        public long OpeningQuantity(string ticker, OrderSide side, long quantity)
+        {
+            long held = _account.Portfolio.QuantityOf(ticker);
+            long closable = side == OrderSide.Sell ? Math.Max(0, held) : Math.Max(0, -held);
+            return Math.Max(0, quantity - closable);
         }
 
         /// <summary>Commission on the order's cumulative fills, so partial fills are charged exactly once per contract.</summary>
@@ -324,43 +351,55 @@ namespace OpeningBell.Trading
             decimal available = _account.BuyingPower + _account.ReservationFor(order.Id);
             decimal margin = _account.MarginPerContract(order.Ticker);
             long q = quantity;
-            while (q > 0 && q * margin + CommissionDelta(order, q, price) > available) q--;
+            while (q > 0 && OpeningQuantity(order.Ticker, order.Side, q) * margin + CommissionDelta(order, q, price) > available) q--;
             return q;
         }
 
+        /// <summary>Holds margin for the part of a working order that would open new exposure, plus its commission.</summary>
         private void UpdateReservation(Order order)
         {
-            if (order.Side != OrderSide.Buy) return;
-
             decimal amount = 0m;
             if (order.IsOpen)
             {
-                decimal commission = _rules.CommissionFor(order.Quantity) - order.Commission;
-                amount = order.RemainingQuantity * _account.MarginPerContract(order.Ticker) + Math.Max(0m, commission);
+                long opening = OpeningQuantity(order.Ticker, order.Side, order.RemainingQuantity);
+                decimal commission = opening > 0 ? Math.Max(0m, _rules.CommissionFor(order.Quantity) - order.Commission) : 0m;
+                amount = opening * _account.MarginPerContract(order.Ticker) + commission;
             }
             _account.SetReservation(order.Id, amount);
         }
 
         /// <summary>
-        /// Shares held that are not already committed to open sell orders. A bracket's two legs protect the same shares,
-        /// so a group counts once (its largest leg). <paramref name="exceptGroup"/> leaves one group out (its own legs).
+        /// Contracts of the open position (long or short) not already committed to working orders that close it. A
+        /// bracket's two legs protect the same contracts, so a group counts once (its largest leg).
+        /// <paramref name="exceptGroup"/> leaves one group out (its own legs).
         /// </summary>
-        public long AvailableToSell(string ticker, long exceptGroup = 0)
+        public long AvailableToClose(string ticker, long exceptGroup = 0)
         {
+            long held = _account.Portfolio.QuantityOf(ticker);
+            if (held == 0) return 0;
+            OrderSide closing = held > 0 ? OrderSide.Sell : OrderSide.Buy;
             long committed = 0;
             var groups = new Dictionary<long, long>();
             foreach (var o in _open)
             {
-                if (o.Side != OrderSide.Sell || o.Ticker != ticker) continue;
+                if (o.Side != closing || o.Ticker != ticker) continue;
                 if (o.OcoGroup == 0) committed += o.RemainingQuantity;
                 else if (o.OcoGroup != exceptGroup)
                     groups[o.OcoGroup] = Math.Max(groups.TryGetValue(o.OcoGroup, out long q) ? q : 0, o.RemainingQuantity);
             }
             foreach (long q in groups.Values) committed += q;
-            return Math.Max(0, _account.Portfolio.QuantityOf(ticker) - committed);
+            return Math.Max(0, Math.Abs(held) - committed);
         }
 
-        /// <summary>Most contracts a buy could open right now (same margin rule as validation).</summary>
+        /// <summary>Most contracts an order on this side could be for right now: close what's held, then open with margin.</summary>
+        public long MaxQuantity(string ticker, OrderSide side)
+        {
+            long held = _account.Portfolio.QuantityOf(ticker);
+            long closable = side == OrderSide.Sell ? Math.Max(0, held) : Math.Max(0, -held);
+            return closable + MaxBuyQuantity(ticker, OrderType.Market, 0m);
+        }
+
+        /// <summary>Most new contracts (either side) margin allows right now (same rule as validation).</summary>
         public long MaxBuyQuantity(string ticker, OrderType type, decimal limitPrice)
         {
             if (!_market.TryGetQuote(ticker, out _)) return 0;

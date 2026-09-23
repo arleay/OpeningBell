@@ -23,6 +23,8 @@ namespace OpeningBell.Market
         Sector,
         Economic,
         Geopolitical,
+        /// <summary>The president posting about the economy, trade or war: market-wide and often violent.</summary>
+        PresidentTweet,
     }
 
     /// <summary>
@@ -147,6 +149,15 @@ namespace OpeningBell.Market
             Severity = severity;
             RealizedMove = realizedMove;
         }
+
+        /// <summary>
+        /// Big, market-moving news: market-wide headlines of real weight, and every presidential tweet. Gets the loud
+        /// alert, the red "BREAKING" banner and a red row in the news feed.
+        /// </summary>
+        public bool IsMajor => Type == CatalystType.PresidentTweet || (Scope == NewsScope.Market && Severity >= MajorSeverity);
+
+        /// <summary>Market headlines at or above this severity count as major.</summary>
+        public const double MajorSeverity = 0.5;
 
         public bool Mentions(string ticker)
         {

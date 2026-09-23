@@ -146,12 +146,15 @@ namespace OpeningBell.UI
         /// <summary>Market order in the regular session; outside it, a limit at the bid (market orders are not accepted then).</summary>
         private void ClosePosition(string ticker)
         {
-            long qty = Context.Orders.AvailableToSell(ticker);
+            long qty = Context.Orders.AvailableToClose(ticker);
             if (qty <= 0 || !Context.Market.TryGetQuote(ticker, out Quote quote)) return;
 
+            // A long closes by selling (at the bid outside the session), a short by buying back (at the ask).
+            bool shortPosition = Context.Account.Portfolio.QuantityOf(ticker) < 0;
+            OrderSide side = shortPosition ? OrderSide.Buy : OrderSide.Sell;
             Order order = Context.Market.Session == MarketSession.Regular
-                ? Context.Orders.SubmitMarket(ticker, OrderSide.Sell, qty)
-                : Context.Orders.SubmitLimit(ticker, OrderSide.Sell, qty, quote.Bid);
+                ? Context.Orders.SubmitMarket(ticker, side, qty)
+                : Context.Orders.SubmitLimit(ticker, side, qty, shortPosition ? quote.Ask : quote.Bid);
             _orderPlaced?.Invoke(order);
         }
 

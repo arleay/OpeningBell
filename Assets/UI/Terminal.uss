@@ -291,6 +291,16 @@
     -unity-font-style: bold;
 }
 
+/* Market-moving news: red, so it stands out in the feed. */
+.news-row.major {
+    background-color: rgba(200, 40, 40, 0.18);
+    border-left-width: 3px;
+    border-left-color: #e8544c;
+}
+.news-row.major .news-tickers { color: #ff6b61; }
+.news-row.major .news-headline { color: #ff8a82; }
+.news-row.major.fresh .news-headline { color: #ffb3ad; }
+
 .legend-news { color: #e0a93b; }
 
 /* ---------- app tabs + bank/store apps ---------- */

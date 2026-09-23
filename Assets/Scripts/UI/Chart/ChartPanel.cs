@@ -78,9 +78,10 @@ namespace OpeningBell.UI
             _view.SelectionChanged += _ => BuildSelectBar();
 
             _trading.Modify = (id, price) => Context.Orders.ModifyPrice(id, price);
+            _trading.Cancel = id => Context.Orders.Cancel(id);
             _trading.CreateBracket = (tp, sl) =>
             {
-                long qty = Context.Orders.AvailableToSell(_ticker);
+                long qty = Context.Orders.AvailableToClose(_ticker);
                 if (qty <= 0) return "All your contracts are already covered by orders.";
                 foreach (Order o in Context.Orders.SubmitBracket(_ticker, qty, tp, sl))
                     if (o.Status == OrderStatus.Rejected) return o.StatusReason;
@@ -117,6 +118,7 @@ namespace OpeningBell.UI
             _trading.Quantity = position != null && position.IsOpen ? position.Quantity : 0;
             _trading.AveragePrice = position != null && position.IsOpen ? position.AveragePrice : 0m;
             _trading.Last = s.Last;
+            _trading.PointValue = Context.Account.Contract(s.Ticker).PointValue;
             _trading.Orders.Clear();
             foreach (Order o in Context.Orders.OpenOrders)
                 if (o.Ticker == s.Ticker && o.Type != OrderType.Market) _trading.Orders.Add(o);

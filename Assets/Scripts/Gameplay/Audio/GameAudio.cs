@@ -17,7 +17,7 @@ namespace OpeningBell.Gameplay
         [SerializeField, Range(0f, 1f)] private float ambienceVolume = 0.25f;
 
         private AudioSource _cues;
-        private AudioClip _bell, _fill, _news, _bill, _mail;
+        private AudioClip _bell, _fill, _news, _breaking, _bill, _mail;
         private float _lastFill = -1f;
 
         private readonly System.Collections.Generic.Dictionary<string, int> _counts = new System.Collections.Generic.Dictionary<string, int>();
@@ -35,6 +35,7 @@ namespace OpeningBell.Gameplay
             _bell = ProceduralSounds.Bell();
             _fill = ProceduralSounds.Fill();
             _news = ProceduralSounds.NewsPing();
+            _breaking = ProceduralSounds.Breaking();
             _bill = ProceduralSounds.Bill();
             _mail = ProceduralSounds.Mail();
 
@@ -54,7 +55,7 @@ namespace OpeningBell.Gameplay
                 _lastFill = Time.unscaledTime;
                 Play("fill", _fill);
             };
-            game.Market.NewsPublished += _ => Play("news", _news);
+            game.Market.NewsPublished += item => Play("news", item.IsMajor ? _breaking : _news);
             game.Economy.TransactionPosted += tx =>
             {
                 if (tx.IsNotable) Play("bill", _bill);

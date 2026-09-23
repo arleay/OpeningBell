@@ -521,8 +521,8 @@ namespace OpeningBell.City
         {
             TicketInput.TryParsePrice(_limit.value, out decimal limit);
             long max = _side == OrderSide.Buy
-                ? Phone.Game.Orders.MaxBuyQuantity(_ticker, _type, limit)
-                : Phone.Game.Orders.AvailableToSell(_ticker);
+                ? Phone.Game.Orders.MaxQuantity(_ticker, OrderSide.Buy)
+                : Phone.Game.Orders.MaxQuantity(_ticker, OrderSide.Sell);
             _quantity.value = Fmt.Shares(max);
         }
 

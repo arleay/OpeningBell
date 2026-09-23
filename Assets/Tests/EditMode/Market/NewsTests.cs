@@ -119,6 +119,31 @@ namespace OpeningBell.Tests
         }
 
         [Test]
+        public void PresidentTweet_IsMajor_AndMovesTheWholeMarket()
+        {
+            var library = UnityEditor.AssetDatabase.LoadAssetAtPath<NewsLibrary>("Assets/ScriptableObjects/News/NewsLibrary.asset");
+            NewsTemplate[] templates = library.Templates.ToArray();
+            Assert.IsTrue(templates.Count(t => t.Type == CatalystType.PresidentTweet) >= 8, "a set of presidential tweets");
+            foreach (NewsTemplate t in templates) t.Validate();
+
+            var control = Sim(4, ScheduledOnly());
+            var news = Sim(4, ScheduledOnly(), templates, At(10 * 60, "hale_tweet_oil", severity: 1));
+            control.AdvanceTo(Monday.AddHours(12));
+            news.AdvanceTo(Monday.AddHours(12));
+
+            NewsItem tweet = news.News.Single();
+            StringAssert.StartsWith("President Hale tweets:", tweet.Headline);
+            Assert.IsTrue(tweet.IsMajor, "breaking: gets the alert and the red row");
+            double indexMove = Math.Log((double)news.Index.Level / (double)control.Index.Level);
+            TestContext.WriteLine($"index move on the tweet: {indexMove:P2}");
+            Assert.Greater(indexMove, 0.005, "a big bullish tweet lifts the whole market");
+
+            var minor = Sim(4, ScheduledOnly(), new[] { T("chatter", NewsScope.Market, 1, 0.2, 0, "Markets drift") }, At(10 * 60, "chatter"));
+            minor.AdvanceTo(Monday.AddHours(11));
+            Assert.IsFalse(minor.News.Single().IsMajor, "small market chatter isn't breaking news");
+        }
+
+        [Test]
         public void MarketNews_SectorTilt_MovesThatSectorAgainstTheMarket()
         {
             // A war threat: the market sells off, energy rallies. Same seed with and without the tilt.

@@ -434,3 +434,136 @@ MonoBehaviour:
     Tilts:
     - Sector: 0
       Bias: 0
+  - Id: hale_tweet_oil
+    Type: 17
+    Scope: 2
+    Headline: 'President Hale tweets: "We secured 900 MILLION barrels of oil. Tremendous deal. Prices coming DOWN!"'
+    Bias: 0.9
+    MinSeverity: 0.6
+    MaxSeverity: 1
+    Uncertainty: 0.4
+    Weight: 0.5
+    OnlySectors:
+    Tilts:
+    - Sector: 2
+      Bias: -0.6
+    - Sector: 4
+      Bias: 0.3
+    - Sector: 3
+      Bias: 0.3
+  - Id: hale_tweet_trade
+    Type: 17
+    Scope: 2
+    Headline: 'President Hale tweets: "Trade deal with Kessar is DONE. Biggest ever. Markets will SOAR!"'
+    Bias: 0.9
+    MinSeverity: 0.6
+    MaxSeverity: 1
+    Uncertainty: 0.4
+    Weight: 0.5
+    OnlySectors:
+    Tilts:
+    - Sector: 4
+      Bias: 0.4
+    - Sector: 0
+      Bias: 0.3
+  - Id: hale_tweet_taxcut
+    Type: 17
+    Scope: 2
+    Headline: 'President Hale tweets: "Giant tax cut for EVERY American company is coming. Very soon!"'
+    Bias: 0.8
+    MinSeverity: 0.6
+    MaxSeverity: 1
+    Uncertainty: 0.4
+    Weight: 0.5
+    OnlySectors:
+    Tilts:
+    - Sector: 3
+      Bias: 0.3
+    - Sector: 5
+      Bias: 0.3
+  - Id: hale_tweet_rates
+    Type: 17
+    Scope: 2
+    Headline: 'President Hale tweets: "Rates are WAY too high. The Central Bank must cut NOW!"'
+    Bias: 0.6
+    MinSeverity: 0.6
+    MaxSeverity: 1
+    Uncertainty: 0.4
+    Weight: 0.5
+    OnlySectors:
+    Tilts:
+    - Sector: 5
+      Bias: -0.4
+    - Sector: 0
+      Bias: 0.3
+  - Id: hale_tweet_peace
+    Type: 17
+    Scope: 2
+    Headline: 'President Hale tweets: "Talks with Varenn going GREAT. Peace is very close!"'
+    Bias: 0.7
+    MinSeverity: 0.6
+    MaxSeverity: 1
+    Uncertainty: 0.4
+    Weight: 0.5
+    OnlySectors:
+    Tilts:
+    - Sector: 2
+      Bias: -0.6
+    - Sector: 4
+      Bias: -0.2
+  - Id: hale_tweet_tariffs
+    Type: 17
+    Scope: 2
+    Headline: 'President Hale tweets: "100% TARIFFS on ALL imported chips, starting Monday!"'
+    Bias: -0.9
+    MinSeverity: 0.6
+    MaxSeverity: 1
+    Uncertainty: 0.4
+    Weight: 0.5
+    OnlySectors:
+    Tilts:
+    - Sector: 0
+      Bias: -0.8
+    - Sector: 4
+      Bias: 0.2
+  - Id: hale_tweet_varenn
+    Type: 17
+    Scope: 2
+    Headline: 'President Hale tweets: "Varenn will pay a VERY big price. Soon!"'
+    Bias: -0.8
+    MinSeverity: 0.6
+    MaxSeverity: 1
+    Uncertainty: 0.4
+    Weight: 0.5
+    OnlySectors:
+    Tilts:
+    - Sector: 2
+      Bias: 0.9
+    - Sector: 4
+      Bias: 0.6
+  - Id: hale_tweet_drugs
+    Type: 17
+    Scope: 2
+    Headline: 'President Hale tweets: "Drug prices are a DISGRACE. We will cut them 50%!"'
+    Bias: -0.5
+    MinSeverity: 0.6
+    MaxSeverity: 1
+    Uncertainty: 0.4
+    Weight: 0.5
+    OnlySectors:
+    Tilts:
+    - Sector: 1
+      Bias: -1.0
+  - Id: hale_tweet_banks
+    Type: 17
+    Scope: 2
+    Headline: 'President Hale tweets: "The big banks are ripping you off. Big crackdown coming!"'
+    Bias: -0.6
+    MinSeverity: 0.6
+    MaxSeverity: 1
+    Uncertainty: 0.4
+    Weight: 0.5
+    OnlySectors:
+    Tilts:
+    - Sector: 5
+      Bias: -1.0

@@ -98,7 +98,7 @@ namespace OpeningBell.Tests
             var legs = _orders.SubmitBracket("TST", 100, 52.00m, 49.00m);
             Assert.AreEqual(2, legs.Count);
             Assert.IsTrue(legs.All(o => o.Status == OrderStatus.Working && o.Gtc), string.Join("; ", legs.Select(o => o.StatusReason)));
-            Assert.AreEqual(0, _orders.AvailableToSell("TST"), "both legs protect the same 100 shares");
+            Assert.AreEqual(0, _orders.AvailableToClose("TST"), "both legs protect the same 100 shares");
 
             _market.SetQuote("TST", 52.05m, 52.07m);
             _market.Tick();
@@ -112,11 +112,36 @@ namespace OpeningBell.Tests
         public void BracketOnPartOfAPosition_LeavesTheRestFreeToSell()
         {
             var legs = _orders.SubmitBracket("TST", 60, 52.00m, 49.00m);
-            Assert.AreEqual(40, _orders.AvailableToSell("TST"), "the bracket commits 60 once, not twice");
+            Assert.AreEqual(40, _orders.AvailableToClose("TST"), "the bracket commits 60 once, not twice");
             Order manual = _orders.SubmitMarket("TST", OrderSide.Sell, 40);
             Assert.AreEqual(OrderStatus.Filled, manual.Status);
             Assert.IsTrue(legs.All(o => o.IsOpen && o.RemainingQuantity == 60), "the bracket still protects the 60 left");
-            Assert.AreEqual(OrderStatus.Rejected, _orders.SubmitMarket("TST", OrderSide.Sell, 1).Status, "everything left is committed");
+            Assert.AreEqual(OrderStatus.Filled, _orders.SubmitMarket("TST", OrderSide.Sell, 1).Status, "selling more is allowed");
+            Assert.IsTrue(legs.All(o => o.IsOpen && o.RemainingQuantity == 59), "and the bracket shrinks to what's left");
+        }
+
+        [Test]
+        public void ShortBracket_BuysBack_TakeProfitBelow_StopLossAbove()
+        {
+            _orders.SubmitMarket("TST", OrderSide.Sell, 150);                              // long 100 → short 50
+            Assert.AreEqual(-50, _account.Portfolio.QuantityOf("TST"));
+            var legs = _orders.SubmitBracket("TST", 50, 49.00m, 51.00m);
+            Assert.IsTrue(legs.All(o => o.Status == OrderStatus.Working && o.Side == OrderSide.Buy), string.Join("; ", legs.Select(o => o.StatusReason)));
+            Assert.AreEqual(0, _orders.AvailableToClose("TST"));
+
+            _market.SetQuote("TST", 51.10m, 51.12m, size: 5000);                           // squeezed through the stop
+            _market.Tick();
+            Assert.AreEqual(OrderStatus.Filled, legs[1].Status, "the stop-loss buys the short back");
+            Assert.AreEqual(OrderStatus.Cancelled, legs[0].Status);
+            Assert.AreEqual(0, _account.Portfolio.QuantityOf("TST"));
+        }
+
+        [Test]
+        public void Bracket_WithNoPosition_IsRejected()
+        {
+            _orders.SubmitMarket("TST", OrderSide.Sell, 100);
+            var legs = _orders.SubmitBracket("TST", 10, 52.00m, 49.00m);
+            Assert.IsTrue(legs.All(o => o.Status == OrderStatus.Rejected), "a bracket only protects a position; it never opens one");
         }
 
         [Test]

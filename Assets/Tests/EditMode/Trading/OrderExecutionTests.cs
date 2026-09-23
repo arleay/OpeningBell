@@ -212,15 +212,50 @@ namespace OpeningBell.Tests
         }
 
         [Test]
-        public void SellBeyondPosition_IsRejected_NoShorting()
+        public void Short_OpensWithMargin_AndProfitsWhenPriceFalls()
         {
-            Assert.AreEqual(OrderStatus.Rejected, _orders.SubmitMarket("TST", OrderSide.Sell, 1).Status);
+            _market.Contracts["TST"] = new ContractSpec(20m, 1000m);
+            Order sell = _orders.SubmitMarket("TST", OrderSide.Sell, 3);                   // short 3 @ 10.18
+            Assert.AreEqual(OrderStatus.Filled, sell.Status, sell.StatusReason);
+            Assert.AreEqual(-3, _account.Portfolio.QuantityOf("TST"));
+            Assert.AreEqual(3000m, _account.MarginInUse);
 
-            _orders.SubmitMarket("TST", OrderSide.Buy, 100);
-            Assert.AreEqual(OrderStatus.Working, _orders.SubmitLimit("TST", OrderSide.Sell, 60, 11m).Status);
-            Order tooMany = _orders.SubmitLimit("TST", OrderSide.Sell, 50, 11m);
-            Assert.AreEqual(OrderStatus.Rejected, tooMany.Status);
-            StringAssert.Contains("Only 40", tooMany.StatusReason);
+            _market.SetQuote("TST", 9.66m, 9.68m, last: 9.67m);
+            Assert.AreEqual(30.60m, _account.UnrealizedPnL, "3 × 0.51 × $20 in the short's favour");
+            _orders.SubmitMarket("TST", OrderSide.Buy, 3);                                  // cover @ 9.68
+            Assert.AreEqual(30m, _account.RealizedPnL);
+            Assert.AreEqual(0, _account.Portfolio.QuantityOf("TST"));
+            Assert.AreEqual(0m, _account.MarginInUse);
+        }
+
+        [Test]
+        public void SellingMoreThanHeld_FlipsShort_AndOnlyTheNewPartPostsMargin()
+        {
+            _market.Contracts["TST"] = new ContractSpec(20m, 1000m);
+            _orders.SubmitMarket("TST", OrderSide.Buy, 2);
+            Assert.AreEqual(3, _orders.OpeningQuantity("TST", OrderSide.Sell, 5), "2 close the long, 3 open a short");
+            Assert.AreEqual(0, _orders.OpeningQuantity("TST", OrderSide.Sell, 2));
+
+            _orders.SubmitMarket("TST", OrderSide.Sell, 5);
+            Assert.AreEqual(-3, _account.Portfolio.QuantityOf("TST"));
+            Assert.AreEqual(-3, _account.Portfolio.Find("TST").Quantity);
+            Assert.AreEqual(10.18m, _account.Portfolio.Find("TST").AveragePrice, "the short's entry is the flip price");
+
+            Order tooBig = _orders.SubmitMarket("TST", OrderSide.Sell, 8);                  // just under 7,000 free (the flip cost a little): 6 more
+            Assert.AreEqual(OrderStatus.Rejected, tooBig.Status);
+            StringAssert.Contains("buying power", tooBig.StatusReason);
+            Assert.AreEqual(9, _orders.MaxQuantity("TST", OrderSide.Buy), "cover 3, then open 6 long");
+        }
+
+        [Test]
+        public void ShortsAreClosedAtTheCloseToo()
+        {
+            _market.Contracts["TST"] = new ContractSpec(20m, 1000m);
+            _orders.SubmitMarket("TST", OrderSide.Sell, 2);                                 // short 2 @ 10.18
+            _market.SetQuote("TST", 10.07m, 10.09m, last: 10.08m);
+            _market.SetSession(MarketSession.AfterHours);
+            Assert.AreEqual(0, _account.Portfolio.QuantityOf("TST"));
+            Assert.AreEqual(4m, _account.RealizedPnL, "bought back at the 10.08 close: 2 × 0.10 × $20");
         }
 
         [Test]
@@ -242,8 +277,8 @@ namespace OpeningBell.Tests
         {
             _orders.SubmitMarket("TST", OrderSide.Buy, 100);
             _orders.SubmitLimit("TST", OrderSide.Sell, 60, 11m);
-            Assert.AreEqual(40, _orders.AvailableToSell("TST"));
-            Assert.AreEqual(0, _orders.AvailableToSell("NOPE"));
+            Assert.AreEqual(40, _orders.AvailableToClose("TST"));
+            Assert.AreEqual(0, _orders.AvailableToClose("NOPE"));
         }
 
         [Test]

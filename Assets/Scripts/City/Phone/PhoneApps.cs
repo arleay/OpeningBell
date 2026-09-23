@@ -872,7 +872,8 @@ namespace OpeningBell.City
 
         private static string Tag(NewsItem item) => item.Scope switch
         {
-            NewsScope.Market => item.Type == CatalystType.Geopolitical ? "WORLD · MARKETS" : "MARKETS",
+            NewsScope.Market => item.Type == CatalystType.PresidentTweet ? "PRESIDENT · MARKETS"
+                : item.Type == CatalystType.Geopolitical ? "WORLD · MARKETS" : "MARKETS",
             NewsScope.Sector => "SECTOR · " + string.Join(" ", item.Tickers),
             _ => string.Join(" ", item.Tickers),
         };
@@ -905,6 +906,7 @@ namespace OpeningBell.City
             CatalystType.Sector => "The whole group is moving together on the news.",
             CatalystType.Economic => "Fresh economic news, and traders are rethinking where rates and growth are headed.",
             CatalystType.Geopolitical => "World events are rattling markets. Headlines like this can move whole sectors at once, and not always the same way.",
+            CatalystType.PresidentTweet => "The president just posted, and the whole market is reacting. Moves like this come fast and can reverse just as fast.",
             _ => "",
         };
     }

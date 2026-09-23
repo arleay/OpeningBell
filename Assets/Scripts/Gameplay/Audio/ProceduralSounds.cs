@@ -29,6 +29,16 @@ namespace OpeningBell.Gameplay
 
         public static AudioClip NewsPing() => Make("news", 0.35f, t => Sine(1046f, t) * Decay(t, 0.12f) * 0.35f);
 
+        /// <summary>Three quick alternating beeps, like a breaking-news alert: market-moving news just hit.</summary>
+        public static AudioClip Breaking() => Make("breaking", 0.62f, t =>
+        {
+            int beep = (int)(t / 0.2f);
+            float local = t - beep * 0.2f;
+            if (beep > 2 || local > 0.14f) return 0f;
+            float hz = beep == 1 ? 1175f : 880f;
+            return (Sine(hz, t) + 0.3f * Sine(hz * 2f, t)) * Decay(local, 0.09f) * 0.45f;
+        });
+
         /// <summary>Two falling tones: money went out.</summary>
         public static AudioClip Bill() => Make("bill", 0.5f, t =>
             (t < 0.22f ? Sine(523f, t) * Decay(t, 0.1f) : Sine(392f, t) * Decay(t - 0.22f, 0.12f)) * 0.45f);

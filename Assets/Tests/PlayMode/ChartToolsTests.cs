@@ -115,6 +115,17 @@ namespace OpeningBell.Tests
             Assert.AreEqual((double)newStop, (double)stop.StopPrice, 0.02, "dragging the SL line moved the real stop order");
             Assert.AreEqual(OrderStatus.Working, stop.Status);
 
+            // The "×" at the end of the take-profit's label cancels it (its stop-loss stays).
+            Order tpLeg = legs.Single(o => o.Type == OrderType.Limit);
+            terminal.RefreshAll();
+            yield return null;
+            Vector2? cancel = view.CancelPointOf(tpLeg.Id);
+            Assert.IsTrue(cancel.HasValue, "the TP line has an ×");
+            Pointer(view, EventType.MouseDown, cancel.Value);
+            Pointer(view, EventType.MouseUp, cancel.Value);
+            Assert.AreEqual(OrderStatus.Cancelled, tpLeg.Status, "clicking × cancelled the take-profit");
+            Assert.AreEqual(OrderStatus.Working, stop.Status, "the stop-loss is still working");
+
             // Drawings are saved with the game, per symbol.
             game.Save();
             Assert.IsTrue(SaveSystem.TryRead("slot1", out SaveGame save, out _));

@@ -358,8 +358,10 @@ namespace OpeningBell.City
 
         private void OnNews(NewsItem item)
         {
-            string tag = item.Scope == NewsScope.Market ? "MARKETS" : string.Join(" ", item.Tickers);
-            Notify(PhoneAppId.News, tag, item.Headline, () => ((NewsApp)_apps[PhoneAppId.News]).Read(item));
+            string tag = item.Type == CatalystType.PresidentTweet ? "BREAKING · PRESIDENT"
+                : item.IsMajor ? "BREAKING · MARKETS"
+                : item.Scope == NewsScope.Market ? "MARKETS" : string.Join(" ", item.Tickers);
+            Notify(PhoneAppId.News, tag, item.Headline, () => ((NewsApp)_apps[PhoneAppId.News]).Read(item), item.IsMajor);
         }
 
         private void OnFill(Fill fill)
@@ -367,15 +369,15 @@ namespace OpeningBell.City
             Notify(PhoneAppId.Messages, "PennyBridge", MessagesApp.FillText(fill), () => ((MessagesApp)_apps[PhoneAppId.Messages]).OpenThread(MessagesApp.BrokerThread));
         }
 
-        /// <summary>A banner in the corner (above the phone when it's out). Tapping it, or Tab, opens it.</summary>
-        public void Notify(PhoneAppId app, string title, string text, Action open = null)
+        /// <summary>A banner in the corner (above the phone when it's out). Tapping it, or Tab, opens it. Urgent ones are red.</summary>
+        public void Notify(PhoneAppId app, string title, string text, Action open = null, bool urgent = false)
         {
             if (_banners == null) return;
             var root = PhoneKit.Box(_banners);
             root.name = "banner";
             root.style.flexDirection = FlexDirection.Row;
-            root.style.backgroundColor = new Color(0.13f, 0.13f, 0.15f, 0.94f);
-            PhoneKit.Border(root, 1f, new Color(1f, 1f, 1f, 0.1f));
+            root.style.backgroundColor = urgent ? new Color(0.45f, 0.08f, 0.08f, 0.96f) : new Color(0.13f, 0.13f, 0.15f, 0.94f);
+            PhoneKit.Border(root, 1f, urgent ? new Color(1f, 0.35f, 0.3f, 0.8f) : new Color(1f, 1f, 1f, 0.1f));
             PhoneKit.Radius(root, 20f);
             PhoneKit.Pad(root, 12f, 11f);
             root.style.marginTop = 8f;
@@ -399,7 +401,8 @@ namespace OpeningBell.City
             var hint = PhoneKit.Label(col, "Tab to open", 11f, new Color(1f, 1f, 1f, 0.35f));
             hint.style.marginTop = 3f;
 
-            var banner = new Banner { Root = root, Until = Time.unscaledTime + BannerSeconds, App = app, Open = open };
+            if (urgent) root.AddToClassList("banner-urgent");
+            var banner = new Banner { Root = root, Until = Time.unscaledTime + BannerSeconds * (urgent ? 1.5f : 1f), App = app, Open = open };
             PhoneKit.Tap(root, () => OpenBanner(banner));
             _live.Add(banner);
             while (_live.Count > MaxBanners) Dismiss(_live[0]);

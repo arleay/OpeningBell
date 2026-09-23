@@ -61,7 +61,10 @@ namespace OpeningBell.UI
             row.userData = item;
             row.name = "news-" + item.Id;
             Ui.SetText((Label)row[0][0], Fmt.Minutes(item.Time));
-            Ui.SetText((Label)row[0][1], item.Scope == NewsScope.Market ? "MARKET" : string.Join(" ", item.Tickers));
+            Ui.SetText((Label)row[0][1], item.Type == CatalystType.PresidentTweet ? "BREAKING · PRESIDENT"
+                : item.IsMajor ? "BREAKING · MARKET"
+                : item.Scope == NewsScope.Market ? "MARKET" : string.Join(" ", item.Tickers));
+            row.EnableInClassList("major", item.IsMajor);
             Ui.SetText((Label)row[1], item.Headline);
             row.EnableInClassList("fresh", (Context.Market.Now - item.Time).TotalMinutes < FreshMinutes);
         }

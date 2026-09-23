@@ -10,20 +10,26 @@ namespace OpeningBell.UI
     /// <summary>What the chart needs from the account to draw the position and working orders, and to change them.</summary>
     public sealed class ChartTrading
     {
+        /// <summary>Signed contracts: negative for a short.</summary>
         public long Quantity;
         public decimal AveragePrice;
         public decimal Last;
+        /// <summary>Dollars per 1.00 move per contract, for the live P&L.</summary>
+        public decimal PointValue = 1m;
         public readonly List<Order> Orders = new List<Order>();
         /// <summary>Moves a working order to a new price; returns an error or null.</summary>
         public Func<long, decimal, string> Modify;
         /// <summary>Creates a take-profit + stop-loss bracket for the position; returns an error or null.</summary>
         public Func<decimal, decimal, string> CreateBracket;
+        /// <summary>Cancels a working order (the "×" on its line); false if it was no longer working.</summary>
+        public Func<long, bool> Cancel;
     }
 
     /// <summary>
     /// The position line (average entry with live P&L) and a line per working order. Take-profit, stop-loss and limit
     /// lines can be dragged: releasing moves the real order (the order manager validates it, so the line and the order
-    /// never disagree). "+ TP/SL" on the position line creates a bracket to drag into place.
+    /// never disagree). "+ TP/SL" on the position line creates a bracket to drag into place, and the "×" at the end of an
+    /// order's label cancels that order.
     /// </summary>
     public sealed partial class ChartView
     {
@@ -34,10 +40,19 @@ namespace OpeningBell.UI
 
         private ChartTrading _trading;
         private Rect _bracketButton;
+        private readonly List<(Order Order, Rect Rect)> _cancelButtons = new List<(Order, Rect)>();
         private Order _dragOrder;
         private decimal _dragPrice;
 
         public void SetTrading(ChartTrading trading) => _trading = trading;
+
+        /// <summary>Where an order's "×" is drawn (chart-local), or null if it has none; lets tests click it like a player.</summary>
+        public Vector2? CancelPointOf(long orderId)
+        {
+            foreach (var (order, rect) in _cancelButtons)
+                if (order.Id == orderId) return rect.center;
+            return null;
+        }
 
         private static decimal LinePrice(Order o) => o.IsStop && !o.Triggered ? o.StopPrice : o.LimitPrice;
 
@@ -46,23 +61,25 @@ namespace OpeningBell.UI
             bool bracket = o.OcoGroup != 0;
             string qty = Fmt.Shares(o.RemainingQuantity);
             if (o.IsStop && !o.Triggered)
-                return bracket && o.Side == OrderSide.Sell ? ($"SL {qty}", StopLossColor) : ($"{o.Side.ToString().ToUpperInvariant()} STOP {qty}", OrderColor);
-            if (bracket && o.Side == OrderSide.Sell) return ($"TP {qty}", TakeProfitColor);
+                return bracket ? ($"SL {qty}", StopLossColor) : ($"{o.Side.ToString().ToUpperInvariant()} STOP {qty}", OrderColor);
+            if (bracket) return ($"TP {qty}", TakeProfitColor);
             return ($"{o.Side.ToString().ToUpperInvariant()} LMT {qty}", o.Side == OrderSide.Buy ? PositionColor : OrderColor);
         }
 
         private void LayoutTrading()
         {
             _bracketButton = Rect.zero;
+            _cancelButtons.Clear();
             if (_trading == null) return;
 
-            if (_trading.Quantity > 0)
+            if (_trading.Quantity != 0)
             {
                 decimal avg = _trading.AveragePrice;
-                decimal pnl = (_trading.Last - avg) * _trading.Quantity;
-                decimal pct = avg > 0 ? (_trading.Last - avg) / avg * 100m : 0m;
+                decimal pnl = (_trading.Last - avg) * _trading.Quantity * _trading.PointValue;
+                decimal pct = avg > 0 ? (_trading.Last - avg) / avg * 100m * Math.Sign(_trading.Quantity) : 0m;
                 float y = ClampY(Y((double)avg)) - 9;
-                Label a = Text(_plot.x + 6, y, $"AVG {Fmt.Price(avg)} · {Fmt.Shares(_trading.Quantity)} ct", Color.white, PositionColor);
+                string side = _trading.Quantity > 0 ? "LONG" : "SHORT";
+                Label a = Text(_plot.x + 6, y, $"{side} {Fmt.Shares(Math.Abs(_trading.Quantity))} ct · AVG {Fmt.Price(avg)}", Color.white, PositionColor);
                 float x = _plot.x + 12 + 7.2f * a.text.Length + 8;
                 Label b = Text(x, y, $"{Fmt.SignedMoney(pnl)}  {Fmt.Percent(pct)}", Color.white, pnl >= 0 ? TakeProfitColor : StopLossColor);
                 x += 7.2f * b.text.Length + 16;
@@ -81,14 +98,22 @@ namespace OpeningBell.UI
                 if (price <= 0m) continue;
                 var (label, color) = Describe(o);
                 float y = ClampY(Y((double)price)) - 9;
-                Text(_plot.xMax - 7.2f * (label.Length + 10) - 8, y, $"{label}  {Fmt.Price(price)}", Color.white, color);
+                string text = $"{label}  {Fmt.Price(price)}";
+                float x = _plot.xMax - 7.2f * (text.Length + 4) - 12;
+                Text(x, y, text, Color.white, color);
+                if (_trading.Cancel != null)
+                {
+                    float cx = x + 7.2f * text.Length + 14;
+                    Text(cx, y, "×", Color.white, new Color(0.25f, 0.28f, 0.34f));
+                    _cancelButtons.Add((o, new Rect(cx - 3, y - 2, 20, 22)));
+                }
             }
         }
 
         private void PaintTrading(Painter2D p)
         {
             if (_trading == null) return;
-            if (_trading.Quantity > 0) HorizontalLine(p, (double)_trading.AveragePrice, PositionColor, 1.5f);
+            if (_trading.Quantity != 0) HorizontalLine(p, (double)_trading.AveragePrice, PositionColor, 1.5f);
             foreach (Order o in _trading.Orders)
             {
                 decimal price = o == _dragOrder ? _dragPrice : LinePrice(o);
@@ -96,11 +121,17 @@ namespace OpeningBell.UI
             }
         }
 
-        /// <summary>Starts dragging an order line, or presses "+ TP/SL". True if the click was for trading.</summary>
+        /// <summary>Starts dragging an order line, or presses "+ TP/SL" or an order's "×". True if the click was for trading.</summary>
         private bool TryBeginTradingDrag(Vector2 pos)
         {
             _dragOrder = null;
             if (_trading == null || !_plot.Contains(pos)) return false;
+            foreach (var (order, rect) in _cancelButtons)
+            {
+                if (!rect.Contains(pos)) continue;
+                if (!_trading.Cancel(order.Id)) ShowStatus("That order is no longer working.");
+                return true;
+            }
             if (_bracketButton.Contains(pos))
             {
                 CreateDefaultBracket();
@@ -132,7 +163,7 @@ namespace OpeningBell.UI
             if (error != null) ShowStatus(error);
         }
 
-        /// <summary>A bracket a typical move away: take-profit two average ranges up, stop-loss one down (then drag them).</summary>
+        /// <summary>A bracket a typical move away: take-profit two average ranges in the position's favour, stop-loss one against.</summary>
         private void CreateDefaultBracket()
         {
             var atr = new double[1];
@@ -140,8 +171,9 @@ namespace OpeningBell.UI
             decimal last = _trading.Last;
             decimal range = double.IsNaN(atr[0]) || atr[0] <= 0 ? last * 0.01m : (decimal)atr[0];
             decimal tick = PriceTick.For(last);
-            decimal tp = PriceTick.RoundNearest(last + Math.Max(2 * range, 3 * tick));
-            decimal sl = PriceTick.RoundNearest(last - Math.Max(range, 3 * tick));
+            decimal dir = _trading.Quantity < 0 ? -1m : 1m;
+            decimal tp = PriceTick.RoundNearest(last + dir * Math.Max(2 * range, 3 * tick));
+            decimal sl = PriceTick.RoundNearest(last - dir * Math.Max(range, 3 * tick));
             string error = _trading.CreateBracket(tp, sl);
             if (error != null) ShowStatus(error);
         }

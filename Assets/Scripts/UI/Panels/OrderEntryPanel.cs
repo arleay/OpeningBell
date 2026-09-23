@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 using OpeningBell.Market;
 using OpeningBell.Trading;
@@ -142,8 +143,9 @@ namespace OpeningBell.UI
                 ContractSpec contract = Context.Account.Contract(s.Ticker);
                 decimal commission = orders.Rules.CommissionFor(qty);
                 string perMove = $"{Fmt.Money(qty * contract.PointValue)}/pt · {Fmt.Money(qty * contract.TickValue(price))}/tick";
-                Ui.SetText(_estimate, buy
-                    ? $"Margin {Fmt.Money(qty * contract.Margin)} + {Fmt.Money(commission)} commission · {perMove}"
+                long opening = orders.OpeningQuantity(s.Ticker, _side, qty);
+                Ui.SetText(_estimate, opening > 0
+                    ? $"Margin {Fmt.Money(opening * contract.Margin)} + {Fmt.Money(commission)} commission · {perMove}"
                     : $"{Fmt.Money(commission)} commission · {perMove}");
             }
             else
@@ -167,15 +169,14 @@ namespace OpeningBell.UI
             }
             if (qty <= 0) return "";
 
-            if (_side == OrderSide.Buy)
-            {
-                long max = Context.Orders.MaxBuyQuantity(s.Ticker, _type, limit);
-                return qty > max ? $"Exceeds buying power. Max {Fmt.Contracts(max)}." : "";
-            }
-
-            long available = Context.Orders.AvailableToSell(s.Ticker);
-            if (qty <= available) return "";
-            return available == 0 ? "No contracts to sell. Short selling is not available." : $"You can sell at most {Fmt.Contracts(available)}.";
+            long max = Context.Orders.MaxQuantity(s.Ticker, _side);
+            if (qty > max) return $"Exceeds buying power. Max {Fmt.Contracts(max)}.";
+            long held = Context.Account.Portfolio.QuantityOf(s.Ticker);
+            if (_side == OrderSide.Sell && qty > Math.Max(0, held))
+                return held > 0 ? $"Sells your {Fmt.Contracts(held)} and goes short {Fmt.Contracts(qty - held)}." : $"Opens a short: {Fmt.Contracts(qty)}.";
+            if (_side == OrderSide.Buy && held < 0 && qty > -held)
+                return $"Covers your short and goes long {Fmt.Contracts(qty + held)}.";
+            return "";
         }
 
         private void RefreshStatus()
@@ -212,7 +213,7 @@ namespace OpeningBell.UI
             }
 
             decimal pnl = p.UnrealizedPnL(Context.Account.MarkPrice(s.Ticker));
-            Ui.SetText(_position, $"Position {Fmt.Contracts(p.Quantity)} @ {Fmt.Price(p.AveragePrice)}   P&L {Fmt.SignedMoney(pnl)}");
+            Ui.SetText(_position, $"{(p.Quantity > 0 ? "Long" : "Short")} {Fmt.Contracts(Math.Abs(p.Quantity))} @ {Fmt.Price(p.AveragePrice)}   P&L {Fmt.SignedMoney(pnl)}");
             Ui.SetSign(_position, pnl);
         }
 
@@ -260,8 +261,8 @@ namespace OpeningBell.UI
             string ticker = Context.SelectedTicker;
             TicketInput.TryParsePrice(_limitPrice.value, out decimal limit);
             long max = _side == OrderSide.Buy
-                ? Context.Orders.MaxBuyQuantity(ticker, _type, limit)
-                : Context.Orders.AvailableToSell(ticker);
+                ? Context.Orders.MaxQuantity(ticker, OrderSide.Buy)
+                : Context.Orders.MaxQuantity(ticker, OrderSide.Sell);
             SetQuantity(max);
         }
 
