@@ -47,21 +47,30 @@ namespace OpeningBell.City
             // Fill the streets for the current hour and let them settle before the first frame.
             int target = TargetCount(_c.Game.Clock.Now.TimeOfDay.TotalHours);
             Vector2 player = Flat(_c.Player.position);
-            for (int i = 0; i < target * 3 && _sim.Cars.Count < target; i++) _sim.Spawn(p => (p - player).sqrMagnitude > 30f * 30f);
+            for (int i = 0; i < target * 3 && _sim.Cars.Count < target; i++)
+                Flag(_sim.Spawn(p => (p - player).sqrMagnitude > 30f * 30f && (p - player).sqrMagnitude < Radius * Radius));
             for (int i = 0; i < 200; i++) _sim.Step(0.1f, null);
             Sync();
         }
 
-        /// <summary>Cars on the whole network by hour: rush hours busy, nights quiet. Sized for the town's ~3 km of road.</summary>
+        /// <summary>Traffic lives within this distance of the player (the town's too big to simulate all of it).</summary>
+        public const float Radius = 420f;
+
+        /// <summary>Cars around the player by hour: rush hours busy, nights quiet (~2.5 km of road within the radius).</summary>
         public static int TargetCount(double hour)
         {
-            if (hour < 5) return 5;
-            if (hour < 6.5) return 11;
-            if (hour < 9.5) return 28;
-            if (hour < 16) return 17;
-            if (hour < 19) return 28;
-            if (hour < 22) return 14;
-            return 7;
+            if (hour < 5) return 6;
+            if (hour < 6.5) return 13;
+            if (hour < 9.5) return 34;
+            if (hour < 16) return 22;
+            if (hour < 19) return 34;
+            if (hour < 22) return 17;
+            return 8;
+        }
+
+        private void Flag(TrafficSimulation.Car car)
+        {
+            if (car != null) car.MakesDeliveries = ModelFor(car).StartsWith("delivery");
         }
 
         private static Vector2 Flat(Vector3 p) => new Vector2(p.x, p.z);
@@ -90,8 +99,13 @@ namespace OpeningBell.City
             GeometryUtility.CalculateFrustumPlanes(_camera, _frustum);
             Vector2 player = Flat(_c.Player.position);
             // Catch up quickly after a time skip (a few cars per tick), gently otherwise.
+            // Cars that drifted far from the player go (fog hides them); new ones appear unseen, nearby.
+            _remove.Clear();
+            foreach (TrafficSimulation.Car car in _sim.Cars)
+                if ((car.Position - player).sqrMagnitude > (Radius + 100f) * (Radius + 100f)) _remove.Add(car);
+            foreach (TrafficSimulation.Car car in _remove) _sim.Despawn(car);
             int change = Mathf.Clamp((target - _sim.Cars.Count + (target > _sim.Cars.Count ? 2 : -2)) / 3, -4, 4);
-            for (int i = 0; i < change; i++) _sim.Spawn(p => Unseen(p, player));
+            for (int i = 0; i < change; i++) Flag(_sim.Spawn(p => Unseen(p, player) && (p - player).sqrMagnitude < Radius * Radius));
             for (int i = 0; i < -change; i++)
             {
                 TrafficSimulation.Car gone = null;

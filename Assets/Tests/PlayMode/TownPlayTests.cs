@@ -70,6 +70,22 @@ namespace OpeningBell.Tests
         }
 
         [UnityTest]
+        public IEnumerator ParkedCars_LineTheStreets_AroundThePlayer()
+        {
+            yield return LoadMain();
+            var city = Find<CityBuilder>();
+            var game = Find<GameBootstrap>();
+            game.SkipTo(game.Clock.Now.Date.AddDays(1).AddHours(12));
+            yield return new WaitForSeconds(2f);
+            Assert.Greater(city.Parked.SpotCount, 500, "kerb and lot spots across town");
+            Assert.Greater(city.Parked.ShownCount, 15, "cars parked around the apartment at midday");
+            Assert.Less(city.Parked.ShownCount, 400, "only near the player");
+            Assert.Greater(city.Traffic.CarCount, 10, "traffic around the player");
+            Assert.IsNotNull(city.Woods);
+            Assert.Greater(city.Woods.TreeCount, 2000, "the woods");
+        }
+
+        [UnityTest]
         public IEnumerator Ground_FollowsTheStreets_AndTheWaterIsDeep()
         {
             yield return LoadMain();

@@ -220,6 +220,11 @@ namespace OpeningBell.City
             {
                 k.Decal(root, "Bay line", new Vector3(x, y + 0.012f, r.yMin + 5f), new Vector2(0.1f, 5f), 0f, paint);
                 k.Decal(root, "Bay line", new Vector3(x, y + 0.012f, r.yMax - 5f), new Vector2(0.1f, 5f), 0f, paint);
+                if (x + 3f < r.xMax - 1f)
+                {
+                    c.ParkingSpots.Add((new Vector3(x + 1.5f, y, r.yMin + 5f), 180f, ParkingKind.Lot));
+                    c.ParkingSpots.Add((new Vector3(x + 1.5f, y, r.yMax - 5f), 0f, ParkingKind.Lot));
+                }
             }
         }
 

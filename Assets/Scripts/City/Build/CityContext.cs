@@ -30,6 +30,8 @@ namespace OpeningBell.City
         /// <summary>Walkways off the sidewalks (park paths, towpath, pier): points as (x, height, z).</summary>
         public readonly List<Vector3[]> WalkPaths = new List<Vector3[]>();
         public Terrain Terrain;
+        /// <summary>Parking bays in lots (kerbside spots are found from the streets): position, yaw, kind.</summary>
+        public readonly List<(Vector3 P, float Yaw, ParkingKind Kind)> ParkingSpots = new List<(Vector3, float, ParkingKind)>();
         /// <summary>The player's vehicles in the world and their driving (set once the city is built; shops use them at runtime).</summary>
         public FleetView FleetView;
         public DriveController Driver;

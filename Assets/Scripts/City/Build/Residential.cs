@@ -229,6 +229,8 @@ namespace OpeningBell.City
             k.Span(b, "Lobby canopy", new Vector3(r.center.x - 4f, 3f, r.yMin - 2f), new Vector3(r.center.x + 4f, 3.3f, r.yMin + 1f), c.P.Lit(new Color(0.2f, 0.3f, 0.35f), 0.4f), collider: false);
             k.Text(b, "GROVE TERRACE", new Vector3(r.center.x, 3.8f, r.yMin + 0.95f), 0f, 0.4f, new Color(0.2f, 0.3f, 0.35f));
             k.Span(b, "Parking", new Vector3(r.xMin, -0.04f, r.yMax), new Vector3(r.xMax, 0.008f, r.yMax + 16f), c.P.Lit(new Color(0.25f, 0.25f, 0.26f), 0.1f));
+            for (float x = r.xMin + 2f; x < r.xMax - 2f; x += 3f)
+                c.ParkingSpots.Add((new Vector3(x, y, r.yMax + 3.5f), 180f, ParkingKind.Kerb));
             c.Place(new Vector3(r.center.x, y, r.yMin - 1f), PlaceKind.Door, "Grove Terrace");
         }
     }

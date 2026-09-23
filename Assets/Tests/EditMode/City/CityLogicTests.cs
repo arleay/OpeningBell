@@ -122,6 +122,22 @@ namespace OpeningBell.Tests
         }
 
         [Test]
+        public void DeliveryVans_StopForAWhile_ThenCarryOn()
+        {
+            var sim = new TrafficSimulation(RoadNetwork.FromPlan(), seed: 21);
+            for (int i = 0; i < 12; i++) sim.Spawn(null).MakesDeliveries = true;
+            int delivering = 0;
+            for (int step = 0; step < 12000; step++) // 10 minutes
+            {
+                sim.Step(0.05f, null);
+                if (step % 20 == 0) delivering += sim.Cars.Count(c => c.Delivering);
+            }
+            Assert.Greater(delivering, 0, "vans made deliveries");
+            foreach (TrafficSimulation.Car car in sim.Cars)
+                Assert.Greater(car.Odometer, 800f, $"van {car.Id} got going again");
+        }
+
+        [Test]
         public void Traffic_StopsForSomeoneInTheLane()
         {
             var net = RoadNetwork.FromPlan();

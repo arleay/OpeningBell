@@ -44,6 +44,7 @@ namespace OpeningBell.City
         public List<DealerLot> Dealers { get; private set; }
         public MechanicShop Mechanic { get; private set; }
         public Forest Woods { get; private set; }
+        public ParkedCars Parked { get; private set; }
         public Minimap Minimap { get; private set; }
         public Phone Phone { get; private set; }
         public TitleScreen Title { get; private set; }
@@ -102,6 +103,7 @@ namespace OpeningBell.City
             SidewalkGraph walks = benchesAndStreets.Build(signals, walkSignals);
             // The woods last: they fill whatever ground is left.
             Woods = Forest.Build(_c, viewCamera);
+            Parked = ParkedCars.Build(_c, viewCamera);
 
             StaticBatchingUtility.Combine(_c.Static.gameObject);
 

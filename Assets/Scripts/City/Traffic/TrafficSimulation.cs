@@ -45,7 +45,16 @@ namespace OpeningBell.City
             /// <summary>How far the car may go before it must be stopped (last step).</summary>
             public float Free = float.MaxValue;
             public int ColorSeed;
+            /// <summary>Delivery vans: now and then they stop in the lane outside a business for a while.</summary>
+            public bool MakesDeliveries;
+            /// <summary>A stop planned on the current lane (distance along it), and how long to wait there.</summary>
+            public float StopAtS = -1f, DwellLeft;
+            public bool Delivering => StopAtS >= 0f && DwellLeft > 0f && Speed < 0.2f && Lane != null && Mathf.Abs(S - StopAtS) < 1f;
         }
+
+        /// <summary>Seconds a delivery takes; how likely a van is to stop on a quiet street it turns into.</summary>
+        public const float DeliverySeconds = 22f;
+        public const double DeliveryChance = 0.18;
 
         private readonly RoadNetwork _net;
         private readonly System.Random _rng;
@@ -75,7 +84,7 @@ namespace OpeningBell.City
         /// <summary>Places a car on a free stretch of lane accepted by <paramref name="allowed"/>. Null if none found.</summary>
         public Car Spawn(Func<Vector2, bool> allowed)
         {
-            for (int attempt = 0; attempt < 12; attempt++)
+            for (int attempt = 0; attempt < 40; attempt++)
             {
                 RoadNetwork.Lane lane = _net.Lanes[_rng.Next(_net.Lanes.Count)];
                 if (lane.Length < 30f) continue;
@@ -131,8 +140,11 @@ namespace OpeningBell.City
 
         /// <param name="people">Positions of pedestrians and the player: cars stop for anyone in front of them.</param>
         /// <param name="otherCars">Cars outside the simulation (the player's, parked ones): followed like traffic.</param>
+        private float _dt;
+
         public void Step(float dt, IReadOnlyList<Vector2> people, IReadOnlyList<Vector2> otherCars = null)
         {
+            _dt = dt;
             Time += dt;
             _otherCars = otherCars;
             foreach (Car car in _cars)
@@ -192,6 +204,20 @@ namespace OpeningBell.City
                 foreach (Vector2 p in _otherCars) free = Mathf.Min(free, AlongPath(p, 1.6f) - FollowGap);
             if (people != null)
                 foreach (Vector2 p in people) free = Mathf.Min(free, AlongPath(p, 1.9f) - PersonGap);
+
+            // A delivery stop ahead on this lane: pull up there, wait, carry on.
+            if (car.Lane != null && car.StopAtS >= 0f)
+            {
+                float toStop = car.StopAtS - car.S;
+                if (toStop < -0.5f) car.StopAtS = -1f;
+                else if (toStop < 0.3f && car.Speed < 0.2f)
+                {
+                    car.DwellLeft -= _dt;
+                    if (car.DwellLeft <= 0f) car.StopAtS = -1f;
+                    else free = 0f;
+                }
+                else free = Mathf.Min(free, toStop);
+            }
 
             car.Free = free;
             if (free <= 0f) return 0f;
@@ -306,6 +332,13 @@ namespace OpeningBell.City
                     car.Lane = car.Move.Out;
                     car.Move = null;
                     car.Next = ChooseExit(car.Lane);
+                    // Vans stop on quieter streets (not the highway or through Maple's lights), mid-block.
+                    if (car.MakesDeliveries && car.Lane.Length > 50f && car.Lane.Segment.Class != RoadClass.Highway && car.Lane.Street != "MAPLE ST"
+                        && _rng.NextDouble() < DeliveryChance)
+                    {
+                        car.StopAtS = car.Lane.Length * (0.35f + 0.3f * (float)_rng.NextDouble());
+                        car.DwellLeft = DeliverySeconds;
+                    }
                 }
             }
             UpdatePose(car);
