@@ -66,6 +66,7 @@ namespace OpeningBell.City
                     float t = Vector2.Dot(p - s.A.P, s.Dir);
                     if (t < -core || t > s.Length + core) continue;
                     if (s.IsBridge && t > s.BridgeFrom + 2f && t < s.BridgeTo - 2f) continue; // the canal stays under the deck
+                    if (CityPlan.InTunnel(p, 0.5f)) continue; // the hill stays over the tunnel
                     float d = Mathf.Abs(Vector2.Dot(p - s.A.P, s.Left));
                     if (t < 0f) d = Mathf.Max(d, -t * 0.5f);
                     else if (t > s.Length) d = Mathf.Max(d, (t - s.Length) * 0.5f);
@@ -126,12 +127,26 @@ namespace OpeningBell.City
                 }
             }
 
+            // The railway: wherever the hills rise towards the tunnels, cut the ground down under the viaduct.
+            for (int z = 0; z < res; z++)
+            for (int x = 0; x < res; x++)
+            {
+                float wx = e.xMin + x * dx, wz = e.yMin + z * dz;
+                if (wx < CityPlan.RailWest - 2f || wx > CityPlan.RailEast + 2f) continue;
+                float d = Mathf.Abs(wz - CityPlan.RailZ);
+                if (d > 22f) continue;
+                float cap = CityPlan.RailDeck(wx) - 1.6f;
+                float allowed = d < 7f ? cap : cap + (d - 7f) * 1.2f; // a cutting with sloped sides
+                if (height[z, x] > allowed) height[z, x] = allowed;
+            }
+
             var data = new TerrainData { heightmapResolution = res, alphamapResolution = 512 };
             data.size = new Vector3(e.width, TownTerrain.Span, e.height);
             var normalized = new float[res, res];
             for (int z = 0; z < res; z++)
             for (int x = 0; x < res; x++) normalized[z, x] = Mathf.Clamp01((height[z, x] - TownTerrain.Base) / TownTerrain.Span);
             data.SetHeights(0, 0, normalized);
+            Holes(data, height, e, dx, dz);
             Paint(data, map);
 
             GameObject go = Terrain.CreateTerrainGameObject(data);
@@ -146,6 +161,26 @@ namespace OpeningBell.City
             terrain.drawInstanced = true;
             go.AddComponent<SurfaceTag>().Roughness = 1f;
             return terrain;
+        }
+
+        /// <summary>Opens the hillside where a tunnel tube passes through the ground (the tube's own mesh shows there).</summary>
+        private static void Holes(TerrainData data, float[,] height, Rect e, float dx, float dz)
+        {
+            int res = data.holesResolution;
+            var solid = new bool[res, res];
+            for (int z = 0; z < res; z++)
+            for (int x = 0; x < res; x++)
+            {
+                solid[z, x] = true;
+                var p = new Vector2(e.xMin + (x + 0.5f) * dx, e.yMin + (z + 0.5f) * dz);
+                foreach (CityPlan.TunnelDef t in CityPlan.Tunnels)
+                {
+                    if (!t.Contains(p)) continue;
+                    float ground = Mathf.Max(height[z, x], height[Mathf.Min(z + 1, res), Mathf.Min(x + 1, res)]);
+                    if (ground < t.Floor + t.Height + 2f) solid[z, x] = false;
+                }
+            }
+            data.SetHoles(0, 0, solid);
         }
 
         /// <summary>Grades for a driveway's points: its ends meet the street grade (or the ground), the middle follows the land.</summary>
@@ -233,7 +268,9 @@ namespace OpeningBell.City
                 float fx = x / (float)size * Mathf.PI * 2f, fy = y / (float)size * Mathf.PI * 2f;
                 float n = Mathf.PerlinNoise(Mathf.Cos(fx) * 2f + 10f, Mathf.Sin(fx) * 2f + Mathf.Cos(fy) * 2f + 20f) * 0.6f
                         + Mathf.PerlinNoise(Mathf.Sin(fy) * 6f + 30f, Mathf.Cos(fx) * 6f + 40f) * 0.4f;
-                pixels[y * size + x] = Color.Lerp(a, b, n);
+                // Fine speckle over the soft blotches; low contrast so the tiling doesn't show.
+                float fine = Mathf.Abs(Mathf.Sin(x * 12.9898f + y * 78.233f) * 43758.5453f) % 1f * 0.25f; // per-pixel, so it tiles
+                pixels[y * size + x] = Color.Lerp(a, b, Mathf.Clamp01(0.5f + (n - 0.5f) * 0.55f + fine - 0.12f));
             }
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, true) { name = "terrain-" + name, wrapMode = TextureWrapMode.Repeat, anisoLevel = 4 };
             texture.SetPixels32(pixels);

@@ -217,8 +217,56 @@ namespace OpeningBell.City
             [P(25, 245)] = 9.4f, [P(40, 275)] = 11.8f,
         };
 
-        /// <summary>The highway runs into the west hills here (a closed tunnel beyond).</summary>
-        public static readonly Vector2 HighwayTunnel = P(-735, 66);
+        // ---- the elevated railway ("Northline") and tunnels ----
+
+        /// <summary>The viaduct runs along z = RailZ between its two tunnel portals.</summary>
+        public const float RailZ = -64f, RailWest = -630f, RailEast = 670f;
+        /// <summary>Maple Station: platforms on the viaduct between these x.</summary>
+        public const float StationWest = 25f, StationEast = 85f;
+
+        /// <summary>Top of the rail deck at x: 7.5 m over the flat town, 9 m east of the canal (the east bank is higher).</summary>
+        public static float RailDeck(float x) => Mathf.Lerp(7.5f, 9f, Mathf.InverseLerp(300f, 345f, x));
+
+        public readonly struct TunnelDef
+        {
+            public readonly Vector2 Portal, Inward;
+            public readonly float Width, Floor, Height, Length;
+            public readonly string Closed;
+
+            public TunnelDef(Vector2 portal, Vector2 inward, float width, float floor, float height, float length, string closed)
+            {
+                Portal = portal;
+                Inward = inward.normalized;
+                Width = width;
+                Floor = floor;
+                Height = height;
+                Length = length;
+                Closed = closed;
+            }
+
+            /// <summary>Inside the tube's footprint (beyond the portal, within its width plus a margin).</summary>
+            public bool Contains(Vector2 p, float margin = 0f)
+            {
+                float t = Vector2.Dot(p - Portal, Inward);
+                float side = Mathf.Abs(Vector2.Dot(p - Portal, new Vector2(-Inward.y, Inward.x)));
+                return t > -margin && t < Length + margin && side < Width / 2f + margin;
+            }
+        }
+
+        /// <summary>The highway into the west hills (closed for repairs) and the railway into the west and east hills.</summary>
+        public static readonly TunnelDef[] Tunnels =
+        {
+            new TunnelDef(P(-735, 66), P(-780, 70) - P(-735, 66), 16f, 5.4f, 7.5f, 50f, "TUNNEL CLOSED FOR REPAIRS"),
+            new TunnelDef(P(RailWest, RailZ), P(-1, 0), 11f, 6.3f, 7f, 60f, null),
+            new TunnelDef(P(RailEast, RailZ), P(1, 0), 11f, 7.8f, 7f, 60f, null),
+        };
+
+        public static bool InTunnel(Vector2 p, float margin = 0f)
+        {
+            foreach (TunnelDef t in Tunnels)
+                if (t.Contains(p, margin)) return true;
+            return false;
+        }
 
         // ---- special buildings (interiors) ----
 

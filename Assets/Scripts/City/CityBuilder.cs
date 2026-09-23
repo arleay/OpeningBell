@@ -68,6 +68,7 @@ namespace OpeningBell.City
             // Lots first: the terrain (built with the streets) is levelled under them.
             TownBuilder.AddPads(_c);
             Dealerships.AddPads(_c);
+            Landmarks.AddPads(_c);
             ShellBuilder.Build(_c);
             TownBuilder.Build(_c, player.transform);
             ApartmentBuilding.Build(_c);
@@ -77,6 +78,7 @@ namespace OpeningBell.City
             MobilityShops.Build(_c);
             FuelStation.Build(_c);
             Dealers = Dealerships.Build(_c);
+            Landmarks.Build(_c);
 
             // Places (doors, benches) are registered by the builders above; the street pass adds benches too,
             // so gather everything first, then build the walk graph the markings and signals need.
