@@ -58,6 +58,10 @@ namespace OpeningBell.Vehicles
         public double X, Y, Z, Yaw;         // where it is when parked (world metres, degrees)
         /// <summary>A dealer's car out on a test drive: driven like yours, but never saved, sold or listed.</summary>
         public bool TestDrive;
+        /// <summary>Body shop paint (cars), or none: the model's own colours.</summary>
+        public bool Painted;
+        public float PaintR, PaintG, PaintB;
+        public bool Tinted;
         public readonly List<ServiceRecord> History = new List<ServiceRecord>();
 
         public double BatteryFraction => BatteryCapacityWh > 0 ? BatteryWh / BatteryCapacityWh : 0;
@@ -241,6 +245,17 @@ namespace OpeningBell.Vehicles
             Changed?.Invoke(v);
         }
 
+        /// <summary>A body shop respray.</summary>
+        public void Paint(OwnedVehicle v, float r, float g, float b, string colour, DateTime now, decimal cost)
+        {
+            v.Painted = true;
+            v.PaintR = r;
+            v.PaintG = g;
+            v.PaintB = b;
+            v.History.Add(new ServiceRecord { Date = now, Kind = ServiceKind.PartInstalled, Detail = "Paint: " + colour, Cost = cost });
+            Changed?.Invoke(v);
+        }
+
         /// <summary>Fits a part (replacing any in the same slot). New wheels also reset wheel wear.</summary>
         public string InstallPart(OwnedVehicle v, string partId, DateTime now, decimal cost)
         {
@@ -281,6 +296,7 @@ namespace OpeningBell.Vehicles
                     State = (int)(v.State == VehicleState.Riding ? (v.Kind == VehicleKind.Skateboard ? VehicleState.Carried : VehicleState.Parked) : v.State),
                     X = v.X, Y = v.Y, Z = v.Z, Yaw = v.Yaw,
                     LastRidden = v == LastRidden,
+                    Painted = v.Painted, PaintR = v.PaintR, PaintG = v.PaintG, PaintB = v.PaintB, Tinted = v.Tinted,
                 };
                 d.Parts.AddRange(v.Parts);
                 foreach (ServiceRecord r in v.History)
@@ -308,6 +324,7 @@ namespace OpeningBell.Vehicles
                     BatteryWh = d.BatteryWh, BatteryCapacityWh = d.BatteryCapacityWh,
                     FuelLiters = d.FuelLiters, FuelCapacity = d.FuelCapacity,
                     State = (VehicleState)d.State, X = d.X, Y = d.Y, Z = d.Z, Yaw = d.Yaw,
+                    Painted = d.Painted, PaintR = d.PaintR, PaintG = d.PaintG, PaintB = d.PaintB, Tinted = d.Tinted,
                 };
                 v.Parts.AddRange(d.Parts);
                 foreach (ServiceRecordSaveData r in d.History)
@@ -334,6 +351,8 @@ namespace OpeningBell.Vehicles
         public long Purchased;
         public double Odometer, Condition, TireCondition, BatteryWh, BatteryCapacityWh, FuelLiters, FuelCapacity, X, Y, Z, Yaw;
         public bool LastRidden;
+        public bool Painted, Tinted;
+        public float PaintR, PaintG, PaintB;
         public List<string> Parts = new List<string>();
         public List<ServiceRecordSaveData> History = new List<ServiceRecordSaveData>();
     }

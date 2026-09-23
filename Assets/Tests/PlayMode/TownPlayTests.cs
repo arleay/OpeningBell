@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using NUnit.Framework;
 using OpeningBell.City;
 using OpeningBell.Gameplay;
@@ -25,6 +26,47 @@ namespace OpeningBell.Tests
             Assert.That(train.X, Is.InRange(middle, CityPlan.StationEast), "stopped with the train along the platform");
             Transform car = train.transform.GetChild(0);
             Assert.That(car.position.y, Is.EqualTo(CityPlan.RailDeck(car.position.x) + 0.42f).Within(0.05f), "on the rails");
+        }
+
+        /// <summary>Park in a bay, buy a turbo at the board (two presses), watch the lift, drive away faster.</summary>
+        [UnityTest]
+        public IEnumerator Mechanic_FitsATurbo_OnTheCarInTheBay()
+        {
+            yield return LoadMain();
+            var city = Find<CityBuilder>();
+            var game = Find<GameBootstrap>();
+            var player = Find<FirstPersonController>();
+            game.SkipTo(game.Clock.Now.Date.AddDays(1).AddHours(10));
+            MechanicShop shop = city.Mechanic;
+            yield return WaitUntil(() => shop.Open, 30f, "the mechanic at the desk");
+            Vector3 bay = city.Anchors["mechanic_bay1"];
+            OpeningBell.Vehicles.OwnedVehicle car = game.Vehicles.Add("car_sedan", 24000m, game.Clock.Now, bay.x, 0.05, bay.z, 270);
+            game.Economy.DevDeposit(20000m, game.Clock.Now);
+            yield return null;
+            Assert.AreEqual(car, shop.CarInBay(out int which));
+            Assert.AreEqual(0, which);
+            float torqueBefore = (float)city.Fleet.Shown(car).GetComponent<CarController>().Spec.CurveTorque.Max();
+
+            player.PlaceAt(city.Anchors["mechanic_board"], 90f, 5f);
+            for (int i = 0; i < 4; i++) yield return null;
+            yield return CaptureCamera(player.GetComponentInChildren<Camera>(), "mechanic-office.png");
+
+            decimal bank = game.Economy.Bank.Balance;
+            shop.Buy("car_turbo", "Turbo kit");
+            Assert.AreEqual(bank, game.Economy.Bank.Balance, "first press asks");
+            shop.Buy("car_turbo", "Turbo kit");
+            Assert.AreEqual(bank - 4800m, game.Economy.Bank.Balance);
+            Assert.IsTrue(shop.Working);
+            yield return new WaitForSeconds(1.5f);
+            Assert.Greater(city.Fleet.Shown(car).transform.position.y, 0.6f, "up on the lift");
+            player.PlaceAt(bay + new Vector3(-6f, 0f, 3f), 120f, 8f);
+            for (int i = 0; i < 3; i++) yield return null;
+            yield return CaptureCamera(player.GetComponentInChildren<Camera>(), "mechanic-lift.png");
+            yield return WaitUntil(() => !shop.Working, 15f, "the job done");
+            yield return null;
+            CarController tuned = city.Fleet.Shown(car).GetComponent<CarController>();
+            Assert.AreEqual(torqueBefore * 1.28f, (float)tuned.Spec.CurveTorque.Max(), 0.5f, "the rebuilt car has the turbo");
+            Assert.Less(tuned.transform.position.y, 0.4f, "back down");
         }
 
         [UnityTest]

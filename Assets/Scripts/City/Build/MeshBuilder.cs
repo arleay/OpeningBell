@@ -82,6 +82,26 @@ namespace OpeningBell.City
         }
 
         /// <summary>
+        /// A vertical panel from a to b (bottom edge), height h, facing right of a→b, with UVs in metres × scale
+        /// along its length and height (so a tiling texture like corrugated metal keeps its size on any wall).
+        /// </summary>
+        public void Panel(Vector3 a, Vector3 b, float h, float scale = 0.5f)
+        {
+            Vector3 up = Vector3.up * h;
+            Vector3 normal = Vector3.Cross(Vector3.up, b - a).normalized;
+            float len = Vector3.Distance(a, b);
+            int i = _v.Count;
+            _v.Add(a); _v.Add(b); _v.Add(b + up); _v.Add(a + up);
+            for (int k = 0; k < 4; k++) _n.Add(normal);
+            _uv.Add(new Vector2(0f, 0f));
+            _uv.Add(new Vector2(len * scale, 0f));
+            _uv.Add(new Vector2(len * scale, h * scale));
+            _uv.Add(new Vector2(0f, h * scale));
+            _t.Add(i); _t.Add(i + 2); _t.Add(i + 1);
+            _t.Add(i); _t.Add(i + 3); _t.Add(i + 2);
+        }
+
+        /// <summary>
         /// A slab: the polygon (counter-clockwise from above, star-shaped around its first vertex) as a top, plus
         /// its sides dropped by <paramref name="depth"/> (kerbs, sidewalks, decks).
         /// </summary>

@@ -89,6 +89,8 @@ namespace OpeningBell.City
             all.Add(One("Ridgeline Moto", Trade.Moto, -404f, -22.5f, Vector2.down, 24f, 20f, 0, Orange, "MOTORCYCLES · GEAR"));
             all.Add(One("Blue Wave", Trade.CarWash, -372f, -22.5f, Vector2.down, 12f, 10f, 0, Blue, "CAR WASH"));
             all.Add(One("FreshWay Market", Trade.Supermarket, -315f, 104f, Vector2.up, 48f, 32f, 0, Green, "GROCERY · DELI · BAKERY"));
+            // The Foundry's tyre shop, on Foundry St by the mechanic.
+            all.Add(One("Treadwell Tires", Trade.AutoParts, -300f, -151.5f, Vector2.up, 18f, 14f, 0, Orange, "TYRES · ALIGNMENT"));
 
             // Canal Row: the night side of the canal.
             all.AddRange(Row(353.5f, -5.5f, true, 14f, FacadeStyle.Brick,

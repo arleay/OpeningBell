@@ -52,6 +52,46 @@ namespace OpeningBell.City
             return root;
         }
 
+        private static readonly string[] NotPaint = { "glass", "tire", "tyre", "wheel", "rim", "chrome", "light", "lamp", "black", "interior", "seat", "rubber", "mirror", "plate", "logo", "grill", "carbon", "brake", "exhaust", "trim" };
+
+        /// <summary>
+        /// A respray: every body material that isn't glass, rubber, chrome, lights or trim takes the colour (the
+        /// model's texture detail is kept underneath). Materials are copied, so other cars keep theirs.
+        /// </summary>
+        public static void Paint(GameObject car, Color colour)
+        {
+            Transform body = Find(car.transform, "body");
+            if (body == null || !body.TryGetComponent(out Renderer r)) return;
+            Material[] mats = r.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++)
+            {
+                if (mats[i] == null) continue;
+                string n = mats[i].name.ToLowerInvariant();
+                if (System.Array.Exists(NotPaint, x => n.Contains(x))) continue;
+                mats[i] = new Material(mats[i]) { name = mats[i].name + " (paint)" };
+                if (mats[i].HasProperty("_BaseColor")) mats[i].SetColor("_BaseColor", colour);
+                else mats[i].color = colour;
+            }
+            r.sharedMaterials = mats;
+        }
+
+        /// <summary>Window tint: every glass material swapped for a darker one.</summary>
+        public static void Tint(GameObject car, Material dark)
+        {
+            foreach (Renderer r in car.GetComponentsInChildren<Renderer>())
+            {
+                Material[] mats = r.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < mats.Length; i++)
+                    if (mats[i] != null && mats[i].name.ToLowerInvariant().Contains("glass"))
+                    {
+                        mats[i] = dark;
+                        changed = true;
+                    }
+                if (changed) r.sharedMaterials = mats;
+            }
+        }
+
         public static CarController BuildDrivable(Transform parent, GameObject prefab, CarSpec spec, string name)
         {
             GameObject root = Model(parent, prefab, name, out Transform[] wheels, out float radius, out Bounds body);

@@ -73,6 +73,16 @@ namespace OpeningBell.City
 
         public GameObject Shown(OwnedVehicle v) => _shown.TryGetValue(v, out GameObject go) ? go : null;
 
+        /// <summary>Throws away a parked vehicle's object and builds it again (after upgrades, paint or tint).</summary>
+        public void Rebuild(OwnedVehicle v)
+        {
+            if (!_shown.TryGetValue(v, out GameObject go) || v.State != VehicleState.Parked) return;
+            go.SetActive(false); // gone this frame, so the new one doesn't collide with it
+            Destroy(go);
+            _shown.Remove(v);
+            Refresh();
+        }
+
         /// <summary>Parked cars, for traffic to steer around or queue behind.</summary>
         public void ParkedCarPositions(List<Vector2> into)
         {
@@ -123,8 +133,10 @@ namespace OpeningBell.City
                 GameObject mesh = _game.VehicleLibrary != null ? _game.VehicleLibrary.CarMesh(model.Mesh) : null;
                 if (mesh != null)
                 {
-                    CarController car = CarFactory.BuildDrivable(transform, mesh, model.Car.Clone(), "Car " + v.Name + " " + v.Id);
+                    CarController car = CarFactory.BuildDrivable(transform, mesh, CarTuning.Apply(model.Car, v.Parts), "Car " + v.Name + " " + v.Id);
                     car.transform.SetPositionAndRotation(new Vector3((float)v.X, (float)v.Y, (float)v.Z), Quaternion.Euler(0f, (float)v.Yaw, 0f));
+                    if (v.Painted) CarFactory.Paint(car.gameObject, new Color(v.PaintR, v.PaintG, v.PaintB));
+                    if (v.Tinted) CarFactory.Tint(car.gameObject, _kit.P.Glass(new Color(0.02f, 0.02f, 0.03f, 0.85f)));
                     car.gameObject.AddComponent<ParkedVehicle>().Configure(v, _game, "Drive", () => !Busy, x => _driver.Enter(x));
                     return car.gameObject;
                 }

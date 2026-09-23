@@ -42,6 +42,7 @@ namespace OpeningBell.City
         public DriveController Driver { get; private set; }
         /// <summary>First Street Motors (new) and Harbor Auto Sales (used).</summary>
         public List<DealerLot> Dealers { get; private set; }
+        public MechanicShop Mechanic { get; private set; }
         public Minimap Minimap { get; private set; }
         public Phone Phone { get; private set; }
         public TitleScreen Title { get; private set; }
@@ -70,6 +71,8 @@ namespace OpeningBell.City
             Dealerships.AddPads(_c);
             Landmarks.AddPads(_c);
             BusinessPlan.AddPads(_c);
+            Industrial.AddPads(_c);
+            MechanicShop.AddPads(_c);
             ShellBuilder.Build(_c);
             TownBuilder.Build(_c, player.transform);
             ApartmentBuilding.Build(_c);
@@ -81,6 +84,8 @@ namespace OpeningBell.City
             Dealers = Dealerships.Build(_c);
             Landmarks.Build(_c);
             BusinessPlan.Build(_c);
+            Industrial.Build(_c);
+            Mechanic = MechanicShop.Build(_c);
 
             // Places (doors, benches) are registered by the builders above; the street pass adds benches too,
             // so gather everything first, then build the walk graph the markings and signals need.
@@ -118,6 +123,8 @@ namespace OpeningBell.City
             Driver.Configure(game, player, interactor, hud, Fleet, () => _c.Night);
             Fleet.Configure(game, _c.Kit, Rider, Driver);
             foreach (DealerLot dealer in Dealers) dealer.Wire(Fleet, Driver);
+            _c.FleetView = Fleet;
+            _c.Driver = Driver;
             player.gameObject.AddComponent<Footsteps>().Configure(player);
             PlayerBody body = null;
             if (art != null && art.HasPeople)

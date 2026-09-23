@@ -30,6 +30,9 @@ namespace OpeningBell.City
         /// <summary>Walkways off the sidewalks (park paths, towpath, pier): points as (x, height, z).</summary>
         public readonly List<Vector3[]> WalkPaths = new List<Vector3[]>();
         public Terrain Terrain;
+        /// <summary>The player's vehicles in the world and their driving (set once the city is built; shops use them at runtime).</summary>
+        public FleetView FleetView;
+        public DriveController Driver;
 
         /// <summary>Ground height at (x, z): the terrain where there is one, else the plan's land.</summary>
         public float GroundY(float x, float z) =>

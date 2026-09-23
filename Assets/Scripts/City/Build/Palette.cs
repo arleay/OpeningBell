@@ -115,6 +115,17 @@ namespace OpeningBell.City
             return _cache[key] = m;
         }
 
+        /// <summary>A lit material with a (tiling) texture, e.g. corrugated metal. Cached by name and tint.</summary>
+        public Material Textured(string name, Texture2D texture, Color tint, float smoothness = 0.12f)
+        {
+            string key = $"tex{name}{tint}{smoothness}";
+            if (_cache.TryGetValue(key, out Material m)) return m;
+            m = new Material(_lit) { name = "City " + name, color = tint };
+            m.SetTexture(BaseMap, texture);
+            m.SetFloat(Smoothness, smoothness);
+            return _cache[key] = m;
+        }
+
         public Material Sign(Color color)
         {
             string key = $"sign{color}";
