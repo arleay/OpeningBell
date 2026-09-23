@@ -1,3 +1,4 @@
+using System;
 using OpeningBell.Market;
 using UnityEngine.UIElements;
 
@@ -6,7 +7,8 @@ namespace OpeningBell.UI
     /// <summary>Top strip: broker, clock, session, index, account metrics, time controls.</summary>
     public sealed class AccountBarPanel : TerminalPanel
     {
-        private static readonly (string label, float multiplier)[] Speeds = { ("1x", 1f), ("5x", 5f), ("30x", 30f), ("120x", 120f) };
+        private static readonly (string label, float multiplier)[] Speeds =
+            { ("1x", 1f), ("2x", 2f), ("5x", 5f), ("10x", 10f), ("30x", 30f), ("60x", 60f), ("120x", 120f) };
 
         private readonly Label _clock, _session, _index;
         private static readonly (TerminalApp app, string label)[] Apps =
@@ -90,9 +92,13 @@ namespace OpeningBell.UI
 
         private void RefreshSession(MarketSession session)
         {
+            // The regular session gets named phases: traders expect midday to be slower and the last hour busier.
+            TimeSpan t = Context.Market.Now.TimeOfDay;
             string text = session switch
             {
                 MarketSession.Premarket => "PRE-MARKET",
+                MarketSession.Regular when t >= new TimeSpan(15, 0, 0) => "POWER HOUR",
+                MarketSession.Regular when t >= new TimeSpan(11, 30, 0) && t < new TimeSpan(13, 30, 0) => "MIDDAY",
                 MarketSession.Regular => "MARKET OPEN",
                 MarketSession.AfterHours => "AFTER HOURS",
                 _ => "CLOSED",

@@ -294,7 +294,7 @@ namespace OpeningBell.City
                         row.style.paddingTop = row.style.paddingBottom = 9f;
                         row.style.borderBottomWidth = 1f;
                         row.style.borderBottomColor = PhoneKit.Separator;
-                        PhoneKit.Label(row, $"{o.Side} {Fmt.Shares(o.Quantity - o.FilledQuantity)} {o.Ticker} @ {(o.Type == OrderType.Limit ? Fmt.Price(o.LimitPrice) : "MKT")}", 14f, PhoneKit.Text, true);
+                        PhoneKit.Label(row, $"{o.Side} {Fmt.Shares(o.Quantity - o.FilledQuantity)} {o.Ticker} @ {Fmt.OrderPrice(o)}", 14f, PhoneKit.Text, true);
                         long id = o.Id;
                         PhoneKit.Pill(row, "Cancel", new Color(1f, 0.27f, 0.23f, 0.2f), PhoneKit.Red, () => { orders.Cancel(id); Refresh(); }, 12f).name = "pb-cancel-" + id;
                     }

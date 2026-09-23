@@ -33,6 +33,8 @@ namespace OpeningBell
         public global::OpeningBell.Vehicles.FleetSaveData Vehicles = new global::OpeningBell.Vehicles.FleetSaveData();
         public bool HasLook;
         public PlayerLook Look = new PlayerLook();
+        public bool HasDrawings;
+        public ChartDrawingsSaveData Drawings = new ChartDrawingsSaveData();
     }
 
     /// <summary>

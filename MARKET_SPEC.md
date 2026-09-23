@@ -234,15 +234,15 @@ Market:
 - [x] M6 Market memory: PDH/PDL/PDC, previous week, premarket range, opening range (5/30 m), swings with equal-high merging, round numbers, day extremes
 - [x] M7 Stop orders: resting conditional flow in the market; player stop/stop-limit (trigger on the tick range, regular session only, gap-through fills at the market), brackets (OCO, good until cancelled), price edits for dragging lines, square-root market impact for large player orders
 - [ ] M8 Supply/demand zones and liquidity concentration
-- [ ] M9 Derived ICT/SMC detection
+- [x] M9 Derived ICT/SMC detection (`StructureDetector`: FVGs with fill fraction, swings, BOS/CHoCH, sweeps, equal highs/lows); not yet read by participants
 - [ ] M10 Time macros, premarket ramp (opening and closing crosses done)
 - [ ] M11 News and sectors feed participants
 - [ ] M12 Statistics suite and tuning (harness + calibration done: `MarketStatisticsTests`, `TestResults/market-stats.txt`, `market-*.png`); debug overlay
 
 Chart:
-- [ ] C-A Colours and themes (saved)
-- [ ] C-B Drawing tools (saved per symbol)
-- [ ] C-C Position line with live P&L
-- [ ] C-D Draggable TP/SL lines on real bracket orders
-- [ ] C-E Indicators menu, settings, panes
-- [ ] C-F Optional ICT and liquidity overlays
+- [x] C-A Colours and themes: 5 presets + custom colours per part, saved as a preference
+- [x] C-B Drawing tools: horizontal line, trendline, ray, rectangle (extend right), Fibonacci, vertical line; select, drag, resize, recolour, width, delete; saved per symbol in the game save
+- [x] C-C Position line with quantity and live $ / % P&L
+- [x] C-D Draggable TP/SL (and limit/stop) lines on the real orders; + TP/SL creates a bracket; STOP in the order ticket
+- [x] C-E Indicators menu: EMA, SMA, VWAP, Bollinger, RSI, MACD, ATR, Volume; period, colour, width, visibility; overlays on price, oscillators in panes
+- [x] C-F Optional overlays (all off by default): FVGs (fade as filled), BOS/CHoCH, sweeps, equal highs/lows, liquidity lines; developer view (F10, dev builds only); session badge shows MIDDAY / POWER HOUR

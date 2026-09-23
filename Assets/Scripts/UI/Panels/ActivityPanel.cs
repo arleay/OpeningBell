@@ -184,7 +184,7 @@ namespace OpeningBell.UI
             SetCell(row, 3, o.Type.ToString().ToUpperInvariant());
             SetCell(row, 4, Fmt.Shares(o.Quantity));
             SetCell(row, 5, Fmt.Shares(o.FilledQuantity));
-            SetCell(row, 6, o.Type == OrderType.Limit ? Fmt.Price(o.LimitPrice) : "MKT");
+            SetCell(row, 6, Fmt.OrderPrice(o));
             SetCell(row, 7, o.FilledQuantity > 0 ? Fmt.Price(o.AverageFillPrice) : "—");
             SetCell(row, 8, o.Status == OrderStatus.PartiallyFilled ? "PARTIAL" : o.Status.ToString().ToUpperInvariant());
 

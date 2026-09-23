@@ -39,6 +39,20 @@ namespace OpeningBell.UI
 
         public static string Date(DateTime time) => time.ToString("ddd MMM d", C);
 
+        /// <summary>How an order is priced, for lists: "MKT", "52.00", "STP 49.00", "STP 49.00 LMT 48.90", tagged TP/SL in a bracket.</summary>
+        public static string OrderPrice(OpeningBell.Trading.Order o)
+        {
+            string text = o.Type switch
+            {
+                OpeningBell.Trading.OrderType.Limit => Price(o.LimitPrice),
+                OpeningBell.Trading.OrderType.Stop => (o.Triggered ? "MKT (stopped)" : "STP " + Price(o.StopPrice)),
+                OpeningBell.Trading.OrderType.StopLimit => (o.Triggered ? "" : "STP " + Price(o.StopPrice) + " ") + "LMT " + Price(o.LimitPrice),
+                _ => "MKT",
+            };
+            if (o.OcoGroup != 0) text = (o.IsStop ? "SL " : "TP ") + text;
+            return text;
+        }
+
         private static string Sign(decimal value) => value > 0m ? "+" : value < 0m ? "-" : "";
     }
 }

@@ -58,8 +58,8 @@ namespace OpeningBell.UI
         private OrderType _type = OrderType.Market;
         private Order _lastOrder;
 
-        private readonly Label _symbol, _quote, _estimate, _hint, _status, _position;
-        private readonly Button _buy, _sell, _market, _limit, _submit;
+        private readonly Label _symbol, _quote, _estimate, _hint, _status, _position, _priceCaption;
+        private readonly Button _buy, _sell, _market, _limit, _stop, _submit;
         private readonly TextField _quantity, _limitPrice;
         private readonly VisualElement _limitSection;
 
@@ -76,6 +76,7 @@ namespace OpeningBell.UI
             var types = Ui.Box("segmented", Root);
             _market = Ui.Button("MARKET", () => SetType(OrderType.Market), "", types, "type-market");
             _limit = Ui.Button("LIMIT", () => SetType(OrderType.Limit), "", types, "type-limit");
+            _stop = Ui.Button("STOP", () => SetType(OrderType.Stop), "", types, "type-stop");
 
             Ui.Label("field-caption", Root, "QUANTITY");
             _quantity = Field("qty", "100", Root);
@@ -86,7 +87,7 @@ namespace OpeningBell.UI
             Ui.Button("MAX", SetMaxQuantity, "", quick, "qty-max");
 
             _limitSection = Ui.Box("", Root);
-            Ui.Label("field-caption", _limitSection, "LIMIT PRICE");
+            _priceCaption = Ui.Label("field-caption", _limitSection, "LIMIT PRICE");
             var priceRow = Ui.Box("field-row", _limitSection);
             _limitPrice = Field("limit-price", "", priceRow);
             TicketInput.Restrict(_limitPrice, ".,$");
@@ -121,13 +122,15 @@ namespace OpeningBell.UI
             _sell.EnableInClassList("active", !buy);
             _market.EnableInClassList("active", _type == OrderType.Market);
             _limit.EnableInClassList("active", _type == OrderType.Limit);
-            Ui.Show(_limitSection, _type == OrderType.Limit);
+            _stop.EnableInClassList("active", _type == OrderType.Stop);
+            Ui.Show(_limitSection, _type != OrderType.Market);
+            Ui.SetText(_priceCaption, _type == OrderType.Stop ? "STOP PRICE (becomes a market order when traded)" : "LIMIT PRICE");
 
             bool hasQty = TicketInput.TryParseQuantity(_quantity.value, out long qty);
             bool hasLimit = TicketInput.TryParsePrice(_limitPrice.value, out decimal limit);
             bool ready = hasQty && (_type == OrderType.Market || hasLimit);
 
-            string priceText = _type == OrderType.Market ? "MKT" : (hasLimit ? Fmt.Price(limit) : "?") + " LMT";
+            string priceText = _type == OrderType.Market ? "MKT" : (hasLimit ? Fmt.Price(limit) : "?") + (_type == OrderType.Stop ? " STOP" : " LMT");
             Ui.SetText(_submit, $"{(buy ? "BUY" : "SELL")} {(hasQty ? Fmt.Shares(qty) : "?")} {s.Ticker} @ {priceText}");
             _submit.EnableInClassList("buy", buy);
             _submit.EnableInClassList("sell", !buy);
@@ -135,7 +138,7 @@ namespace OpeningBell.UI
 
             if (ready)
             {
-                decimal price = _type == OrderType.Limit ? limit : buy ? s.Ask : s.Bid;
+                decimal price = _type != OrderType.Market ? limit : buy ? s.Ask : s.Bid;
                 decimal notional = qty * price;
                 decimal commission = orders.Rules.CommissionFor(qty, notional);
                 Ui.SetText(_estimate, buy
@@ -188,7 +191,7 @@ namespace OpeningBell.UI
                 OrderStatus.Rejected => "Rejected: " + o.StatusReason,
                 OrderStatus.Filled => $"Filled {Fmt.Shares(o.FilledQuantity)} {o.Ticker} @ {Fmt.Price(o.AverageFillPrice)}",
                 OrderStatus.PartiallyFilled => $"Partially filled {Fmt.Shares(o.FilledQuantity)}/{Fmt.Shares(o.Quantity)} @ {Fmt.Price(o.AverageFillPrice)}. Working.",
-                OrderStatus.Working => $"Working: {o.Side} {Fmt.Shares(o.Quantity)} {o.Ticker} @ {(o.Type == OrderType.Limit ? Fmt.Price(o.LimitPrice) : "MKT")}",
+                OrderStatus.Working => $"Working: {o.Side} {Fmt.Shares(o.Quantity)} {o.Ticker} @ {Fmt.OrderPrice(o)}",
                 OrderStatus.Cancelled => $"Cancelled{(o.FilledQuantity > 0 ? $" after {Fmt.Shares(o.FilledQuantity)} filled" : "")}: {o.StatusReason}",
                 _ => o.Status.ToString(),
             };
@@ -216,9 +219,11 @@ namespace OpeningBell.UI
         {
             if (!TicketInput.TryParseQuantity(_quantity.value, out long qty)) return;
             decimal limit = 0m;
-            if (_type == OrderType.Limit && !TicketInput.TryParsePrice(_limitPrice.value, out limit)) return;
+            if (_type != OrderType.Market && !TicketInput.TryParsePrice(_limitPrice.value, out limit)) return;
 
-            _lastOrder = Context.Orders.Submit(Context.SelectedTicker, _side, _type, qty, limit);
+            _lastOrder = _type == OrderType.Stop
+                ? Context.Orders.SubmitStop(Context.SelectedTicker, _side, qty, limit)
+                : Context.Orders.Submit(Context.SelectedTicker, _side, _type, qty, limit);
             Refresh();
         }
 
@@ -238,7 +243,7 @@ namespace OpeningBell.UI
         private void SetType(OrderType type)
         {
             _type = type;
-            if (type == OrderType.Limit && !TicketInput.TryParsePrice(_limitPrice.value, out _))
+            if (type != OrderType.Market && !TicketInput.TryParsePrice(_limitPrice.value, out _))
                 SetLimit(Context.Selected.Last);
             Refresh();
         }

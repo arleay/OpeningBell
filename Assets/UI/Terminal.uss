@@ -102,6 +102,7 @@
 
 .clock {
     font-size: 14px;
+    margin-left: 12px;
     margin-right: 12px;
 }
 
@@ -132,7 +133,8 @@
 }
 
 .time-controls { margin-left: 14px; }
-.time-btn { min-width: 44px; }
+.time-btn { min-width: 34px; }
+.terminal .tb.time-btn { padding: 3px 5px; margin-left: 2px; }
 
 /* ---------- tables ---------- */
 
@@ -641,3 +643,63 @@
 .activity-list { flex-grow: 1; }
 
 .empty-note { margin: 8px 6px; }
+
+/* ---------- chart tools, menus, selection bar ---------- */
+
+.chart { position: relative; }
+.terminal .tb.tool-btn { padding: 2px 7px; min-width: 26px; -unity-text-align: middle-center; }
+.chart-sep { width: 1px; height: 16px; margin: 0 6px; background-color: #2a323d; }
+
+.chart-menu {
+    position: absolute;
+    top: 30px;
+    background-color: #151a21;
+    border-width: 1px;
+    border-color: #2a323d;
+    border-radius: 6px;
+    padding: 8px 10px;
+    min-width: 280px;
+    flex-direction: column;
+}
+
+.chart-menu-title {
+    font-size: 11px;
+    color: #7c8795;
+    -unity-font-style: bold;
+    margin: 6px 0 3px 0;
+}
+
+.chart-menu-row {
+    flex-direction: row;
+    align-items: center;
+    margin: 2px 0;
+}
+
+.chart-menu-row .chart-menu-name { min-width: 110px; color: #d5dbe3; font-size: 12px; }
+
+.chart-swatch {
+    width: 18px;
+    height: 18px;
+    margin: 2px;
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.5);
+}
+
+.chart-swatch.picked { border-width: 2px; border-color: #ffffff; }
+.chart-swatches { flex-direction: row; flex-wrap: wrap; max-width: 280px; }
+
+.terminal .ticket-field.chart-field { width: 46px; min-width: 46px; margin: 0 4px; }
+
+.chart-select-bar {
+    position: absolute;
+    top: 30px;
+    left: 38%;
+    flex-direction: row;
+    align-items: center;
+    background-color: #151a21;
+    border-width: 1px;
+    border-color: #2a323d;
+    border-radius: 6px;
+    padding: 3px 6px;
+}

@@ -59,6 +59,8 @@ namespace OpeningBell
         public TradingDayRecorder Days { get; private set; }
         public EconomySystem Economy { get; private set; }
         public Inbox Inbox { get; private set; }
+        /// <summary>What the player has drawn on charts, per symbol (saved with the game).</summary>
+        public ChartDrawings Drawings { get; } = new ChartDrawings();
         /// <summary>The player's bikes and boards (spec §16: persistent identity).</summary>
         public global::OpeningBell.Vehicles.Fleet Vehicles { get; private set; }
         /// <summary>Vehicle content (models, 3D meshes, traffic mix).</summary>
@@ -147,6 +149,7 @@ namespace OpeningBell
                 TradingState.Restore(save.Trading, Account, Orders, Days);
                 Continued = true;
                 if (save.HasLook) Look = save.Look;
+                if (save.HasDrawings) Drawings.RestoreState(save.Drawings);
                 if (save.HasPlayer) PlacePlayer(save.Player);
                 Debug.Log($"Loaded save '{saveSlot}' (day {Days.DayNumber}, {Clock.Now:ddd MMM d HH:mm}).");
             }
@@ -171,6 +174,8 @@ namespace OpeningBell
                 Vehicles = Vehicles.CaptureState(),
                 HasLook = Look != null,
                 Look = Look ?? new PlayerLook(),
+                HasDrawings = true,
+                Drawings = Drawings.CaptureState(),
             };
             if (player != null)
             {

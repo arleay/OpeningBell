@@ -26,6 +26,7 @@ namespace OpeningBell.UI
 
         public VisualElement Root { get; private set; }
         public TerminalContext Context { get; private set; }
+        public ChartPanel Chart { get; private set; }
 
         /// <summary>What the in-world monitor displays while the terminal is not on screen.</summary>
         public RenderTexture WorldTexture { get; private set; }
@@ -63,6 +64,7 @@ namespace OpeningBell.UI
             var watchlist = new WatchlistPanel(Context);
             var quote = new QuotePanel(Context);
             var chart = new ChartPanel(Context);
+            Chart = chart;
             var orderEntry = new OrderEntryPanel(Context);
             var activity = new ActivityPanel(Context, orderEntry.Track);
             var news = new NewsPanel(Context);
