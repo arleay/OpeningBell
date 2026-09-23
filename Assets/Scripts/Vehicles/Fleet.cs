@@ -56,6 +56,8 @@ namespace OpeningBell.Vehicles
         public readonly List<string> Parts = new List<string>();
         public VehicleState State;
         public double X, Y, Z, Yaw;         // where it is when parked (world metres, degrees)
+        /// <summary>A dealer's car out on a test drive: driven like yours, but never saved, sold or listed.</summary>
+        public bool TestDrive;
         public readonly List<ServiceRecord> History = new List<ServiceRecord>();
 
         public double BatteryFraction => BatteryCapacityWh > 0 ? BatteryWh / BatteryCapacityWh : 0;
@@ -187,6 +189,33 @@ namespace OpeningBell.Vehicles
             return v;
         }
 
+        /// <summary>
+        /// A dealer's car for a test drive: new, or as the used listing describes it. It lives in the fleet only so
+        /// it can be driven like any car; <see cref="Remove"/> it when it's handed back.
+        /// </summary>
+        public OwnedVehicle Lend(string modelId, UsedListing used, DateTime now, double x, double y, double z, double yaw)
+        {
+            OwnedVehicle v = Add(modelId, 0m, now, x, y, z, yaw);
+            v.TestDrive = true;
+            if (used != null)
+            {
+                v.Odometer = used.OdometerKm * 1000;
+                v.Condition = used.Condition;
+                v.TireCondition = used.TireCondition;
+                v.FuelLiters = v.FuelCapacity * used.FuelFraction;
+            }
+            Changed?.Invoke(v);
+            return v;
+        }
+
+        /// <summary>Takes a vehicle out of the fleet (sold, or a test car handed back). Payment is the caller's.</summary>
+        public void Remove(OwnedVehicle v)
+        {
+            if (!_vehicles.Remove(v)) return;
+            if (LastRidden == v) LastRidden = null;
+            Changed?.Invoke(v);
+        }
+
         /// <summary>Charges for <paramref name="gameSeconds"/> at <paramref name="watts"/>, tapering above 80% like real packs.</summary>
         public void Charge(OwnedVehicle v, double watts, double gameSeconds)
         {
@@ -240,6 +269,7 @@ namespace OpeningBell.Vehicles
             data.Sold.AddRange(_sold);
             foreach (OwnedVehicle v in _vehicles)
             {
+                if (v.TestDrive) continue; // the dealer's, not yours
                 var d = new OwnedVehicleSaveData
                 {
                     Id = v.Id, ModelId = v.ModelId, Name = v.Name, Kind = (int)v.Kind,

@@ -46,10 +46,11 @@
 - [ ] Continue MARKET_SPEC.md: M8 supply/demand zones as participant interest, M10 configurable time macros + premarket ramp, M11 news → participant bias, M12 remaining statistics (breakout follow-through, FVG interaction, gap behaviour), multi-timeframe structure (4H) read by participants, anchored VWAP
 - [x] Market news can tilt sectors (`SectorTilt`): geopolitical and macro headlines (fictional President Hale, the Varenn Mountains, Kessar Strait) sink the index while lifting energy/defence, hit tech on tariffs, banks on a lender run, etc. Market news rate 0.3 → 0.6/day
 - [ ] Art pass 2b: shop, lobby and office furniture (same `Kit.Fit` approach; `ModelSheet` for orientation/shelf heights), ground-floor trims on the enterable buildings, suburban houses for the outer ring
-- [ ] Then WORLD_SPEC Phase 11 (dealerships: used lot and standard dealer, test drives, resale) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
+- [x] Phase 11 (dealerships): First Street Motors (new cars, lot behind the Maple shops, driveway off First St, showroom office) and Harbor Auto Sales (used lot behind Main Street, driveway off Harbor Ave), both 9 AM–7 PM. Weekly stock from the world seed (no save data); aim at a car for its spec card, [E] to test drive (brought round to the exit; free if returned to the lot, $250 recovery plus damage otherwise); [E] at the price board to buy (second press confirms), delivered to a bay; sell/trade in at the sales desk for 85% of private value. Used stickers list every flaw. `DealershipTests`, `DealerPlayTests` (writes `dealer-*.png`)
+- [ ] Next: WORLD_SPEC Phase 12 (mechanics) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
 
 ## Later phases (do not start early)
-- WORLD_SPEC Phases 11–12 and 14–17 (property, Phase 14, can now use the town's houses): dealerships, mechanics, property, advanced vehicles, aviation, world polish
+- WORLD_SPEC Phases 12 and 14–17 (property, Phase 14, can now use the town's houses): mechanics, property, advanced vehicles, aviation, world polish
 
 ## Known debt / decisions to revisit
 - Phone: you stand still while it's out (control is off); no texting back or incoming calls; call history isn't saved; the phone can't be used in vehicles or at the desk
@@ -76,7 +77,7 @@
   - One elevator car, two served floors.
 - Small mobility (Phase 13):
   - The city is flat. Slope physics works (tested) but only stairs and ramps use it until a hills district exists.
-  - No selling vehicles yet: resale value is shown, but selling comes with dealerships (Phase 11).
+  - Bikes and boards can't be sold yet (car dealers buy cars only).
   - No helmets, locks or lights (no crash-injury, theft or night-visibility systems for them to act on).
   - No tricks or ollies. Skateboards can't climb curbs, so use the ramps at crosswalks.
   - No paint customisation yet (`OwnedVehicle` has no paint field; add with the body shop).
@@ -91,7 +92,7 @@
   - Damage is condition and power only; no visual dents or broken parts (the kit has debris models for later).
   - AI traffic doesn't overtake: a car parked in a lane blocks it.
   - No parking garages or passes yet (§63), no insurance or registration (optional §83–84), no towing or breakdowns (§81–82).
-  - Cars aren't sold anywhere but the classifieds until dealerships (Phase 11).
+  - Dealerships (Phase 11): no financing (spec lists it; later), no luxury/exotic dealer (the exotics stay in the classifieds), no paint or trim choice. Test drives have no time limit, and a test car is dropped (not saved) if you save mid-drive. Trade-in is sell-then-buy, not one combined deal. Display cars don't show wear visually.
   - The engine sound is one synthesized loop.
   - Traffic cars don't honk or react to being hit.
 - Art pass 1:

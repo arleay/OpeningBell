@@ -153,6 +153,20 @@ namespace OpeningBell.Economy
             return null;
         }
 
+        /// <summary>Money paid to you (a car sold to a dealer).</summary>
+        public void Receive(decimal amount, string description, DateTime now)
+        {
+            amount = Money.RoundCents(amount);
+            if (amount > 0m) Post(now, TransactionKind.Deposit, amount, description);
+        }
+
+        /// <summary>A bill you can't decline (damage to a dealer's car): charged even if it overdraws the account.</summary>
+        public void ChargeFee(decimal amount, string description, DateTime now)
+        {
+            amount = Money.RoundCents(amount);
+            if (amount > 0m) Post(now, TransactionKind.Fee, -amount, description);
+        }
+
         /// <summary>Returns an error message, or null on success.</summary>
         public string TransferToBrokerage(decimal amount, DateTime now)
         {

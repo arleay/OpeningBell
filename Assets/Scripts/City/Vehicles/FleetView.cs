@@ -84,7 +84,12 @@ namespace OpeningBell.City
 
         private void LateUpdate()
         {
-            if (!_dirty) return;
+            if (_dirty) Refresh();
+        }
+
+        /// <summary>Brings the world objects up to date now (a dealer's test car must exist before you get in).</summary>
+        public void Refresh()
+        {
             _dirty = false;
             var keep = new HashSet<OwnedVehicle>();
             foreach (OwnedVehicle v in _game.Vehicles.Vehicles)
