@@ -22,6 +22,15 @@ namespace OpeningBell.Market
         public double Passive;
     }
 
+    /// <summary>What the current leg of the day is doing. Append only: saved by value.</summary>
+    public enum LegKind
+    {
+        Pause,
+        Impulse,
+        Pullback,
+        Rotation,
+    }
+
     /// <summary>Everything the order-flow model remembers about one stock between steps (all of it is saved).</summary>
     internal sealed class FlowState
     {
@@ -51,6 +60,14 @@ namespace OpeningBell.Market
         public bool OpenAuctionDone;
         /// <summary>Start (ticks) of the last 5-minute bar checked for swings (by time: counts change with trimming and loads).</summary>
         public long LastSwingTicks;
+
+        // The current leg of the day's move (regular session): how the day's direction actually arrives.
+        public LegKind Leg;
+        /// <summary>Log move per step the leg carries into fair value and price together (program-like flow).</summary>
+        public double LegRate;
+        public double LegMinutes;
+        /// <summary>Current fast-reverting jitter of price (log).</summary>
+        public double Jitter;
 
         // The last step's traded range (for wicks and, later, stop triggers).
         public double PathHigh, PathLow;

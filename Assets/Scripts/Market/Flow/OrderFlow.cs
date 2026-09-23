@@ -45,10 +45,12 @@ namespace OpeningBell.Market
         // Participant weights (tuned against the statistics tests, not outcomes). Noise is per step; the others are
         // persistent pressures, which add up linearly over time, so they are in daily volatilities per session:
         // saturated momentum alone would carry a stock about 1.3 σ over a whole session.
-        private const double NoiseWeight = 0.7;
+        private const double NoiseWeight = 0.1;
         private const double MomentumWeight = 1.3;
-        private const double MeanReversionWeight = 0.9;
+        private const double MeanReversionWeight = 0.6;
         private const double FomoWeight = 0.3;
+        /// <summary>Jitter size per step and how fast it fades (seconds).</summary>
+        private const double JitterWeight = 0.25, JitterSeconds = 60;
         /// <summary>Informed traders close a gap to fair value with this time constant (minutes).</summary>
         private const double ValueMinutesRegular = 30, ValueMinutesExtended = 90;
         /// <summary>Book depth outside regular hours relative to the regular session.</summary>
@@ -57,13 +59,17 @@ namespace OpeningBell.Market
         private const double ExtendedParticipation = 0.35;
 
         // Level interest, in daily-volatility units per unit of level strength.
-        private const double WallScale = 0.09;
+        private const double WallScale = 0.06;
         private const double StopScale = 0.05;
         private const double BreakoutScale = 0.05;
         private const double StopOffset = 0.035;
         private const double CrossMargin = 0.02;
         /// <summary>Minutes a level must stand before its break brings in breakout traders.</summary>
         private const double EstablishedMinutes = 20;
+
+        // Legs: share of the session spent pausing (chop), and the size of legs in daily volatilities.
+        private const double PauseShare = 0.08;
+        private const double LegScale = 0.62;
 
         // Institutions.
         private const double MetaArrivalPerMinute = 0.012;
@@ -74,12 +80,14 @@ namespace OpeningBell.Market
         private readonly double _valueKappaRegular, _valueKappaExtended;
         /// <summary>Steps in a regular session: a persistent pressure of sd/_stepsPerSession moves price 1 σ a session.</summary>
         private readonly double _stepsPerSession;
+        private readonly double _jitterDecay;
 
         public OrderFlow(MarketConfig config, MarketSchedule schedule)
         {
             _schedule = schedule;
             _stepsPerMinute = 60 / config.TickSeconds;
             _stepsPerSession = schedule.RegularSessionSeconds / config.TickSeconds;
+            _jitterDecay = Math.Exp(-config.TickSeconds / JitterSeconds);
             _valueKappaRegular = 1 - Math.Exp(-config.TickSeconds / (ValueMinutesRegular * 60));
             _valueKappaExtended = 1 - Math.Exp(-config.TickSeconds / (ValueMinutesExtended * 60));
         }
@@ -98,6 +106,11 @@ namespace OpeningBell.Market
 
             // ---- participants
             double noise = s * NoiseWeight * Math.Sqrt(f.Day.Retail) * StudentT4(rng);
+            // Texture: fast-reverting jitter (quote flicker, small prints) that shapes candles and wicks but nets out
+            // within a few minutes, so it doesn't pile up into chop the way persistent noise does.
+            double jitterLevel = f.Jitter * _jitterDecay + s * JitterWeight * StudentT4(rng);
+            double jitter = jitterLevel - f.Jitter;
+            f.Jitter = jitterLevel;
             double gap = sec.FairLog - price;
             double value = gap * (step.Regular ? _valueKappaRegular : _valueKappaExtended);
 
@@ -106,7 +119,7 @@ namespace OpeningBell.Market
             double z30 = f.Mom30 * Math.Sqrt(30 * _stepsPerMinute) / vol;
             // Momentum desks are mostly absent outside the session; without this, thin premarket drifts in smooth waves.
             double momentum = MomentumWeight * f.Day.Momentum * RegimeMomentum(f.Regime) * unit * Math.Tanh(0.6 * z5 + 0.4 * z30)
-                              * (step.Regular ? 1 : ExtendedParticipation);
+                              * (step.Regular ? 1 : 0.4 * ExtendedParticipation);
 
             double reversion = 0;
             if (sec.Vwap > 0m)
@@ -141,8 +154,8 @@ namespace OpeningBell.Market
             // Index arbitrage / hedging: when the market or the sector moves, programs trade the stock with it at once.
             double program = step.Systematic;
 
-            double push = noise + value + momentum + reversion + fomo + burst + news + institutional + program;
-            gross = Math.Abs(noise) + Math.Abs(value) + Math.Abs(momentum) + Math.Abs(reversion) + Math.Abs(fomo)
+            double push = noise + jitter + value + momentum + reversion + fomo + burst + news + institutional + program;
+            gross = Math.Abs(noise) + Math.Abs(jitter) + Math.Abs(value) + Math.Abs(momentum) + Math.Abs(reversion) + Math.Abs(fomo)
                     + Math.Abs(burst) + Math.Abs(news) + Math.Abs(institutional) + Math.Abs(program);
 
             // ---- the book
@@ -319,10 +332,65 @@ namespace OpeningBell.Market
             if (f.Metas.Count < MaxMetas && rng.NextDouble() < arrival)
                 f.Metas.Add(NewMeta(sec, price, rng, step));
 
+            // Legs: the day's direction arrives in impulses and pullbacks, a range day's in rotations.
+            if (!step.Regular) { f.Leg = LegKind.Pause; f.LegRate = 0; f.LegMinutes = 0; }
+            else if (--f.LegMinutes <= 0) NewLeg(sec, price, rng, step);
+
             UpdateRegime(f, rng);
             TrackSession(sec, price, step);
             DetectSwings(sec, price);
         }
+
+        /// <summary>
+        /// Draws the next leg. Trend days send most legs with the trend (impulses on heavy volume) and some against it
+        /// (shallower pullbacks on light volume); range days rotate, mostly back toward VWAP. About a fifth of the
+        /// session is pauses, where only the other participants trade: that is the chop.
+        /// A leg moves fair value and price together (like program flow), so value traders don't fade it back.
+        /// </summary>
+        private void NewLeg(SecurityRuntimeState sec, double price, SeededRandom rng, in FlowStep step)
+        {
+            FlowState f = sec.Flow;
+            double sd = sec.Spec.DailyVolatility;
+            double drift = f.Day.DriftAt(step.MinutesSinceOpen);
+            double minutes, move;
+            int dir;
+            if (rng.NextDouble() < PauseShare)
+            {
+                f.Leg = LegKind.Pause;
+                minutes = 5 + 12 * rng.NextDouble();
+                move = 0;
+                dir = 0;
+            }
+            else if (Math.Abs(drift) > 0.4)
+            {
+                double pWith = Math.Min(0.68, 0.5 + 0.08 * Math.Abs(drift));
+                bool with = rng.NextDouble() < pWith;
+                dir = with ? Math.Sign(drift) : -Math.Sign(drift);
+                f.Leg = with ? LegKind.Impulse : LegKind.Pullback;
+                minutes = with ? 10 + 25 * rng.NextDouble() : 6 + 14 * rng.NextDouble();
+                move = with ? 0.16 + 0.16 * rng.NextDouble() : 0.12 + 0.14 * rng.NextDouble();
+            }
+            else
+            {
+                double zv = sec.Vwap > 0m ? (price - Math.Log((double)sec.Vwap)) / (0.3 * sd) : 0;
+                dir = rng.NextDouble() < 1 / (1 + Math.Exp(1.5 * zv)) ? 1 : -1;
+                f.Leg = LegKind.Rotation;
+                minutes = 8 + 20 * rng.NextDouble();
+                move = 0.08 + 0.12 * rng.NextDouble();
+            }
+            minutes = Math.Round(minutes);
+            f.LegMinutes = minutes;
+            f.LegRate = dir * move * LegScale * sd * f.Day.Volatility / (minutes * _stepsPerMinute);
+        }
+
+        /// <summary>Volume relative to normal during each kind of leg: impulses print heavy, pullbacks and pauses light.</summary>
+        internal static double LegVolume(LegKind leg) => leg switch
+        {
+            LegKind.Impulse => 1.5,
+            LegKind.Rotation => 1.05,
+            LegKind.Pullback => 0.75,
+            _ => 0.7,
+        };
 
         private MetaOrder NewMeta(SecurityRuntimeState sec, double price, SeededRandom rng, in FlowStep step)
         {

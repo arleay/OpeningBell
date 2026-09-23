@@ -53,7 +53,7 @@ namespace OpeningBell.Market
         {
             DayProfile p = Neutral;
             double u = rng.NextDouble();
-            double upOdds = Clamp(0.5 + 0.25 * marketDrift, 0.15, 0.85);
+            double upOdds = Clamp(0.5 + 0.4 * marketDrift, 0.1, 0.9);
             bool up = rng.NextDouble() < upOdds;
 
             // Rough frequencies of US single-stock days: ranges and trend days dominate, the rest are spice.

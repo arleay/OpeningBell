@@ -135,6 +135,22 @@ namespace OpeningBell.Tests
                 else if (body / (hi - lo) < 0.25) rangeish++;
             }
             report.AppendLine($"\n== Day shape: trend-like {trendish}, range-like {rangeish}, of {records.Count}");
+            // Chop: 30-minute windows of the session that go nowhere (net move under 30% of the window's range).
+            int windows = 0, chop = 0;
+            foreach (DayRecord r in records)
+            {
+                List<Candle> session = r.Minutes.Where(c => c.Start.TimeOfDay >= TimeSpan.FromHours(9.5) && c.Start.TimeOfDay < TimeSpan.FromHours(16)).ToList();
+                for (int w = 0; w + 30 <= session.Count; w += 30)
+                {
+                    List<Candle> win = session.GetRange(w, 30);
+                    double hi = (double)win.Max(c => c.High), lo = (double)win.Min(c => c.Low);
+                    if (hi <= lo) continue;
+                    windows++;
+                    if (Math.Abs((double)(win[29].Close - win[0].Open)) < 0.3 * (hi - lo)) chop++;
+                }
+            }
+            double chopShare = chop / (double)Math.Max(1, windows);
+            report.AppendLine($"Chop: {chopShare:P0} of {windows} half-hour windows");
             report.AppendLine("Hidden day types: " + string.Join(", ", dayTypes.OrderByDescending(p => p.Value).Select(p => $"{p.Key} {p.Value}")));
             int totalRegime = regimeMinutes.Values.Sum();
             report.AppendLine("Regime time: " + string.Join(", ", regimeMinutes.OrderByDescending(p => p.Value).Select(p => $"{p.Key} {p.Value / (double)totalRegime:P0}")));

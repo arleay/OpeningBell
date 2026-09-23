@@ -16,6 +16,7 @@ namespace OpeningBell.Market
         public long TickCount;
         public long MarketActivityBits;
         public long MarketDayDriftBits;
+        public long MarketLegRateBits, MarketLegMinutesBits;
         public RandomState MarketRng;
         public List<SecuritySaveData> Securities = new List<SecuritySaveData>();
         public IndexSaveData Index = new IndexSaveData();

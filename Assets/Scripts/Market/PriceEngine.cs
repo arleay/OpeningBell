@@ -40,12 +40,17 @@ namespace OpeningBell.Market
         /// Share of each layer's variance left to random diffusion once day drifts and gaps take their part, so
         /// close-to-close volatility still matches the specs on average.
         /// </summary>
-        private const double FairDiffusion = 0.15, MarketDiffusion = 0.78;
+        private const double FairDiffusion = 0.08, MarketDiffusion = 0.4;
         /// <summary>Spread of the market's daily drift, in market-volatility units.</summary>
-        private const double MarketDayDriftSpread = 0.65;
+        private const double MarketDayDriftSpread = 0.9;
+        /// <summary>Size of the index's legs in market daily volatilities.</summary>
+        private const double MarketLegScale = 0.6;
 
         /// <summary>The market's hidden day: drift of the index factor over the regular session, in market-vol units.</summary>
         internal double MarketDayDrift { get; set; }
+        /// <summary>The index's current leg: log move per step and minutes left (see NewMarketLeg).</summary>
+        internal double MarketLegRate { get; set; }
+        internal double MarketLegMinutes { get; set; }
 
         internal OrderFlow Flow => _flow;
 
@@ -137,6 +142,38 @@ namespace OpeningBell.Market
             _flow.StartDay(sec, sec.FairLog, DayProfile.Draw(sec.Rng, MarketDayDrift, SmallCap(sec.Spec)));
         }
 
+        /// <summary>
+        /// Next leg of the index: mostly with the day's drift on trending days (shallower pullbacks against it),
+        /// two-way rotations on flat days, and short pauses. Drawn from the market stream at minute boundaries.
+        /// </summary>
+        private void NewMarketLeg()
+        {
+            double minutes, move;
+            int dir;
+            if (_marketRng.NextDouble() < 0.12)
+            {
+                minutes = 5 + 10 * _marketRng.NextDouble();
+                move = 0;
+                dir = 0;
+            }
+            else if (Math.Abs(MarketDayDrift) > 0.3)
+            {
+                bool with = _marketRng.NextDouble() < Math.Min(0.72, 0.5 + 0.12 * Math.Abs(MarketDayDrift));
+                dir = with ? Math.Sign(MarketDayDrift) : -Math.Sign(MarketDayDrift);
+                minutes = with ? 10 + 25 * _marketRng.NextDouble() : 6 + 14 * _marketRng.NextDouble();
+                move = with ? 0.16 + 0.16 * _marketRng.NextDouble() : 0.1 + 0.12 * _marketRng.NextDouble();
+            }
+            else
+            {
+                dir = _marketRng.NextDouble() < 0.5 ? 1 : -1;
+                minutes = 8 + 20 * _marketRng.NextDouble();
+                move = 0.08 + 0.12 * _marketRng.NextDouble();
+            }
+            minutes = Math.Round(minutes);
+            MarketLegMinutes = minutes;
+            MarketLegRate = dir * move * MarketLegScale * _config.MarketDailyVolatility / (minutes * 60 / _dt);
+        }
+
         public void Initialize(MarketIndex index)
         {
             index.LogLevel = Math.Log(index.Spec.BaseLevel);
@@ -154,8 +191,11 @@ namespace OpeningBell.Market
             double marketActivity = Math.Exp(_marketActivityLog - _activityVariance);
             double factorScale = _volNormalizer * profile.Volatility * marketActivity * _sqrtDtDays;
 
-            double marketDrift = regular ? MarketDayDrift * _config.MarketDailyVolatility / _stepsPerSession : 0;
-            double marketReturn = _config.MarketDailyDrift * _dtDays + marketDrift +
+            // The market's day arrives in legs too, so the whole tape pushes together and beta names trend with it.
+            if (!regular) { MarketLegRate = 0; MarketLegMinutes = 0; }
+            else if ((time.TimeOfDay.TotalSeconds + _dt) % 60 < 1e-6 && --MarketLegMinutes <= 0) NewMarketLeg();
+            double marketLeg = regular ? MarketLegRate * Math.Sqrt(profile.Volatility) : 0;
+            double marketReturn = _config.MarketDailyDrift * _dtDays + marketLeg +
                                   _config.MarketDailyVolatility * MarketDiffusion * factorScale * _marketRng.NextGaussian();
             for (int i = 0; i < _sectorReturns.Length; i++)
                 _sectorReturns[i] = _config.SectorDailyVolatility * factorScale * _marketRng.NextGaussian();
@@ -196,16 +236,17 @@ namespace OpeningBell.Market
 
             // ---- information: fair value moves with the market, the sector, the company's own news and the day's drift.
             double price = sec.FairLog + sec.DeviationLog;
-            // Day drifts are drawn in daily-vol units; 0.78 keeps total daily σ on spec now that trend days carry most of it.
-            double drift = regular ? 0.78 * flow.Day.DriftAt(minutesSinceOpen) * spec.DailyVolatility / _stepsPerSession : 0;
+            // The day's direction arrives as legs (impulses, pullbacks, rotations: see OrderFlow.NewLeg), carried into
+            // fair value and, like index arbitrage, straight into price.
+            double leg = regular ? flow.LegRate * Math.Sqrt(profile.Volatility) : 0; // legs run faster at the open and close
             double systematic = spec.MarketBeta * marketReturn + spec.SectorBeta * _sectorReturns[sec.SectorIndex];
-            sec.FairLog += systematic + sigma * FairDiffusion * rng.NextGaussian() + newsFair + drift;
+            sec.FairLog += systematic + sigma * FairDiffusion * rng.NextGaussian() + newsFair + leg;
 
             // ---- price: only order flow moves it.
             if (newsNow != 0) _flow.OnNews(sec, newsNow, price);
             bool openingCross = regular && !flow.OpenAuctionDone;
             if (openingCross) _flow.OnOpen(sec, price);
-            var step = new FlowStep(regular, minutesSinceOpen, profile.Volume, sigma, systematic);
+            var step = new FlowStep(regular, minutesSinceOpen, profile.Volume, sigma, systematic + leg);
             double newLog = Math.Max(MinLogPrice, _flow.Step(sec, price, step, out double gross));
             sec.DeviationLog = newLog - sec.FairLog;
             if ((time.TimeOfDay.TotalSeconds + _dt) % 60 < 1e-6) _flow.Minute(sec, newLog, step);
@@ -218,7 +259,8 @@ namespace OpeningBell.Market
             double flowRatio = flow.GrossEma > 0 ? Math.Min(4, gross / flow.GrossEma) : 1;
             double expectedShares = spec.AverageDailyVolume * _dtDays * profile.Volume * activity * Math.Sqrt(attention)
                                     * marketActivity * _volumeNormalizer * flow.Day.RelativeVolume / RelativeVolumeMean
-                                    * (0.6 + 0.4 * flowRatio) * LogNormal(rng, _config.VolumeNoise);
+                                    * (0.6 + 0.4 * flowRatio) * (regular ? OrderFlow.LegVolume(flow.Leg) : 1)
+                                    * LogNormal(rng, _config.VolumeNoise);
             // Opening and closing crosses: queued orders meet in one big print.
             if (openingCross) expectedShares += spec.AverageDailyVolume * 0.006 * flow.Day.RelativeVolume * LogNormal(rng, 0.4);
             bool closingCross = session == MarketSession.Regular && (time + TimeSpan.FromSeconds(_dt)).TimeOfDay >= _schedule.RegularClose;

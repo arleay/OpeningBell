@@ -9,7 +9,7 @@ namespace OpeningBell.Market
     /// </summary>
     internal static class FlowCodec
     {
-        private const long Version = 1;
+        private const long Version = 2; // 2: legs and jitter appended at the end
 
         public static List<long> Capture(FlowState f)
         {
@@ -58,12 +58,18 @@ namespace OpeningBell.Market
                 D(o, l.Stops);
                 D(o, l.Age);
             }
+
+            o.Add((long)f.Leg);
+            D(o, f.LegRate);
+            D(o, f.LegMinutes);
+            D(o, f.Jitter);
             return o;
         }
 
         public static void Restore(FlowState f, List<long> data)
         {
-            if (data == null || data.Count == 0 || data[0] != Version) return;
+            if (data == null || data.Count == 0 || data[0] < 1 || data[0] > Version) return;
+            long version = data[0];
             int i = 1;
             long L() => data[i++];
             double R() => BitConverter.Int64BitsToDouble(data[i++]);
@@ -95,6 +101,14 @@ namespace OpeningBell.Market
                 {
                     Kind = (LevelKind)L(), Log = R(), Strength = R(), Touches = (int)L(), Side = (int)L(), Wall = R(), Stops = R(), Age = R(),
                 });
+
+            if (version >= 2)
+            {
+                f.Leg = (LegKind)L();
+                f.LegRate = R();
+                f.LegMinutes = R();
+                f.Jitter = R();
+            }
         }
 
         private static void D(List<long> o, double v) => o.Add(BitConverter.DoubleToInt64Bits(v));
