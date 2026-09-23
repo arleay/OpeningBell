@@ -59,11 +59,11 @@ namespace OpeningBell.Tests
             VisualElement root = terminal.Root;
             Click(root.Q("watch-APEX"));
             Press(root.Q<Button>("type-limit"));
-            root.Q<TextField>("qty").value = "50";
+            root.Q<TextField>("qty").value = "2";
             game.Market.TryGetQuote("APEX", out Quote quote);
             root.Q<TextField>("limit-price").value = Fmt.Price(quote.Ask);
             Press(root.Q<Button>("submit-order"));
-            Assert.AreEqual(50, game.Account.Portfolio.QuantityOf("APEX"), "bought through the terminal");
+            Assert.AreEqual(2, game.Account.Portfolio.QuantityOf("APEX"), "bought through the terminal");
             terminal.ShowOnScreen(true); // undo the offscreen test target before standing up
 
             // Stand up with Esc, then walk away.
@@ -78,7 +78,7 @@ namespace OpeningBell.Tests
             HoldKeys(Key.S);
             yield return WaitUntil(() => Vector3.Distance(stood, player.transform.position) > 1f, 5f, "walked away from the desk");
             HoldKeys();
-            Assert.AreEqual(50, game.Account.Portfolio.QuantityOf("APEX"), "position persists away from the desk");
+            Assert.AreEqual(2, game.Account.Portfolio.QuantityOf("APEX"), "position persists away from the desk");
             Assert.AreNotEqual(MarketSession.Closed, game.Market.Session);
         }
     }

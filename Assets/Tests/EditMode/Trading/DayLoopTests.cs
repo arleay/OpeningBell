@@ -54,27 +54,29 @@ namespace OpeningBell.Tests
             days.DayCompleted += _ => completedEvents++;
             Assert.AreEqual(1, days.DayNumber);
 
-            // Thursday: round trip. Friday: buy and hold over the weekend. Monday: sell.
+            // Thursday: round trip. Friday: buy and let the close flatten it. Monday: round trip.
             sim.AdvanceTo(thursday.AddHours(10));
-            orders.SubmitMarket("AAA", OrderSide.Buy, 100);
+            Assert.AreEqual(OrderStatus.Filled, orders.SubmitMarket("AAA", OrderSide.Buy, 2).Status);
             sim.AdvanceTo(thursday.AddHours(11));
-            orders.SubmitMarket("AAA", OrderSide.Sell, 100);
+            orders.SubmitMarket("AAA", OrderSide.Sell, 2);
             sim.AdvanceTo(thursday.AddDays(1).AddHours(10));
-            orders.SubmitMarket("BBB", OrderSide.Buy, 50);
+            orders.SubmitMarket("BBB", OrderSide.Buy, 1);
             sim.AdvanceTo(Monday.AddDays(7).AddHours(10));
-            orders.SubmitMarket("BBB", OrderSide.Sell, 50);
+            Assert.AreEqual(0, account.Portfolio.QuantityOf("BBB"), "nothing is held over the weekend");
+            orders.SubmitMarket("BBB", OrderSide.Buy, 1);
+            orders.SubmitMarket("BBB", OrderSide.Sell, 1);
             sim.AdvanceTo(Monday.AddDays(7).AddHours(21));
 
             var reports = days.Completed;
             CollectionAssert.AreEqual(new[] { thursday, thursday.AddDays(1), Monday.AddDays(7) }, reports.Select(r => r.Date));
             CollectionAssert.AreEqual(new[] { 1, 2, 3 }, reports.Select(r => r.DayNumber));
-            CollectionAssert.AreEqual(new[] { 2, 1, 1 }, reports.Select(r => r.Fills));
+            CollectionAssert.AreEqual(new[] { 2, 2, 2 }, reports.Select(r => r.Fills));
             Assert.IsTrue(reports.All(r => r.IsComplete));
             Assert.AreEqual(3, completedEvents);
             Assert.IsNull(days.Current, "market closed between days");
 
             Assert.AreEqual(1, reports[0].Winners + reports[0].Losers, "Thursday's round trip closed one trade");
-            Assert.AreEqual(0, reports[1].Winners + reports[1].Losers, "Friday only opened a position");
+            Assert.AreEqual(1, reports[1].Winners + reports[1].Losers, "Friday's position was closed at the close");
             Assert.AreEqual(account.TotalCommissions, reports.Sum(r => r.Commissions));
             Assert.AreEqual(account.RealizedPnL, reports.Sum(r => r.RealizedPnL));
 

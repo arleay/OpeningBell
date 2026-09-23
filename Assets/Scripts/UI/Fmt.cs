@@ -33,6 +33,9 @@ namespace OpeningBell.UI
 
         public static string Shares(long quantity) => quantity.ToString("N0", C);
 
+        /// <summary>"1 contract", "3 contracts".</summary>
+        public static string Contracts(long quantity) => Shares(quantity) + (Math.Abs(quantity) == 1 ? " contract" : " contracts");
+
         public static string Clock(DateTime time) => time.ToString("HH:mm:ss", C);
 
         public static string Minutes(DateTime time) => time.ToString("HH:mm", C);

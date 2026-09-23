@@ -27,8 +27,8 @@ namespace OpeningBell.UI
             _vwap = Ui.Stat("VWAP", stats);
             _range = Ui.Stat("DAY RANGE", stats);
             _prevClose = Ui.Stat("PREV CLOSE", stats);
-            _float = Ui.Stat("FLOAT", stats);
-            _marketCap = Ui.Stat("MKT CAP", stats);
+            _float = Ui.Stat("$ / POINT", stats);
+            _marketCap = Ui.Stat("MARGIN", stats);
             _avgVolume = Ui.Stat("AVG VOL", stats);
             _latestNews = Ui.Label("quote-news", Root);
             _latestNews.name = "quote-news";
@@ -55,8 +55,10 @@ namespace OpeningBell.UI
             Ui.SetText(_vwap, s.DayVolume > 0 ? Fmt.Price(s.Vwap) : "—");
             Ui.SetText(_range, s.DayVolume > 0 ? $"{Fmt.Price(s.DayLow)} – {Fmt.Price(s.DayHigh)}" : "—");
             Ui.SetText(_prevClose, Fmt.Price(s.PreviousClose));
-            Ui.SetText(_float, Fmt.Volume(spec.FloatShares));
-            Ui.SetText(_marketCap, "$" + Fmt.Volume((long)(s.Last * spec.SharesOutstanding)));
+            // Contract terms: dollars per 1.00 move per contract, and the day margin one contract posts.
+            ContractSpec contract = ContractSpec.For(spec);
+            Ui.SetText(_float, Fmt.Money(contract.PointValue));
+            Ui.SetText(_marketCap, Fmt.Money(contract.Margin));
             Ui.SetText(_avgVolume, Fmt.Volume(spec.AverageDailyVolume));
 
             NewsItem latest = LatestNews(s.Ticker);

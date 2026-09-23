@@ -18,6 +18,8 @@ namespace OpeningBell.Trading
         public List<DayReportSaveData> CompletedDays = new List<DayReportSaveData>();
         public bool HasCurrentDay;
         public DayReportSaveData CurrentDay = new DayReportSaveData();
+        /// <summary>Saved since the broker trades contracts (false: an older save in shares, converted on load).</summary>
+        public bool Contracts;
     }
 
     [Serializable]
@@ -89,6 +91,7 @@ namespace OpeningBell.Trading
                     Amount = S(e.Amount), BalanceAfter = S(e.BalanceAfter), Ticker = e.Ticker ?? "", Memo = e.Memo ?? "",
                 });
 
+            data.Contracts = true;
             foreach (Position p in account.Portfolio.Positions)
                 data.Positions.Add(new PositionSaveData
                 {
@@ -143,7 +146,16 @@ namespace OpeningBell.Trading
             account.RestoreTotals(D(data.NetDeposits), D(data.TotalCommissions), D(data.DayStartEquity));
 
             foreach (PositionSaveData p in data.Positions)
-                account.Portfolio.GetOrCreate(p.Ticker).Restore(p.Quantity, D(p.CostBasis), D(p.RealizedPnL));
+            {
+                Position position = account.PositionFor(p.Ticker);
+                if (data.Contracts) position.Restore(p.Quantity, D(p.CostBasis), D(p.RealizedPnL));
+                else
+                {
+                    // Shares bought before the switch to contracts: give back what they cost and start flat.
+                    position.Restore(0, 0m, D(p.RealizedPnL));
+                    if (p.Quantity != 0) account.RefundLegacyShares(p.Ticker, D(p.CostBasis));
+                }
+            }
 
             var fills = new List<Fill>();
             foreach (FillSaveData f in data.Fills)
@@ -160,6 +172,9 @@ namespace OpeningBell.Trading
                 order.Triggered = o.Triggered;
                 order.Gtc = o.Gtc;
                 order.OcoGroup = o.OcoGroup;
+                if (!data.Contracts && order.IsOpen)
+                    order.Restore(OrderStatus.Cancelled, "Share orders were cancelled: PennyBridge now trades contracts.",
+                        new DateTime(o.UpdatedAt), o.FilledQuantity, D(o.FilledNotional), D(o.Commission), o.IsResting, D(o.ReservePrice));
                 foreach (Fill f in fills)
                     if (f.OrderId == order.Id) order.AttachFill(f);
                 restoredOrders.Add(order);

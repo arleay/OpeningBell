@@ -62,7 +62,7 @@ namespace OpeningBell.UI
                 decimal pnl = (_trading.Last - avg) * _trading.Quantity;
                 decimal pct = avg > 0 ? (_trading.Last - avg) / avg * 100m : 0m;
                 float y = ClampY(Y((double)avg)) - 9;
-                Label a = Text(_plot.x + 6, y, $"AVG {Fmt.Price(avg)} · {Fmt.Shares(_trading.Quantity)} sh", Color.white, PositionColor);
+                Label a = Text(_plot.x + 6, y, $"AVG {Fmt.Price(avg)} · {Fmt.Shares(_trading.Quantity)} ct", Color.white, PositionColor);
                 float x = _plot.x + 12 + 7.2f * a.text.Length + 8;
                 Label b = Text(x, y, $"{Fmt.SignedMoney(pnl)}  {Fmt.Percent(pct)}", Color.white, pnl >= 0 ? TakeProfitColor : StopLossColor);
                 x += 7.2f * b.text.Length + 16;

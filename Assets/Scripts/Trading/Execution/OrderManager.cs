@@ -11,6 +11,8 @@ namespace OpeningBell.Trading
     /// orders; brackets (take-profit + stop-loss, one-cancels-other). Orders are day orders unless good 'til
     /// cancelled (brackets): unfilled market orders are cancelled at the regular close, other day orders when the
     /// market closes. Stops trigger only in the regular session and then fill against the book like any market order.
+    /// Symbols trade as futures-style contracts: buys post day margin (see Account), and no position is held
+    /// overnight: at the 4:00 PM close every position is closed at the closing price (after-hours ones at 8:00 PM).
     /// </summary>
     public sealed class OrderManager
     {
@@ -202,18 +204,19 @@ namespace OpeningBell.Trading
             if (order.Side == OrderSide.Buy)
             {
                 order.ReservePrice = ReservePrice(order, quote);
-                decimal required = RequiredCash(order.Quantity, order.ReservePrice);
+                decimal required = RequiredMargin(order.Ticker, order.Quantity);
                 if (required > _account.BuyingPower)
                     return string.Format(CultureInfo.InvariantCulture,
-                        "Insufficient buying power: needs ${0:N2}, available ${1:N2}.", required, _account.BuyingPower);
+                        "Insufficient buying power: {0} contract{1} need ${2:N2} margin, available ${3:N2}.",
+                        order.Quantity, order.Quantity == 1 ? "" : "s", required, _account.BuyingPower);
             }
             else
             {
                 long available = AvailableToSell(order.Ticker, order.OcoGroup);
                 if (order.Quantity > available)
                     return available <= 0
-                        ? "No shares available to sell. Short selling is not available."
-                        : $"Only {available} shares available to sell. Short selling is not available.";
+                        ? "No contracts to sell. Short selling is not available."
+                        : $"Only {available} contract{(available == 1 ? "" : "s")} to sell. Short selling is not available.";
             }
 
             return null;
@@ -254,7 +257,12 @@ namespace OpeningBell.Trading
                 ApplyExecution(order, execution.Price, quantity);
                 taken += quantity;
             }
-            if (aggressive && taken > 0) _market.ReportAggressiveFlow(order.Ticker, order.Side == OrderSide.Buy ? taken : -taken);
+            // Impact is sized by exposure: a contract moves the market like point-value shares.
+            if (aggressive && taken > 0)
+            {
+                long exposure = (long)(taken * _account.Contract(order.Ticker).PointValue);
+                _market.ReportAggressiveFlow(order.Ticker, order.Side == OrderSide.Buy ? exposure : -exposure);
+            }
         }
 
         private void ApplyExecution(Order order, decimal price, long quantity)
@@ -303,24 +311,21 @@ namespace OpeningBell.Trading
             }
         }
 
-        /// <summary>Commission is computed on the order's cumulative fills, so partial fills never overpay the minimum.</summary>
+        /// <summary>Commission on the order's cumulative fills, so partial fills are charged exactly once per contract.</summary>
         private decimal CommissionDelta(Order order, long quantity, decimal price) =>
-            _rules.CommissionFor(order.FilledQuantity + quantity, order.FilledNotional + quantity * price) - order.Commission;
+            _rules.CommissionFor(order.FilledQuantity + quantity) - order.Commission;
 
         /// <summary>
-        /// Guards cash when a market buy slips past its reserve cushion. The order may use its own reservation,
-        /// never cash reserved for other orders.
+        /// Guards margin when a buy fills after the account moved (open P&L fell). The order may use its own
+        /// reservation, never margin reserved for other orders.
         /// </summary>
         private long AffordableQuantity(Order order, decimal price, long quantity)
         {
             decimal available = _account.BuyingPower + _account.ReservationFor(order.Id);
-            if (Cost(quantity) <= available) return quantity;
-
-            long q = Math.Min(quantity - 1, (long)Math.Floor(available / price));
-            while (q > 0 && Cost(q) > available) q--;
+            decimal margin = _account.MarginPerContract(order.Ticker);
+            long q = quantity;
+            while (q > 0 && q * margin + CommissionDelta(order, q, price) > available) q--;
             return q;
-
-            decimal Cost(long n) => n * price + CommissionDelta(order, n, price);
         }
 
         private void UpdateReservation(Order order)
@@ -330,9 +335,8 @@ namespace OpeningBell.Trading
             decimal amount = 0m;
             if (order.IsOpen)
             {
-                decimal remainingNotional = order.RemainingQuantity * order.ReservePrice;
-                decimal commission = _rules.CommissionFor(order.Quantity, order.FilledNotional + remainingNotional) - order.Commission;
-                amount = remainingNotional + Math.Max(0m, commission);
+                decimal commission = _rules.CommissionFor(order.Quantity) - order.Commission;
+                amount = order.RemainingQuantity * _account.MarginPerContract(order.Ticker) + Math.Max(0m, commission);
             }
             _account.SetReservation(order.Id, amount);
         }
@@ -356,24 +360,18 @@ namespace OpeningBell.Trading
             return Math.Max(0, _account.Portfolio.QuantityOf(ticker) - committed);
         }
 
-        /// <summary>Largest buy that would pass the buying-power check right now (same reserve rule as validation).</summary>
+        /// <summary>Most contracts a buy could open right now (same margin rule as validation).</summary>
         public long MaxBuyQuantity(string ticker, OrderType type, decimal limitPrice)
         {
-            if (!_market.TryGetQuote(ticker, out Quote quote)) return 0;
-            decimal price = ReservePrice(type, limitPrice, 0m, quote);
-            if (price <= 0m) return 0;
-
-            // Required cash rises monotonically with quantity; binary search below the no-commission upper bound.
+            if (!_market.TryGetQuote(ticker, out _)) return 0;
+            decimal perContract = _account.MarginPerContract(ticker) + _rules.CommissionFor(1);
             decimal buyingPower = _account.BuyingPower;
-            long lo = 0, hi = Math.Max(0L, (long)Math.Floor(buyingPower / price));
-            while (lo < hi)
-            {
-                long mid = lo + (hi - lo + 1) / 2;
-                if (RequiredCash(mid, price) <= buyingPower) lo = mid;
-                else hi = mid - 1;
-            }
-            return lo;
+            return perContract <= 0m || buyingPower <= 0m ? 0 : (long)Math.Floor(buyingPower / perContract);
         }
+
+        /// <summary>Margin plus commission to open this many contracts.</summary>
+        public decimal RequiredMargin(string ticker, long contracts) =>
+            contracts * _account.MarginPerContract(ticker) + _rules.CommissionFor(contracts);
 
         private decimal ReservePrice(Order order, in Quote quote) => ReservePrice(order.Type, order.LimitPrice, order.StopPrice, quote);
 
@@ -385,10 +383,34 @@ namespace OpeningBell.Trading
             return PriceTick.RoundUp(basis * (1m + (decimal)_rules.MarketBuyReservePercent / 100m), PriceTick.For(basis));
         }
 
-        private decimal RequiredCash(long quantity, decimal price)
+
+        /// <summary>
+        /// End of day: cancels the orders of every held symbol and closes each position in full at the closing
+        /// price (the closing print, so the whole size fills there like a market-on-close order).
+        /// </summary>
+        private void FlattenAll(string reason)
         {
-            decimal notional = quantity * price;
-            return notional + _rules.CommissionFor(quantity, notional);
+            var held = new List<Position>();
+            foreach (Position p in _account.Portfolio.Positions)
+                if (p.IsOpen) held.Add(p);
+            foreach (Position p in held)
+            {
+                if (!_market.TryGetQuote(p.Ticker, out Quote quote)) continue;
+                foreach (Order o in _open.FindAll(o => o.Ticker == p.Ticker))
+                    Close(o, OrderStatus.Cancelled, "Cancelled: the position was closed at the end of the day.");
+
+                long quantity = Math.Abs(p.Quantity);
+                OrderSide side = p.Quantity > 0 ? OrderSide.Sell : OrderSide.Buy;
+                var order = new Order(_nextOrderId++, p.Ticker, side, OrderType.Market, quantity, 0m, _market.Now)
+                {
+                    Status = OrderStatus.Working,
+                    StatusReason = reason,
+                };
+                _orders.Add(order);
+                _open.Add(order);
+                decimal price = quote.Last > 0m ? quote.Last : quote.Mid;
+                ApplyExecution(order, price, quantity);
+            }
         }
 
         private void Close(Order order, OrderStatus status, string reason)
@@ -416,6 +438,8 @@ namespace OpeningBell.Trading
 
         private void OnSessionChanged(MarketSession previous, MarketSession current)
         {
+            if (previous == MarketSession.Regular && current != MarketSession.Regular) FlattenAll("Closed at the 4:00 PM close.");
+            else if (current == MarketSession.Closed) FlattenAll("Closed when the market closed.");
             if (_open.Count == 0) return;
             _scratch.Clear();
             _scratch.AddRange(_open);

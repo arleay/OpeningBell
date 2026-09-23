@@ -35,9 +35,9 @@ namespace OpeningBell.Tests
 
                 // Trade during the session.
                 game.SkipTo(date.AddHours(10));
-                Assert.AreEqual(OrderStatus.Filled, game.Orders.SubmitMarket("APEX", OrderSide.Buy, 10).Status);
+                Assert.AreEqual(OrderStatus.Filled, game.Orders.SubmitMarket("APEX", OrderSide.Buy, 1).Status);
                 game.SkipTo(date.AddHours(11));
-                Assert.AreEqual(OrderStatus.Filled, game.Orders.SubmitMarket("APEX", OrderSide.Sell, 10).Status);
+                Assert.AreEqual(OrderStatus.Filled, game.Orders.SubmitMarket("APEX", OrderSide.Sell, 1).Status);
                 // Regular close → session summary appears in the terminal.
                 game.SkipTo(date.AddHours(16).AddMinutes(30));
                 terminal.RefreshAll();

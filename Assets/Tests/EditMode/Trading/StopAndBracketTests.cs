@@ -18,7 +18,7 @@ namespace OpeningBell.Tests
             _market = new FakeMarketData();
             _account = new Account(_market);
             _account.Deposit(10_000m);
-            _orders = new OrderManager(_market, _account, new BrokerRules { CommissionPerShare = 0, MinimumCommission = 0 });
+            _orders = new OrderManager(_market, _account, new BrokerRules { CommissionPerContract = 0 });
             _market.SetQuote("TST", 50.48m, 50.50m, size: 5000);
             _orders.SubmitMarket("TST", OrderSide.Buy, 100);
         }
@@ -55,18 +55,19 @@ namespace OpeningBell.Tests
         [Test]
         public void Stops_DoNotTriggerOutsideTheRegularSession()
         {
-            Order stop = _orders.SubmitStop("TST", OrderSide.Sell, 100, 50.00m, gtc: true);
             _market.SetSession(MarketSession.AfterHours);
+            Assert.AreEqual(0, _account.Portfolio.QuantityOf("TST"), "the regular close flattened the day's position");
+
+            Order buy = _orders.SubmitLimit("TST", OrderSide.Buy, 10, 50.50m);
+            Assert.AreEqual(OrderStatus.Filled, buy.Status);
+            Order stop = _orders.SubmitStop("TST", OrderSide.Sell, 10, 50.00m, gtc: true);
             _market.SetQuote("TST", 49.50m, 49.60m);
             _market.Tick();
             Assert.AreEqual(OrderStatus.Working, stop.Status, "a thin after-hours print doesn't set off a stop");
+
             _market.SetSession(MarketSession.Closed);
-            Assert.AreEqual(OrderStatus.Working, stop.Status, "good 'til cancelled survives the close");
-            _market.SetSession(MarketSession.Premarket);
-            _market.SetSession(MarketSession.Regular);
-            _market.Tick();
-            Assert.AreEqual(OrderStatus.Filled, stop.Status, "triggers at the open, at the market");
-            Assert.AreEqual(49.50m, stop.AverageFillPrice);
+            Assert.AreEqual(OrderStatus.Cancelled, stop.Status, "nothing is held overnight: the position closes and its stop goes");
+            Assert.AreEqual(0, _account.Portfolio.QuantityOf("TST"));
         }
 
         [Test]
@@ -135,6 +136,27 @@ namespace OpeningBell.Tests
         }
 
         [Test]
+        public void OldShareSave_LoadsFlat_WithTheSharesCostRefunded()
+        {
+            // A save from before contracts: 100 shares bought for $5,050 in cash, and a working share order.
+            var days = new TradingDayRecorder(_market, _account, _orders);
+            _orders.SubmitLimit("TST", OrderSide.Buy, 50, 49.00m);
+            TradingSaveData data = TradingState.Capture(_account, _orders, days);
+            data.Contracts = false;
+            data.Positions.Single(p => p.Ticker == "TST").CostBasis = "5050.00";
+            data.Ledger.Add(new LedgerEntrySaveData { Id = 99, Type = (int)LedgerEntryType.TradeBuy, Amount = "-5050.00", BalanceAfter = "4950.00", Ticker = "TST" });
+
+            var account = new Account(_market);
+            var orders = new OrderManager(_market, account, new BrokerRules { CommissionPerContract = 0 });
+            TradingState.Restore(UnityEngine.JsonUtility.FromJson<TradingSaveData>(UnityEngine.JsonUtility.ToJson(data)), account, orders,
+                new TradingDayRecorder(_market, account, orders));
+
+            Assert.AreEqual(0, account.Portfolio.QuantityOf("TST"), "no 100-contract position appears");
+            Assert.AreEqual(10_000m, account.Cash, "what the shares cost comes back");
+            Assert.AreEqual(0, orders.OpenOrders.Count, "share orders don't come back as contract orders");
+        }
+
+        [Test]
         public void Bracket_SurvivesSaveAndLoad_AndStillCancelsTheOtherLeg()
         {
             var days = new TradingDayRecorder(_market, _account, _orders);
@@ -145,7 +167,7 @@ namespace OpeningBell.Tests
             var market = new FakeMarketData();
             market.SetQuote("TST", 50.48m, 50.50m, size: 5000);
             var account = new Account(market);
-            var orders = new OrderManager(market, account, new BrokerRules { CommissionPerShare = 0, MinimumCommission = 0 });
+            var orders = new OrderManager(market, account, new BrokerRules { CommissionPerContract = 0 });
             TradingState.Restore(UnityEngine.JsonUtility.FromJson<TradingSaveData>(json), account, orders, new TradingDayRecorder(market, account, orders));
 
             Order sl = orders.OpenOrders.Single(o => o.Type == OrderType.Stop);

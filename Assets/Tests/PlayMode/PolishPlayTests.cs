@@ -51,7 +51,7 @@ namespace OpeningBell.Tests
             yield return null;
             SaveTerminalScreenshot("mail-app.png");
 
-            game.Orders.SubmitMarket("APEX", OrderSide.Buy, 10);
+            game.Orders.SubmitMarket("APEX", OrderSide.Buy, 1);
             yield return null;
             Assert.GreaterOrEqual(audio.Played("fill"), 1);
             Assert.IsTrue(game.Inbox.Emails.Any(e => e.Subject == "Your first fill"));
@@ -68,7 +68,7 @@ namespace OpeningBell.Tests
             yield return null;
 
             game.SkipTo(game.Clock.Now.Date.AddHours(10));
-            game.Orders.SubmitMarket("APEX", OrderSide.Buy, 10);
+            game.Orders.SubmitMarket("APEX", OrderSide.Buy, 1);
 
             yield return TapKey(Key.Escape);
             Assert.IsTrue(menu.IsOpen, "Esc opens the menu while standing");

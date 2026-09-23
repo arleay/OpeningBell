@@ -55,6 +55,16 @@ namespace OpeningBell.Tests
 
         public bool TryGetQuote(string ticker, out Quote quote) => _quotes.TryGetValue(ticker, out quote);
 
+        /// <summary>Contract terms per symbol; unset symbols trade $1 a point with $10 margin per contract.</summary>
+        public readonly Dictionary<string, ContractSpec> Contracts = new Dictionary<string, ContractSpec>();
+
+        public bool TryGetContract(string ticker, out ContractSpec contract)
+        {
+            if (!_quotes.ContainsKey(ticker)) { contract = default; return false; }
+            if (!Contracts.TryGetValue(ticker, out contract)) contract = new ContractSpec(1m, 10m);
+            return true;
+        }
+
         /// <summary>Aggressive flow reported by the order manager (signed shares), for impact tests.</summary>
         public readonly List<(string Ticker, long Shares)> ReportedFlow = new List<(string, long)>();
 

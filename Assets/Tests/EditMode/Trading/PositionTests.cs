@@ -8,7 +8,7 @@ namespace OpeningBell.Tests
         [Test]
         public void ScalingIn_AveragesCost()
         {
-            var p = new Position("TST");
+            var p = new Position("TST", 1m);
             p.ApplyFill(100, 10m);
             p.ApplyFill(100, 12m);
 
@@ -21,7 +21,7 @@ namespace OpeningBell.Tests
         [Test]
         public void PartialExit_RealizesProfit_AndKeepsAverage()
         {
-            var p = new Position("TST");
+            var p = new Position("TST", 1m);
             p.ApplyFill(200, 11m);
 
             decimal realized = p.ApplyFill(-100, 13m);
@@ -35,7 +35,7 @@ namespace OpeningBell.Tests
         [Test]
         public void CompleteExit_ClosesPosition()
         {
-            var p = new Position("TST");
+            var p = new Position("TST", 1m);
             p.ApplyFill(200, 11m);
             p.ApplyFill(-100, 13m);
             decimal realized = p.ApplyFill(-100, 9m);
@@ -51,7 +51,7 @@ namespace OpeningBell.Tests
         [Test]
         public void RepeatingDecimalCost_StaysExactAcrossExits()
         {
-            var p = new Position("TST");
+            var p = new Position("TST", 1m);
             p.ApplyFill(1, 10m);
             p.ApplyFill(1, 10m);
             p.ApplyFill(1, 10.01m); // cost 30.01 over 3 shares
@@ -65,7 +65,7 @@ namespace OpeningBell.Tests
         [Test]
         public void ShortSide_CoverAndFlip()
         {
-            var p = new Position("TST");
+            var p = new Position("TST", 1m);
             p.ApplyFill(-100, 10m);
             Assert.AreEqual(PositionDirection.Short, p.Direction);
             Assert.AreEqual(10m, p.AveragePrice);
@@ -83,10 +83,22 @@ namespace OpeningBell.Tests
         [Test]
         public void UnrealizedPnL_UsesMark()
         {
-            var p = new Position("TST");
+            var p = new Position("TST", 1m);
             p.ApplyFill(100, 10m);
             Assert.AreEqual(1050m, p.MarketValue(10.50m));
             Assert.AreEqual(50m, p.UnrealizedPnL(10.50m));
+        }
+
+        [Test]
+        public void PointValue_ScalesMoney_LikeFutures()
+        {
+            var p = new Position("NQX", 20m); // $20 a point, like an NQ mini
+            p.ApplyFill(2, 100m);
+            Assert.AreEqual(100m, p.AveragePrice);
+            Assert.AreEqual(30m, p.UnrealizedPnL(100.75m));   // 2 × 0.75 × 20
+            Assert.AreEqual(4030m, p.MarketValue(100.75m));   // notional exposure, not what it costs to hold
+            Assert.AreEqual(50m, p.ApplyFill(-2, 101.25m));   // 2 × 1.25 × 20
+            Assert.IsFalse(p.IsOpen);
         }
     }
 }

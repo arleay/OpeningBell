@@ -10,6 +10,8 @@ namespace OpeningBell.Trading
         TradeBuy,
         TradeSell,
         Commission,
+        /// <summary>Realized result of closing contracts (futures-style: no cash for the contracts themselves).</summary>
+        TradePnL,
     }
 
     public sealed class LedgerEntry

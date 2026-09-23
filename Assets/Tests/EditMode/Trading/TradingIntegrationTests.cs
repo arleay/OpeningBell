@@ -25,21 +25,21 @@ namespace OpeningBell.Tests
             Assert.AreEqual(MarketSession.Regular, sim.Session);
 
             sim.TryGetQuote("AAA", out Quote entry);
-            Order buy = orders.SubmitMarket("AAA", OrderSide.Buy, 100);
+            Order buy = orders.SubmitMarket("AAA", OrderSide.Buy, 2);
             Assert.AreEqual(OrderStatus.Filled, buy.Status);
             Assert.AreEqual(entry.Ask, buy.Fills[0].Price);
 
-            Order farBid = orders.SubmitLimit("AAA", OrderSide.Buy, 10, PriceTick.RoundDown(entry.Bid * 0.5m, 0.01m));
+            Order farBid = orders.SubmitLimit("AAA", OrderSide.Buy, 1, PriceTick.RoundDown(entry.Bid * 0.5m, 0.01m));
 
             sim.AdvanceTo(Monday.AddHours(11));
             sim.TryGetQuote("AAA", out Quote exit);
-            Order sell = orders.SubmitMarket("AAA", OrderSide.Sell, 100);
+            Order sell = orders.SubmitMarket("AAA", OrderSide.Sell, 2);
             Assert.AreEqual(OrderStatus.Filled, sell.Status);
             Assert.AreEqual(exit.Bid, sell.Fills[0].Price);
-            Assert.AreEqual(100 * (exit.Bid - entry.Ask), account.RealizedPnL);
+            Assert.AreEqual(2 * (exit.Bid - entry.Ask) * account.Contract("AAA").PointValue, account.RealizedPnL);
 
             decimal nearLimit = exit.Bid - 0.05m;
-            Order nearBid = orders.SubmitLimit("AAA", OrderSide.Buy, 50, nearLimit);
+            Order nearBid = orders.SubmitLimit("AAA", OrderSide.Buy, 1, nearLimit);
 
             sim.AdvanceTo(Monday.AddHours(21));
 

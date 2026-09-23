@@ -53,14 +53,14 @@ namespace OpeningBell.Tests
             Assert.AreEqual("APEX", root.Q<Label>("quote-ticker").text);
             StringAssert.Contains("distribution agreement", root.Q<Label>("quote-news").text);
 
-            // Market buy 100.
+            // Market buy 2 contracts.
             game.Market.TryGetQuote("APEX", out Quote entry);
             Press(root.Q<Button>("side-buy"));
             Press(root.Q<Button>("type-market"));
-            root.Q<TextField>("qty").value = "100";
+            root.Q<TextField>("qty").value = "2";
             Press(submit);
-            Assert.AreEqual(100, game.Account.Portfolio.QuantityOf("APEX"));
-            StringAssert.StartsWith("Filled 100 APEX @ " + Fmt.Price(entry.Ask), status.text);
+            Assert.AreEqual(2, game.Account.Portfolio.QuantityOf("APEX"));
+            StringAssert.StartsWith("Filled 2 APEX @ " + Fmt.Price(entry.Ask), status.text);
 
             // Resting limit buy well below the market.
             Press(root.Q<Button>("type-limit"));
@@ -93,15 +93,15 @@ namespace OpeningBell.Tests
             Assert.NotNull(cancel, "cancel button for the working order");
             Press(cancel);
             Assert.AreEqual(OrderStatus.Cancelled, resting.Status);
-            Assert.AreEqual(game.Account.Cash, game.Account.BuyingPower, "reservation released");
+            Assert.AreEqual(0m, game.Account.ReservedCash, "reservation released");
 
             // Close the position from the Positions tab.
             Press(root.Q<Button>("tab-positions"));
             game.Market.TryGetQuote("APEX", out Quote exit);
             Press(root.Q<Button>("close-APEX"));
             Assert.AreEqual(0, game.Account.Portfolio.QuantityOf("APEX"));
-            Assert.AreEqual(100 * (exit.Bid - entry.Ask), game.Account.RealizedPnL);
-            StringAssert.StartsWith("Filled 100 APEX", status.text, "ticket shows the Close result");
+            Assert.AreEqual(2 * (exit.Bid - entry.Ask) * game.Account.Contract("APEX").PointValue, game.Account.RealizedPnL);
+            StringAssert.StartsWith("Filled 2 APEX", status.text, "ticket shows the Close result");
 
             terminal.RefreshAll();
             yield return null;

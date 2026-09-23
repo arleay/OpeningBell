@@ -5,7 +5,8 @@ using OpeningBell.Market;
 namespace OpeningBell.Trading
 {
     /// <summary>
-    /// Cash brokerage account (no margin yet). Positions are marked at the last trade price.
+    /// Futures-style margin account. Opening contracts posts day margin instead of paying for them; cash only moves
+    /// by realized P&L (points × point value) and commissions. Positions are marked at the last trade price.
     /// Invariant: Equity − NetDeposits == RealizedPnL + UnrealizedPnL − TotalCommissions.
     /// </summary>
     public sealed class Account
@@ -20,13 +21,27 @@ namespace OpeningBell.Trading
         public decimal NetDeposits { get; private set; }
         public decimal TotalCommissions { get; private set; }
 
-        /// <summary>Cash held back for open buy orders.</summary>
+        /// <summary>Margin held back for open orders that would add contracts.</summary>
         public decimal ReservedCash { get; private set; }
 
-        public decimal BuyingPower => Cash - ReservedCash;
+        /// <summary>Day margin posted for open contracts.</summary>
+        public decimal MarginInUse
+        {
+            get
+            {
+                decimal total = 0m;
+                foreach (var p in Portfolio.Positions)
+                    if (p.IsOpen) total += Math.Abs(p.Quantity) * MarginPerContract(p.Ticker);
+                return total;
+            }
+        }
 
+        /// <summary>What new contracts can use: equity (open P&L counts) less margin posted and reserved.</summary>
+        public decimal BuyingPower => Equity - MarginInUse - ReservedCash;
+
+        /// <summary>Notional exposure of long contracts.</summary>
         public decimal LongMarketValue => SumOverPositions(longOnly: true, unrealized: false);
-        public decimal Equity => Cash + SumOverPositions(longOnly: false, unrealized: false);
+        public decimal Equity => Cash + UnrealizedPnL;
         public decimal RealizedPnL => Portfolio.RealizedPnL;
         public decimal UnrealizedPnL => SumOverPositions(longOnly: false, unrealized: true);
 
@@ -39,6 +54,13 @@ namespace OpeningBell.Trading
             _market = market;
             _market.SessionChanged += OnSessionChanged;
         }
+
+        public ContractSpec Contract(string ticker) =>
+            _market.TryGetContract(ticker, out ContractSpec c) ? c : new ContractSpec(1m, 0m);
+
+        public decimal MarginPerContract(string ticker) => Contract(ticker).Margin;
+
+        internal Position PositionFor(string ticker) => Portfolio.GetOrCreate(ticker, Contract(ticker).PointValue);
 
         public decimal MarkPrice(string ticker)
         {
@@ -58,7 +80,7 @@ namespace OpeningBell.Trading
         public void Withdraw(decimal amount, string memo = null)
         {
             if (amount <= 0m) throw new ArgumentOutOfRangeException(nameof(amount), "Withdrawal must be positive.");
-            if (amount > BuyingPower) throw new InvalidOperationException("Withdrawal exceeds cash not reserved for open orders.");
+            if (amount > Math.Min(BuyingPower, Cash)) throw new InvalidOperationException("Withdrawal exceeds cash not held as margin.");
             Ledger.Post(_market.Now, LedgerEntryType.Withdrawal, -amount, memo: memo);
             NetDeposits -= amount;
             DayStartEquity -= amount;
@@ -71,19 +93,24 @@ namespace OpeningBell.Trading
             DayStartEquity = dayStartEquity;
         }
 
+        /// <summary>Older saves held shares paid for in cash; converting to contracts refunds that cost.</summary>
+        internal void RefundLegacyShares(string ticker, decimal costBasis) =>
+            Ledger.Post(_market.Now, LedgerEntryType.TradePnL, costBasis, ticker, memo: "Shares converted: cost refunded");
+
         internal decimal ApplyFill(Fill fill)
         {
             bool buy = fill.Side == OrderSide.Buy;
-            Ledger.Post(fill.Time, buy ? LedgerEntryType.TradeBuy : LedgerEntryType.TradeSell,
-                buy ? -fill.Notional : fill.Notional, fill.Ticker, fill.OrderId, fill.Id);
+            decimal realized = PositionFor(fill.Ticker).ApplyFill(buy ? fill.Quantity : -fill.Quantity, fill.Price);
+            // Contracts aren't paid for: only the realized result of closing them settles in cash.
+            if (realized != 0m)
+                Ledger.Post(fill.Time, LedgerEntryType.TradePnL, realized, fill.Ticker, fill.OrderId, fill.Id);
 
             if (fill.Commission != 0m)
             {
                 Ledger.Post(fill.Time, LedgerEntryType.Commission, -fill.Commission, fill.Ticker, fill.OrderId, fill.Id);
                 TotalCommissions += fill.Commission;
             }
-
-            return Portfolio.GetOrCreate(fill.Ticker).ApplyFill(buy ? fill.Quantity : -fill.Quantity, fill.Price);
+            return realized;
         }
 
         internal decimal ReservationFor(long orderId) => _reservations.TryGetValue(orderId, out var amount) ? amount : 0m;

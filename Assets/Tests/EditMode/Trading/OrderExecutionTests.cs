@@ -12,7 +12,7 @@ namespace OpeningBell.Tests
         private OrderManager _orders;
 
         [SetUp]
-        public void SetUp() => Build(new BrokerRules { CommissionPerShare = 0, MinimumCommission = 0 });
+        public void SetUp() => Build(new BrokerRules { CommissionPerContract = 0 });
 
         private void Build(BrokerRules rules)
         {
@@ -32,7 +32,8 @@ namespace OpeningBell.Tests
 
             Assert.AreEqual(OrderStatus.Filled, order.Status);
             Assert.AreEqual(10.20m, order.AverageFillPrice);
-            Assert.AreEqual(8980m, _account.Cash);
+            Assert.AreEqual(10_000m, _account.Cash, "contracts aren't paid for");
+            Assert.AreEqual(1000m, _account.MarginInUse, "100 contracts × $10 margin");
             Assert.AreEqual(100, _account.Portfolio.QuantityOf("TST"));
             Assert.AreEqual(10.20m, _account.Portfolio.Find("TST").AveragePrice);
         }
@@ -54,7 +55,7 @@ namespace OpeningBell.Tests
         [Test]
         public void LargeMarketOrder_WalksBook_AndFillsOverSeveralTicks()
         {
-            Build(new BrokerRules { CommissionPerShare = 0, MinimumCommission = 0, BookLevelsPerTick = 3 });
+            Build(new BrokerRules { CommissionPerContract = 0, BookLevelsPerTick = 3 });
             _market.SetQuote("TST", 10.00m, 10.02m, size: 100);
 
             Order order = _orders.SubmitMarket("TST", OrderSide.Buy, 600);
@@ -68,21 +69,22 @@ namespace OpeningBell.Tests
 
             Assert.AreEqual(OrderStatus.Filled, order.Status);
             Assert.AreEqual(6018m, order.FilledNotional);
-            Assert.AreEqual(10_000m - 6018m, _account.Cash);
-            Assert.AreEqual(_account.Cash, _account.BuyingPower, "reservation released");
+            Assert.AreEqual(0m, _account.ReservedCash, "reservation released");
+            Assert.AreEqual(_account.Equity - _account.MarginInUse, _account.BuyingPower);
         }
 
         [Test]
         public void UnfilledMarketOrder_IsCancelledAtRegularClose()
         {
-            Build(new BrokerRules { CommissionPerShare = 0, MinimumCommission = 0, BookLevelsPerTick = 3 });
+            Build(new BrokerRules { CommissionPerContract = 0, BookLevelsPerTick = 3 });
             _market.SetQuote("TST", 10.00m, 10.02m, size: 100);
             Order order = _orders.SubmitMarket("TST", OrderSide.Buy, 600);
 
+            Assert.AreEqual(450, order.FilledQuantity);
             _market.SetSession(MarketSession.AfterHours);
 
             Assert.AreEqual(OrderStatus.Cancelled, order.Status);
-            Assert.AreEqual(450, _account.Portfolio.QuantityOf("TST"));
+            Assert.AreEqual(0, _account.Portfolio.QuantityOf("TST"), "and what did fill is closed at the close");
             Assert.AreEqual(_account.Cash, _account.BuyingPower);
         }
 
@@ -103,7 +105,8 @@ namespace OpeningBell.Tests
             _market.Tick();
             Assert.AreEqual(OrderStatus.Filled, order.Status);
             Assert.IsTrue(order.Fills.All(f => f.Price == 10.00m));
-            Assert.AreEqual(9000m, _account.Cash);
+            Assert.AreEqual(10_000m, _account.Cash);
+            Assert.AreEqual(1000m, _account.MarginInUse);
         }
 
         [Test]
@@ -197,15 +200,15 @@ namespace OpeningBell.Tests
         [Test]
         public void BuyBeyondBuyingPower_IsRejected()
         {
-            // Market buys reserve ask + 5%: 1000 × 10.71 > 10,000.
-            Order market = _orders.SubmitMarket("TST", OrderSide.Buy, 1000);
+            _market.Contracts["TST"] = new ContractSpec(20m, 1000m); // $1,000 day margin a contract
+            Order market = _orders.SubmitMarket("TST", OrderSide.Buy, 11);
             Assert.AreEqual(OrderStatus.Rejected, market.Status);
             StringAssert.Contains("buying power", market.StatusReason);
 
-            Order limit = _orders.SubmitLimit("TST", OrderSide.Buy, 1000, 9.99m);
+            Order limit = _orders.SubmitLimit("TST", OrderSide.Buy, 10, 9.99m);
             Assert.AreEqual(OrderStatus.Working, limit.Status);
-            Assert.AreEqual(OrderStatus.Rejected, _orders.SubmitLimit("TST", OrderSide.Buy, 2, 9.99m).Status,
-                "cash reserved by the first order is not available");
+            Assert.AreEqual(OrderStatus.Rejected, _orders.SubmitLimit("TST", OrderSide.Buy, 1, 9.99m).Status,
+                "margin reserved by the first order is not available");
         }
 
         [Test]
@@ -247,7 +250,7 @@ namespace OpeningBell.Tests
         public void Cancel_ReleasesReservation()
         {
             Order order = _orders.SubmitLimit("TST", OrderSide.Buy, 100, 9.00m);
-            Assert.AreEqual(9100m, _account.BuyingPower);
+            Assert.AreEqual(9000m, _account.BuyingPower, "100 contracts × $10 margin held");
 
             Assert.IsTrue(_orders.Cancel(order.Id));
             Assert.AreEqual(OrderStatus.Cancelled, order.Status);
@@ -271,24 +274,22 @@ namespace OpeningBell.Tests
         // ---- Commissions & accounting ----
 
         [Test]
-        public void Commission_AppliesMinimum_Cap_AndIsNotOverchargedOnPartialFills()
+        public void Commission_IsPerContract_AndChargedOnceAcrossPartialFills()
         {
-            Build(new BrokerRules { BookLevelsPerTick = 2 }); // $0.005/share, $1 min, 1% cap
+            Build(new BrokerRules { BookLevelsPerTick = 2 }); // $2.50 a contract a side
 
-            Assert.AreEqual(1.00m, _orders.SubmitMarket("TST", OrderSide.Buy, 100).Commission, "minimum");
-            Assert.AreEqual(0.10m, _orders.SubmitMarket("TST", OrderSide.Buy, 1).Commission, "1% cap on a $10 order");
+            Assert.AreEqual(2.50m, _orders.SubmitMarket("TST", OrderSide.Buy, 1).Commission);
 
             _market.SetQuote("TST", 10.00m, 10.02m, size: 100);
-            Order big = _orders.SubmitMarket("TST", OrderSide.Buy, 700); // 250 per tick
-            _market.Tick();
+            Order big = _orders.SubmitMarket("TST", OrderSide.Buy, 300); // 250 per tick
             _market.Tick();
 
             Assert.AreEqual(OrderStatus.Filled, big.Status);
-            Assert.Greater(big.Fills.Count, 2);
-            Assert.AreEqual(3.50m, big.Commission, "700 × $0.005, not a minimum per fill");
+            Assert.GreaterOrEqual(big.Fills.Count, 2);
+            Assert.AreEqual(750m, big.Commission, "300 × $2.50, however many fills");
 
             decimal ledgerCommissions = -_account.Ledger.Entries.Where(e => e.Type == LedgerEntryType.Commission).Sum(e => e.Amount);
-            Assert.AreEqual(4.60m, _account.TotalCommissions);
+            Assert.AreEqual(752.50m, _account.TotalCommissions);
             Assert.AreEqual(_account.TotalCommissions, ledgerCommissions);
         }
 
@@ -312,11 +313,58 @@ namespace OpeningBell.Tests
             Assert.AreEqual(ledgerSum, _account.Cash);
             Assert.AreEqual(_account.Ledger.Entries.Last().BalanceAfter, _account.Cash);
 
-            Assert.AreEqual(_account.Cash + 110 * 10.31m, _account.Equity);
+            Assert.AreEqual(_account.NetDeposits + _account.RealizedPnL - _account.TotalCommissions, _account.Cash,
+                "only realized results and fees settle in cash");
+            Assert.AreEqual(_account.Cash + _account.UnrealizedPnL, _account.Equity);
             Assert.AreEqual(_account.Equity - _account.NetDeposits,
                 _account.RealizedPnL + _account.UnrealizedPnL - _account.TotalCommissions);
             Assert.AreEqual(_account.Equity - 10_000m, _account.DailyPnL);
-            Assert.AreEqual(_account.Cash - 90m - 0.90m, _account.BuyingPower, "open order reserves 10 × 9.00 + commission");
+            Assert.AreEqual(_account.Equity - 110 * 10m - (10 * 10m + 25m), _account.BuyingPower,
+                "margin for 110 contracts, plus the open order's 10 contracts and their commission");
+        }
+
+        // ---- Futures-style contracts ----
+
+        [Test]
+        public void PointValue_SetsTheDollars_AndMarginLimitsSize()
+        {
+            _market.Contracts["TST"] = new ContractSpec(20m, 1500m); // $20 a point, $1,500 margin
+            Assert.AreEqual(6, _orders.MaxBuyQuantity("TST", OrderType.Market, 0m), "10,000 / 1,500");
+
+            _orders.SubmitMarket("TST", OrderSide.Buy, 2);                    // 2 @ 10.20
+            _market.SetQuote("TST", 10.70m, 10.72m, last: 10.71m);
+            Assert.AreEqual(20.40m, _account.UnrealizedPnL, "2 × 0.51 × $20");
+
+            _orders.SubmitMarket("TST", OrderSide.Sell, 2);                   // 2 @ 10.70
+            Assert.AreEqual(20m, _account.RealizedPnL, "2 × 0.50 × $20");
+            Assert.AreEqual(10_020m, _account.Cash);
+            Assert.AreEqual(0m, _account.MarginInUse);
+        }
+
+        [Test]
+        public void Positions_AreClosedAutomaticallyAtTheClose()
+        {
+            _market.Contracts["TST"] = new ContractSpec(20m, 1000m);
+            _orders.SubmitMarket("TST", OrderSide.Buy, 3);                                // 3 @ 10.20
+            var bracket = _orders.SubmitBracket("TST", 3, 11.00m, 9.50m);
+            Assert.IsTrue(bracket.All(o => o.Status == OrderStatus.Working));
+
+            _market.SetQuote("TST", 10.39m, 10.41m, last: 10.40m);                          // the closing print
+            _market.SetSession(MarketSession.AfterHours);
+
+            Assert.AreEqual(0, _account.Portfolio.QuantityOf("TST"), "flat at the close");
+            Assert.AreEqual(12m, _account.RealizedPnL, "3 × 0.20 × $20 at the closing price");
+            Assert.IsTrue(bracket.All(o => o.Status == OrderStatus.Cancelled), "its TP/SL are cancelled");
+            Order flatten = _orders.Orders.Last();
+            Assert.AreEqual(OrderSide.Sell, flatten.Side);
+            Assert.AreEqual(OrderStatus.Filled, flatten.Status);
+            StringAssert.Contains("close", flatten.StatusReason);
+
+            // Something opened after hours is closed when the market closes for the night.
+            _orders.SubmitLimit("TST", OrderSide.Buy, 1, 10.45m);
+            Assert.AreEqual(1, _account.Portfolio.QuantityOf("TST"));
+            _market.SetSession(MarketSession.Closed);
+            Assert.AreEqual(0, _account.Portfolio.QuantityOf("TST"));
         }
     }
 }

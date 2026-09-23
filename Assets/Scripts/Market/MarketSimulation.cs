@@ -102,6 +102,17 @@ namespace OpeningBell.Market
             return false;
         }
 
+        public bool TryGetContract(string ticker, out ContractSpec contract)
+        {
+            if (_byTicker.TryGetValue(ticker, out var sec))
+            {
+                contract = ContractSpec.For(sec.Spec);
+                return true;
+            }
+            contract = default;
+            return false;
+        }
+
         public void AdvanceTo(DateTime target)
         {
             while (true)

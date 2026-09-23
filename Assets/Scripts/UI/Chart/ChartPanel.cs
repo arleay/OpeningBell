@@ -81,7 +81,7 @@ namespace OpeningBell.UI
             _trading.CreateBracket = (tp, sl) =>
             {
                 long qty = Context.Orders.AvailableToSell(_ticker);
-                if (qty <= 0) return "All your shares are already covered by orders.";
+                if (qty <= 0) return "All your contracts are already covered by orders.";
                 foreach (Order o in Context.Orders.SubmitBracket(_ticker, qty, tp, sl))
                     if (o.Status == OrderStatus.Rejected) return o.StatusReason;
                 return null;

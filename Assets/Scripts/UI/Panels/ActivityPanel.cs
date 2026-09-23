@@ -43,7 +43,7 @@ namespace OpeningBell.UI
             _fillsTab = Ui.Button("FILLS", () => SetTab(Tab.Fills), "", tabs, "tab-fills");
 
             _positionsView = Ui.Box("activity-view", Root);
-            Header(_positionsView, "SYMBOL", "QTY", "AVG", "LAST", "MKT VALUE", "UNREALIZED", "REALIZED", "");
+            Header(_positionsView, "SYMBOL", "CONTRACTS", "AVG", "LAST", "MARGIN", "UNREALIZED", "REALIZED", "");
             _positionsBody = Ui.Box("", _positionsView);
             _noPositions = Ui.Label("muted empty-note", _positionsView, "No open positions.");
 
@@ -116,7 +116,7 @@ namespace OpeningBell.UI
                 Ui.SetText(row.Qty, Fmt.Shares(p.Quantity));
                 Ui.SetText(row.Avg, Fmt.Price(p.AveragePrice));
                 Ui.SetText(row.Last, Fmt.Price(mark));
-                Ui.SetText(row.Value, Fmt.Money(p.MarketValue(mark)));
+                Ui.SetText(row.Value, Fmt.Money(System.Math.Abs(p.Quantity) * Context.Account.MarginPerContract(p.Ticker)));
                 Ui.SetText(row.Unrealized, Fmt.SignedMoney(unrealized));
                 Ui.SetSign(row.Unrealized, unrealized);
                 Ui.SetText(row.Realized, Fmt.SignedMoney(p.RealizedPnL));

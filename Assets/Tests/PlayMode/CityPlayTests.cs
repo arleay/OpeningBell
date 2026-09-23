@@ -158,11 +158,11 @@ namespace OpeningBell.Tests
             VisualElement root = terminal.Root;
             Click(root.Q("watch-APEX"));
             Press(root.Q<Button>("type-limit"));
-            root.Q<TextField>("qty").value = "20";
+            root.Q<TextField>("qty").value = "1";
             game.Market.TryGetQuote("APEX", out Quote quote);
             root.Q<TextField>("limit-price").value = Fmt.Price(quote.Ask);
             Press(root.Q<Button>("submit-order"));
-            Assert.AreEqual(20, game.Account.Portfolio.QuantityOf("APEX"), "bought from the office");
+            Assert.AreEqual(1, game.Account.Portfolio.QuantityOf("APEX"), "bought from the office");
             terminal.ShowOnScreen(true);
             workstation.StandUp();
             yield return WaitUntil(() => workstation.State == WorkstationState.Standing, 5f, "stood up");

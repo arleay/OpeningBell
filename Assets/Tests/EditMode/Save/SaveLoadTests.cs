@@ -68,12 +68,12 @@ namespace OpeningBell.Tests
         {
             Game original = Build(Monday.AddHours(6), deposit: true);
             original.Market.AdvanceTo(Monday.AddHours(10));
-            original.Orders.SubmitMarket("AAA", OrderSide.Buy, 100);
-            original.Orders.SubmitLimit("BBB", OrderSide.Buy, 20, PriceTick.RoundDown(original.Market.Securities[1].Bid * 0.99m, 0.01m));
+            original.Orders.SubmitMarket("AAA", OrderSide.Buy, 2);
+            original.Orders.SubmitLimit("BBB", OrderSide.Buy, 1, PriceTick.RoundDown(original.Market.Securities[1].Bid * 0.99m, 0.01m));
 
             DateTime saveTime = Monday.AddDays(1).AddHours(10).AddMinutes(17).AddSeconds(36);
             original.Market.AdvanceTo(saveTime);
-            Order restingAtSave = original.Orders.SubmitLimit("CCC", OrderSide.Buy, 100, PriceTick.RoundDown(original.Market.Securities[2].Bid * 0.98m, 0.01m));
+            Order restingAtSave = original.Orders.SubmitLimit("CCC", OrderSide.Buy, 1, PriceTick.RoundDown(original.Market.Securities[2].Bid * 0.98m, 0.01m));
             Assert.IsTrue(restingAtSave.IsOpen, "an open order is part of the save");
 
             var save = new SaveGame

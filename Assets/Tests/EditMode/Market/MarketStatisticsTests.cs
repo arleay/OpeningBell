@@ -200,8 +200,10 @@ namespace OpeningBell.Tests
                 return Math.Log((double)sim.Securities[0].Last / (double)before);
             }
 
-            double control = Move(0), retail = Move(100), huge = Move(100_000); // AAA trades 2M a day: 5% of ADV
-            TestContext.WriteLine($"3-minute move: none {control:P3}, 100 shares {retail:P3}, 100k shares {huge:P3}");
+            // Orders are in contracts: one is retail size; the huge one carries 100k shares of exposure (AAA trades 2M a day: 5% of ADV).
+            long pointValue = (long)ContractSpec.For(TestMarkets.Basic()[0]).PointValue;
+            double control = Move(0), retail = Move(1), huge = Move(100_000 / pointValue);
+            TestContext.WriteLine($"3-minute move: none {control:P3}, 1 contract {retail:P3}, 100k shares of exposure {huge:P3}");
             Assert.AreEqual(control, retail, 0.0005, "retail size is invisible");
             // Square-root law: 5% of ADV ≈ 0.8 σ × √0.05 ≈ 0.54% push, some of it absorbed by resting walls.
             Assert.Greater(huge - control, 0.0015, "5% of a day's volume in one go pushes the price up");

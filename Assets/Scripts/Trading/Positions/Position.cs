@@ -10,18 +10,20 @@ namespace OpeningBell.Trading
     }
 
     /// <summary>
-    /// Average-cost position. Tracks total cost basis rather than an average price so money stays exact:
-    /// partial exits remove a pro-rata share of cost (rounded to cents), and a full exit removes whatever
-    /// remains. Realized + unrealized therefore always reconciles to cash flows exactly.
-    /// Quantity is signed (negative = short) so shorting can plug in later without new math.
+    /// Average-price futures-style position in contracts. Cost basis is kept in price points (Σ contracts × price)
+    /// so the average stays exact; money is points × the contract's point value. Partial exits remove a pro-rata
+    /// share of cost, a full exit whatever remains. Quantity is signed (negative = short).
     /// </summary>
     public sealed class Position
     {
         public string Ticker { get; }
         public long Quantity { get; private set; }
 
-        /// <summary>Signed: positive for longs (cash paid), negative for shorts (cash received).</summary>
+        /// <summary>Signed Σ contracts × entry price, in price points (not dollars).</summary>
         public decimal CostBasis { get; private set; }
+
+        /// <summary>Dollars per 1.00 price move per contract.</summary>
+        public decimal PointValue { get; }
 
         public decimal RealizedPnL { get; private set; }
 
@@ -31,12 +33,14 @@ namespace OpeningBell.Trading
         public bool IsOpen => Quantity != 0;
         public decimal AveragePrice => Quantity == 0 ? 0m : CostBasis / Quantity;
 
-        public decimal MarketValue(decimal markPrice) => Quantity * markPrice;
-        public decimal UnrealizedPnL(decimal markPrice) => Quantity * markPrice - CostBasis;
+        /// <summary>Notional exposure (contracts × price × point value); futures post margin, not this.</summary>
+        public decimal MarketValue(decimal markPrice) => Quantity * markPrice * PointValue;
+        public decimal UnrealizedPnL(decimal markPrice) => Money.RoundCents((Quantity * markPrice - CostBasis) * PointValue);
 
-        internal Position(string ticker)
+        internal Position(string ticker, decimal pointValue)
         {
             Ticker = ticker;
+            PointValue = pointValue;
         }
 
         internal void Restore(long quantity, decimal costBasis, decimal realizedPnL)
@@ -46,7 +50,7 @@ namespace OpeningBell.Trading
             RealizedPnL = realizedPnL;
         }
 
-        /// <summary>Applies a fill (positive quantity buys, negative sells) and returns the realized P&L.</summary>
+        /// <summary>Applies a fill (positive quantity buys, negative sells) and returns the realized P&L in dollars.</summary>
         internal decimal ApplyFill(long signedQuantity, decimal price)
         {
             if (signedQuantity == 0) throw new ArgumentException("Fill quantity cannot be zero.", nameof(signedQuantity));
@@ -60,8 +64,8 @@ namespace OpeningBell.Trading
 
             long held = Math.Abs(Quantity);
             long closing = Math.Min(Math.Abs(signedQuantity), held);
-            decimal removedCost = closing == held ? CostBasis : Money.RoundCents(CostBasis * closing / held);
-            decimal realized = Math.Sign(Quantity) * closing * price - removedCost;
+            decimal removedCost = closing == held ? CostBasis : Math.Round(CostBasis * closing / held, 8, MidpointRounding.AwayFromZero);
+            decimal realized = Money.RoundCents((Math.Sign(Quantity) * closing * price - removedCost) * PointValue);
 
             Quantity += Math.Sign(signedQuantity) * closing;
             CostBasis -= removedCost;

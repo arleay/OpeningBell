@@ -61,10 +61,10 @@ namespace OpeningBell.Tests
             Assert.IsTrue(PlayerPrefs.GetString(PrefsKey, "").Contains("\"Period\":20"), "the layout persists between sessions");
 
             // A position with a bracket on it.
-            Order buy = game.Orders.SubmitMarket("APEX", OrderSide.Buy, 100);
+            Order buy = game.Orders.SubmitMarket("APEX", OrderSide.Buy, 2);
             Assert.AreEqual(OrderStatus.Filled, buy.Status, buy.StatusReason);
             decimal last = game.Market.Securities.First(s => s.Ticker == "APEX").Last;
-            var legs = game.Orders.SubmitBracket("APEX", 100, PriceTick.RoundNearest(last * 1.02m), PriceTick.RoundNearest(last * 0.985m));
+            var legs = game.Orders.SubmitBracket("APEX", 2, PriceTick.RoundNearest(last * 1.02m), PriceTick.RoundNearest(last * 0.985m));
             Assert.IsTrue(legs.All(o => o.Status == OrderStatus.Working), string.Join("; ", legs.Select(o => o.StatusReason)));
 
             // Drawings, anchored in time and price.
@@ -86,8 +86,8 @@ namespace OpeningBell.Tests
             string texts = string.Join(" | ", chart.Query<Label>().ToList().Where(l => l.resolvedStyle.display != DisplayStyle.None).Select(l => l.text));
             TestContext.WriteLine(texts);
             StringAssert.Contains("AVG ", texts, "the position line is labelled");
-            StringAssert.Contains("TP 100", texts, "the take-profit line");
-            StringAssert.Contains("SL 100", texts, "the stop-loss line");
+            StringAssert.Contains("TP 2", texts, "the take-profit line");
+            StringAssert.Contains("SL 2", texts, "the stop-loss line");
             StringAssert.Contains("RSI 14", texts, "the RSI pane");
             StringAssert.Contains("MACD 12 26 9", texts, "the MACD pane");
             StringAssert.Contains("EMA 20", texts, "the EMA legend");

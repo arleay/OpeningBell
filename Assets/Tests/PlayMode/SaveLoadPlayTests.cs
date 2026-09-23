@@ -24,9 +24,9 @@ namespace OpeningBell.Tests
             DateTime date = game.Clock.Now.Date;
 
             game.SkipTo(date.AddHours(10));
-            game.Orders.SubmitMarket("APEX", OrderSide.Buy, 100);
+            game.Orders.SubmitMarket("APEX", OrderSide.Buy, 2);
             game.Market.TryGetQuote("NVRA", out var nvra);
-            Order resting = game.Orders.SubmitLimit("NVRA", OrderSide.Buy, 5, Market.PriceTick.RoundDown(nvra.Bid * 0.95m, 0.01m));
+            Order resting = game.Orders.SubmitLimit("NVRA", OrderSide.Buy, 1, Market.PriceTick.RoundDown(nvra.Bid * 0.95m, 0.01m));
             player.PlaceAt(new Vector3(-1.2f, 0f, -1.5f), 135f);
             yield return null;
 

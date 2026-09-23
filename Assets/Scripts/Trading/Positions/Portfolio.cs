@@ -25,11 +25,11 @@ namespace OpeningBell.Trading
             }
         }
 
-        internal Position GetOrCreate(string ticker)
+        internal Position GetOrCreate(string ticker, decimal pointValue)
         {
             if (!_byTicker.TryGetValue(ticker, out var position))
             {
-                position = new Position(ticker);
+                position = new Position(ticker, pointValue);
                 _byTicker.Add(ticker, position);
                 _positions.Add(position);
             }

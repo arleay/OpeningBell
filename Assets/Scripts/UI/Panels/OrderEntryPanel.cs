@@ -79,10 +79,10 @@ namespace OpeningBell.UI
             _stop = Ui.Button("STOP", () => SetType(OrderType.Stop), "", types, "type-stop");
 
             Ui.Label("field-caption", Root, "QUANTITY");
-            _quantity = Field("qty", "100", Root);
-            TicketInput.Restrict(_quantity, ","); // whole shares; commas from the quick buttons ("1,000")
+            _quantity = Field("qty", "1", Root);
+            TicketInput.Restrict(_quantity, ","); // whole contracts; commas from the quick buttons
             var quick = Ui.Box("quick-row", Root);
-            foreach (long q in new long[] { 100, 500, 1000 })
+            foreach (long q in new long[] { 1, 2, 5 })
                 Ui.Button(Fmt.Shares(q), () => SetQuantity(q), "", quick);
             Ui.Button("MAX", SetMaxQuantity, "", quick, "qty-max");
 
@@ -139,15 +139,16 @@ namespace OpeningBell.UI
             if (ready)
             {
                 decimal price = _type != OrderType.Market ? limit : buy ? s.Ask : s.Bid;
-                decimal notional = qty * price;
-                decimal commission = orders.Rules.CommissionFor(qty, notional);
+                ContractSpec contract = Context.Account.Contract(s.Ticker);
+                decimal commission = orders.Rules.CommissionFor(qty);
+                string perMove = $"{Fmt.Money(qty * contract.PointValue)}/pt · {Fmt.Money(qty * contract.TickValue(price))}/tick";
                 Ui.SetText(_estimate, buy
-                    ? $"Est. cost {Fmt.Money(notional)} + {Fmt.Money(commission)} commission"
-                    : $"Est. proceeds {Fmt.Money(notional)} − {Fmt.Money(commission)} commission");
+                    ? $"Margin {Fmt.Money(qty * contract.Margin)} + {Fmt.Money(commission)} commission · {perMove}"
+                    : $"{Fmt.Money(commission)} commission · {perMove}");
             }
             else
             {
-                Ui.SetText(_estimate, hasQty ? "Enter a limit price." : "Enter a whole number of shares.");
+                Ui.SetText(_estimate, hasQty ? "Enter a limit price." : "Enter a whole number of contracts.");
             }
 
             Ui.SetText(_hint, Hint(s, hasQty ? qty : 0, limit));
@@ -169,12 +170,12 @@ namespace OpeningBell.UI
             if (_side == OrderSide.Buy)
             {
                 long max = Context.Orders.MaxBuyQuantity(s.Ticker, _type, limit);
-                return qty > max ? $"Exceeds buying power. Max {Fmt.Shares(max)} shares." : "";
+                return qty > max ? $"Exceeds buying power. Max {Fmt.Contracts(max)}." : "";
             }
 
             long available = Context.Orders.AvailableToSell(s.Ticker);
             if (qty <= available) return "";
-            return available == 0 ? "No shares to sell. Short selling is not available." : $"You can sell at most {Fmt.Shares(available)}.";
+            return available == 0 ? "No contracts to sell. Short selling is not available." : $"You can sell at most {Fmt.Contracts(available)}.";
         }
 
         private void RefreshStatus()
@@ -211,7 +212,7 @@ namespace OpeningBell.UI
             }
 
             decimal pnl = p.UnrealizedPnL(Context.Account.MarkPrice(s.Ticker));
-            Ui.SetText(_position, $"Position {Fmt.Shares(p.Quantity)} @ {Fmt.Price(p.AveragePrice)}   P&L {Fmt.SignedMoney(pnl)}");
+            Ui.SetText(_position, $"Position {Fmt.Contracts(p.Quantity)} @ {Fmt.Price(p.AveragePrice)}   P&L {Fmt.SignedMoney(pnl)}");
             Ui.SetSign(_position, pnl);
         }
 

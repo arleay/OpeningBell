@@ -11,7 +11,7 @@ namespace OpeningBell.City
 {
     /// <summary>
     /// PennyBridge on the phone: the same account as the desk terminal. Watchlist, positions and orders tabs; a
-    /// stock page with today's chart, stats and your position; and an order sheet (market or limit, whole shares
+    /// stock page with today's chart, stats and your position; and an order sheet (market or limit, whole contracts
     /// only) that goes through the same order manager and rules as the desk.
     /// </summary>
     internal sealed class PennyBridgeApp : PhoneScreen
@@ -125,15 +125,15 @@ namespace OpeningBell.City
             _marketType = TypeTab(types, "Market", OrderType.Market);
             _limitType = TypeTab(types, "Limit", OrderType.Limit);
 
-            PhoneKit.Label(_sheet, "SHARES", 11f, PhoneKit.Muted, true).style.marginTop = 12f;
+            PhoneKit.Label(_sheet, "CONTRACTS", 11f, PhoneKit.Muted, true).style.marginTop = 12f;
             var qtyRow = PhoneKit.Row(_sheet);
             qtyRow.style.marginTop = 4f;
-            _quantity = PhoneKit.Field(qtyRow, "10", "pb-qty");
-            TicketInput.Restrict(_quantity, ","); // whole shares only: letters never get in
+            _quantity = PhoneKit.Field(qtyRow, "1", "pb-qty");
+            TicketInput.Restrict(_quantity, ","); // whole contracts only: letters never get in
             _quantity.RegisterValueChangedCallback(_ => RefreshSheet());
             var quick = PhoneKit.Row(_sheet, Justify.SpaceBetween);
             quick.style.marginTop = 6f;
-            foreach (long q in new long[] { 1, 10, 100 })
+            foreach (long q in new long[] { 1, 2, 5 })
             {
                 long n = q;
                 var p = PhoneKit.Pill(quick, Fmt.Shares(q), new Color(1f, 1f, 1f, 0.08f), PhoneKit.Text, () => _quantity.value = Fmt.Shares(n), 13f);
@@ -273,7 +273,7 @@ namespace OpeningBell.City
                         if (p == null || !p.IsOpen) continue;
                         any = true;
                         SecurityRuntimeState sec = s;
-                        var (_, value, pnlPill) = Row(c, s.Ticker, $"{Fmt.Shares(p.Quantity)} sh @ {Fmt.Price(p.AveragePrice)}", () => ShowStock(sec.Ticker));
+                        var (_, value, pnlPill) = Row(c, s.Ticker, $"{Fmt.Shares(p.Quantity)} ct @ {Fmt.Price(p.AveragePrice)}", () => ShowStock(sec.Ticker));
                         Live(() =>
                         {
                             decimal pnl = p.UnrealizedPnL(account.MarkPrice(sec.Ticker));
@@ -409,20 +409,20 @@ namespace OpeningBell.City
             var pos = Card(c);
             if (holding)
             {
-                Label shares = Stat(pos, "Your shares"), avg = Stat(pos, "Average cost"), value = Stat(pos, "Market value"), unreal = Stat(pos, "Unrealized");
+                Label shares = Stat(pos, "Your contracts"), avg = Stat(pos, "Average price"), value = Stat(pos, "Margin"), unreal = Stat(pos, "Unrealized");
                 Live(() =>
                 {
                     decimal pnl = p.UnrealizedPnL(account.MarkPrice(s.Ticker));
                     shares.text = Fmt.Shares(p.Quantity);
                     avg.text = "$" + Fmt.Price(p.AveragePrice);
-                    value.text = Fmt.Money(p.Quantity * s.Last);
+                    value.text = Fmt.Money(System.Math.Abs(p.Quantity) * account.MarginPerContract(s.Ticker));
                     unreal.text = Fmt.SignedMoney(pnl);
                     unreal.style.color = PhoneKit.SignColor(pnl);
                 });
             }
             else
             {
-                Stat(pos, "Your shares").text = "None";
+                Stat(pos, "Your contracts").text = "None";
             }
 
             // The latest headline about it.
@@ -538,21 +538,20 @@ namespace OpeningBell.City
             bool hasQty = TicketInput.TryParseQuantity(_quantity.value, out long qty);
             bool hasLimit = TicketInput.TryParsePrice(_limit.value, out decimal limit);
             bool ready = hasQty && (_type == OrderType.Market || hasLimit);
-            _submit.text = ready ? $"{(buy ? "Buy" : "Sell")} {Fmt.Shares(qty)} {(_type == OrderType.Market ? "at market" : "at $" + Fmt.Price(limit))}" : "Enter shares";
+            _submit.text = ready ? $"{(buy ? "Buy" : "Sell")} {Fmt.Shares(qty)} {(_type == OrderType.Market ? "at market" : "at $" + Fmt.Price(limit))}" : "Enter contracts";
             _submit.parent.style.backgroundColor = !ready ? new Color(0.3f, 0.3f, 0.33f) : buy ? PhoneKit.Green : PhoneKit.Red;
 
             if (ready)
             {
-                decimal price = _type == OrderType.Limit ? limit : buy ? s.Ask : s.Bid;
-                decimal notional = qty * price;
-                decimal commission = Phone.Game.Orders.Rules.CommissionFor(qty, notional);
+                ContractSpec contract = Phone.Game.Account.Contract(_ticker);
+                decimal commission = Phone.Game.Orders.Rules.CommissionFor(qty);
                 _estimate.text = buy
-                    ? $"Est. cost {Fmt.Money(notional + commission)} incl. {Fmt.Money(commission)} commission"
-                    : $"Est. proceeds {Fmt.Money(notional - commission)} after {Fmt.Money(commission)} commission";
+                    ? $"Margin {Fmt.Money(qty * contract.Margin)} + {Fmt.Money(commission)} fees · {Fmt.Money(qty * contract.PointValue)} per point"
+                    : $"{Fmt.Money(commission)} fees · {Fmt.Money(qty * contract.PointValue)} per point";
             }
             else
             {
-                _estimate.text = hasQty ? "Enter a limit price." : "Whole shares only.";
+                _estimate.text = hasQty ? "Enter a limit price." : "Whole contracts only.";
             }
 
             if (_last != null)

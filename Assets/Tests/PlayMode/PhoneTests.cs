@@ -13,7 +13,7 @@ using UnityEngine.UIElements;
 namespace OpeningBell.Tests
 {
     /// <summary>
-    /// The phone: Tab takes it out and puts it away, PennyBridge trades on the real account (whole shares only),
+    /// The phone: Tab takes it out and puts it away, PennyBridge trades on the real account (whole contracts only),
     /// fills and headlines notify, calls connect, and every app is photographed (TestResults/phone-*.png).
     /// </summary>
     public class PhoneTests : SceneTestBase
@@ -51,15 +51,15 @@ namespace OpeningBell.Tests
             string ticker = game.Market.Securities[0].Ticker;
             broker.ShowStock(ticker);
             broker.OpenSheet(OrderSide.Buy);
-            broker.QuantityField.value = "12abc";
-            Assert.AreEqual("12", broker.QuantityField.value, "letters are filtered out");
+            broker.QuantityField.value = "2abc";
+            Assert.AreEqual("2", broker.QuantityField.value, "letters are filtered out");
             yield return null;
             broker.Submit();
             yield return null;
-            StringAssert.StartsWith("Filled 12", broker.StatusText);
-            Assert.AreEqual(12, game.Account.Portfolio.Find(ticker).Quantity, "the fill lands on the real account");
+            StringAssert.StartsWith("Filled 2", broker.StatusText);
+            Assert.AreEqual(2, game.Account.Portfolio.Find(ticker).Quantity, "the fill lands on the real account");
             yield return CaptureWithHud(player, hud, "phone-trade.png");
-            Assert.IsTrue(phone.BannerTexts.Any(t => t.Contains("Bought 12 " + ticker)), "the fill pops up as a notification");
+            Assert.IsTrue(phone.BannerTexts.Any(t => t.Contains("Bought 2 " + ticker)), "the fill pops up as a notification");
 
             // Messages has the fill.
             phone.Show(PhoneAppId.Messages);

@@ -33,6 +33,10 @@ namespace OpeningBell.Market
         /// <summary>Decay rate of transient mispricing, per session. 15 ≈ 18-minute half-life.</summary>
         public double MeanReversionPerDay = 15;
 
+        /// <summary>Contract terms (see ContractSpec): dollars per 1.00 move per contract and day margin; 0 = sized automatically.</summary>
+        public double PointValue;
+        public double DayMargin;
+
         public SecuritySpec Clone() => (SecuritySpec)MemberwiseClone();
 
         public void Validate()
