@@ -307,6 +307,8 @@ namespace OpeningBell.City
             new Shell(172f, -5.5f, 206.5f, 24f, 16f, FacadeStyle.Glass, sign: "MERIDIAN"),
             new Shell(144f, 27f, 168f, 61.5f, 14f, FacadeStyle.Concrete, sign: "PARKING"),
             new Shell(172f, 30f, 206.5f, 61.5f, 12f, FacadeStyle.Brick),
+            // Lowell Court: cheap flats across Maple from the apartment
+            new Shell(-21.5f, -44.5f, 46.5f, -22.5f, 12f, FacadeStyle.Brick),
             // Main street, south side of Maple opposite the shops
             new Shell(62.5f, -45f, 88f, -22.5f, 8f, FacadeStyle.Brick, storefront: true),
             new Shell(88.5f, -45f, 112f, -22.5f, 10f, FacadeStyle.Stucco, storefront: true),

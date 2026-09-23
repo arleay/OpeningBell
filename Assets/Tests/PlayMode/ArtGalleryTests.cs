@@ -103,6 +103,11 @@ namespace OpeningBell.Tests
                 (new Vector3(400f, 20f, -60f), 40f, 10f, "landmark-casino.png"),
                 (new Vector3(-330f, 25f, -60f), 225f, 12f, "landmark-mill.png"),
                 (new Vector3(-560f, 22f, 20f), -70f, 8f, "landmark-highway.png"),
+                (new Vector3(-230f, 1.7f, -14f), 80f, 2f, "strip-maple-west.png"),
+                (new Vector3(-100f, 1.7f, -16f), 250f, 2f, "strip-maple-east.png"),
+                (new Vector3(-460f, 12f, -30f), 50f, 14f, "strip-highway.png"),
+                (new Vector3(360f, 1.7f + 1.5f, -16f), 70f, 3f, "strip-canalrow.png"),
+                (new Vector3(-176f, 1.7f, 4f), 170f, 5f, "inside-diner.png"),
             };
             // The camera flies alone (the player's body would be in the shot).
             _player.PlaceAt(new Vector3(0f, 0.2f, -5f), 0f, 0f);
