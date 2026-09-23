@@ -11,8 +11,10 @@ namespace OpeningBell.City
     }
 
     /// <summary>
-    /// Where pedestrians can walk: a loop along the middle of every block's sidewalk, crosswalks between them at
-    /// each junction, and short spurs to doors and benches. Built from the plan and the road network.
+    /// Where pedestrians can walk, built from <see cref="StreetMap"/>: a path down the middle of each sidewalk,
+    /// linked round every kerb corner, crosswalks across each approach of a junction (and across the end of a
+    /// dead end), alleys as shortcuts, extra paths (park, canal towpath, pier), and short spurs to doors and benches.
+    /// Every node knows its height, so people walk up the hill and over the bridges.
     /// </summary>
     public sealed class SidewalkGraph
     {
@@ -20,6 +22,7 @@ namespace OpeningBell.City
         {
             public int Id;
             public Vector2 P;
+            public float Y;
             public PlaceKind Kind;
             public string Tag;
             public readonly List<Edge> Edges = new List<Edge>();
@@ -47,8 +50,6 @@ namespace OpeningBell.City
         public readonly List<Node> Nodes = new List<Node>();
         public readonly List<Crosswalk> Crosswalks = new List<Crosswalk>();
 
-        private const float Inset = CityPlan.SidewalkWidth / 2f;
-
         public IEnumerable<Node> Places(PlaceKind kind)
         {
             foreach (Node n in Nodes)
@@ -57,157 +58,191 @@ namespace OpeningBell.City
 
         public Node FindPlace(string tag) => Nodes.Find(n => n.Tag == tag);
 
-        public static SidewalkGraph Build(RoadNetwork roads, IEnumerable<(Vector2 P, PlaceKind Kind, string Tag)> places)
+        /// <param name="paths">Extra walkways (park paths, towpath, pier): polylines of (x, height, z) joined to the nearest sidewalk at both ends.</param>
+        public static SidewalkGraph Build(RoadNetwork roads, IEnumerable<(Vector2 P, PlaceKind Kind, string Tag)> places, IEnumerable<Vector3[]> paths = null)
         {
             var g = new SidewalkGraph();
-            var rings = new List<Rect>();
-            foreach (var block in CityPlan.Blocks)
+            StreetMap map = roads.Map;
+            var junctions = new Dictionary<StreetMap.Node, RoadNetwork.Node>();
+            foreach (RoadNetwork.Node n in roads.Nodes) junctions[n.Map] = n;
+
+            // Side path ends: per approach, the point on its left and right sidewalk nearest the node.
+            var leftEnd = new Dictionary<StreetMap.Approach, Node>();
+            var rightEnd = new Dictionary<StreetMap.Approach, Node>();
+            foreach (StreetMap.Node n in map.Nodes)
             {
-                Rect a = block.Area;
-                rings.Add(Rect.MinMaxRect(a.xMin + Inset, a.yMin + Inset, a.xMax - Inset, a.yMax - Inset));
-            }
-            var onRing = new List<List<Node>>();
-            foreach (Rect r in rings)
-            {
-                var corners = new List<Node>
+                foreach (StreetMap.Approach a in n.Approaches)
                 {
-                    g.Add(new Vector2(r.xMin, r.yMin)), g.Add(new Vector2(r.xMax, r.yMin)),
-                    g.Add(new Vector2(r.xMax, r.yMax)), g.Add(new Vector2(r.xMin, r.yMax)),
-                };
-                onRing.Add(corners);
+                    if (a.Sidewalk <= 0f) continue;
+                    float mid = a.HalfWidth + a.Sidewalk / 2f;
+                    float sl = a.HasCrosswalk ? a.Crosswalk : a.LeftStart, sr = a.HasCrosswalk ? a.Crosswalk : a.RightStart;
+                    leftEnd[a] = g.Add(a.At(sl, mid), a.GradeAt(sl));
+                    rightEnd[a] = g.Add(a.At(sr, -mid), a.GradeAt(sr));
+                    if (a.HasCrosswalk)
+                    {
+                        junctions.TryGetValue(n, out RoadNetwork.Node j);
+                        bool main = n.IsMain(a);
+                        var cw = new Crosswalk
+                        {
+                            Junction = j, Center = a.At(a.Crosswalk, 0f), Along = a.Out,
+                            Signalized = j != null && j.Lights != null,
+                            // Crossing the main street is safe while it's red, i.e. in the cross street's phase.
+                            WalkPhase = main ? 1 : 0,
+                        };
+                        g.Crosswalks.Add(cw);
+                        g.Link(leftEnd[a], rightEnd[a], cw);
+                    }
+                }
+                if (n.Degree == 1 && leftEnd.TryGetValue(n.Approaches[0], out Node l))
+                {
+                    // Dead end: cross the end of the road (no markings, just look both ways).
+                    StreetMap.Approach only = n.Approaches[0];
+                    var cw = new Crosswalk { Center = n.P, Along = only.Out };
+                    g.Crosswalks.Add(cw);
+                    g.Link(l, rightEnd[only], cw);
+                }
+                foreach (StreetMap.Corner c in n.Corners)
+                {
+                    bool hasLeft = leftEnd.TryGetValue(c.Left, out Node from);
+                    bool hasRight = rightEnd.TryGetValue(c.Right, out Node to);
+                    if (!hasLeft && !hasRight) continue;
+                    Node corner = g.Add(c.Middle, n.Grade);
+                    if (hasLeft) g.Link(from, corner, null);
+                    if (hasRight) g.Link(corner, to, null);
+                }
+            }
+            // Along each segment: A's left side runs to B's right side and vice versa.
+            foreach (StreetMap.Segment s in map.Segments)
+            {
+                if (s.Sidewalk <= 0f) continue;
+                g.Link(leftEnd[s.AtA], rightEnd[s.AtB], null);
+                g.Link(rightEnd[s.AtA], leftEnd[s.AtB], null);
             }
 
-            // Crosswalks: across every approach of every junction, just outside the junction box.
-            float mid = (CityPlan.CrosswalkNear + CityPlan.CrosswalkFar) / 2f;
-            foreach (RoadNetwork.Node j in roads.Nodes)
-            foreach (RoadNetwork.Lane outLane in j.Outgoing)
+            // Alleys: shortcuts between the sidewalks at their mouths.
+            foreach (StreetDef d in map.Driveways)
             {
-                Vector2 d = outLane.Dir;
-                Vector2 across = RoadNetwork.RightOf(d);
-                Vector2 c = j.P + d * mid;
-                Node a = g.AttachToRing(rings, onRing, c + across * mid, exact: true);
-                Node b = g.AttachToRing(rings, onRing, c - across * mid, exact: true);
-                if (a == null || b == null) continue;
-                bool stem = j.StemDir != Vector2.zero && Vector2.Dot(d, j.StemDir) > 0.9f;
-                var cw = new Crosswalk { Junction = j, Center = c, Along = d, Signalized = j.Lights != null, WalkPhase = stem ? 0 : 1 };
-                g.Crosswalks.Add(cw);
-                g.Link(a, b, cw);
+                if (d.Class != RoadClass.Alley) continue;
+                Node prev = null;
+                for (int i = 0; i < d.Points.Length; i++)
+                {
+                    Vector2 p = d.Points[i];
+                    bool end = i == 0 || i == d.Points.Length - 1;
+                    // Ends sit on a street's centre line: join the sidewalk on the alley's side of it.
+                    Vector2 inward = i == 0 ? (d.Points[1] - p).normalized : (d.Points[i - 1] - p).normalized;
+                    Node here = end ? g.AttachToSidewalk(map, p + inward * 7f) : null;
+                    here ??= g.Add(p, TownTerrain.Height(p.x, p.y));
+                    if (prev != null) g.Link(prev, here, null);
+                    prev = here;
+                }
+            }
+            foreach (Vector3[] path in paths ?? System.Array.Empty<Vector3[]>())
+            {
+                Node prev = g.AttachToSidewalk(map, new Vector2(path[0].x, path[0].z));
+                for (int i = 0; i < path.Length; i++)
+                {
+                    Node here = i == path.Length - 1 ? g.AttachToSidewalk(map, new Vector2(path[i].x, path[i].z)) : null;
+                    here ??= g.Add(new Vector2(path[i].x, path[i].z), path[i].y);
+                    if (prev != null) g.Link(prev, here, null);
+                    prev = here;
+                }
             }
 
             foreach (var (p, kind, tag) in places)
             {
-                Node spot = g.Add(p);
+                Node landing = g.AttachToSidewalk(map, p);
+                if (landing == null) continue;
+                Node spot = g.Add(p, landing.Y);
                 spot.Kind = kind;
                 spot.Tag = tag;
-                Node landing = g.AttachToRing(rings, onRing, p, exact: false);
                 g.Link(spot, landing, null);
-            }
-
-            // Connect each ring's points in order around the loop.
-            for (int i = 0; i < rings.Count; i++)
-            {
-                Rect r = rings[i];
-                List<Node> pts = onRing[i];
-                pts.Sort((x, y) => Perimeter(r, x.P).CompareTo(Perimeter(r, y.P)));
-                for (int k = 0; k < pts.Count; k++) g.Link(pts[k], pts[(k + 1) % pts.Count], null);
             }
             return g;
         }
 
-        private Node Add(Vector2 p)
+        private Node Add(Vector2 p, float y)
         {
-            var n = new Node { Id = Nodes.Count, P = p };
+            var n = new Node { Id = Nodes.Count, P = p, Y = y };
             Nodes.Add(n);
             return n;
         }
 
         private void Link(Node a, Node b, Crosswalk cw)
         {
-            if (a == b) return;
+            if (a == b || EdgeBetween(a, b) != null) return;
             var e = new Edge { A = a, B = b, Length = Vector2.Distance(a.P, b.P), Crosswalk = cw };
             a.Edges.Add(e);
             b.Edges.Add(e);
         }
 
-        /// <summary>Finds (or inserts) the ring point nearest to <paramref name="p"/>. Exact: p must lie on a ring.</summary>
-        private Node AttachToRing(List<Rect> rings, List<List<Node>> onRing, Vector2 p, bool exact)
+        private void Unlink(Edge e)
         {
-            int best = -1;
-            float bestDistance = float.MaxValue;
-            Vector2 bestPoint = default;
-            for (int i = 0; i < rings.Count; i++)
+            e.A.Edges.Remove(e);
+            e.B.Edges.Remove(e);
+        }
+
+        /// <summary>
+        /// Splits the nearest walkway edge (not a crosswalk, not a spur to a place) at the point closest to p and
+        /// returns the new node there. Null if nothing is within 40 m.
+        /// </summary>
+        private Node AttachToSidewalk(StreetMap map, Vector2 p)
+        {
+            Edge best = null;
+            float bestD = 40f * 40f, bestT = 0f;
+            var seen = new HashSet<Edge>();
+            foreach (Node n in Nodes)
             {
-                Vector2 q = ClosestOnBoundary(rings[i], p);
-                float d = Vector2.Distance(p, q);
-                if (d < bestDistance)
+                if (n.Kind != PlaceKind.Walkway) continue;
+                foreach (Edge e in n.Edges)
                 {
-                    bestDistance = d;
-                    best = i;
-                    bestPoint = q;
+                    if (!seen.Add(e) || e.Crosswalk != null || e.A.Kind != PlaceKind.Walkway || e.B.Kind != PlaceKind.Walkway) continue;
+                    Vector2 ab = e.B.P - e.A.P;
+                    float t = ab.sqrMagnitude < 1e-6f ? 0f : Mathf.Clamp01(Vector2.Dot(p - e.A.P, ab) / ab.sqrMagnitude);
+                    float d = (e.A.P + ab * t - p).sqrMagnitude;
+                    if (d < bestD)
+                    {
+                        bestD = d;
+                        best = e;
+                        bestT = t;
+                    }
                 }
             }
-            if (best < 0 || (exact && bestDistance > 0.05f)) return null;
-            foreach (Node n in onRing[best])
-                if (Vector2.Distance(n.P, bestPoint) < 0.3f) return n;
-            Node added = Add(bestPoint);
-            onRing[best].Add(added);
-            return added;
+            if (best == null) return null;
+            if (bestT < 0.02f || best.Length * bestT < 0.3f) return best.A;
+            if (bestT > 0.98f || best.Length * (1f - bestT) < 0.3f) return best.B;
+            Node mid = Add(Vector2.Lerp(best.A.P, best.B.P, bestT), Mathf.Lerp(best.A.Y, best.B.Y, bestT));
+            Unlink(best);
+            Link(best.A, mid, null);
+            Link(mid, best.B, null);
+            return mid;
         }
 
-        private static Vector2 ClosestOnBoundary(Rect r, Vector2 p)
-        {
-            Vector2 c = new Vector2(Mathf.Clamp(p.x, r.xMin, r.xMax), Mathf.Clamp(p.y, r.yMin, r.yMax));
-            if (c != p) return c; // outside: clamping lands on the boundary
-            // Inside: push to the nearest side.
-            float left = p.x - r.xMin, right = r.xMax - p.x, bottom = p.y - r.yMin, top = r.yMax - p.y;
-            float m = Mathf.Min(Mathf.Min(left, right), Mathf.Min(bottom, top));
-            if (m == left) return new Vector2(r.xMin, p.y);
-            if (m == right) return new Vector2(r.xMax, p.y);
-            if (m == bottom) return new Vector2(p.x, r.yMin);
-            return new Vector2(p.x, r.yMax);
-        }
-
-        /// <summary>Distance along the rectangle's boundary, counter-clockwise from the min corner.</summary>
-        private static float Perimeter(Rect r, Vector2 p)
-        {
-            const float e = 0.01f;
-            if (Mathf.Abs(p.y - r.yMin) < e) return p.x - r.xMin;
-            if (Mathf.Abs(p.x - r.xMax) < e) return r.width + (p.y - r.yMin);
-            if (Mathf.Abs(p.y - r.yMax) < e) return r.width + r.height + (r.xMax - p.x);
-            return 2f * r.width + r.height + (r.yMax - p.y);
-        }
-
-        /// <summary>Shortest route (Dijkstra). Null if unreachable.</summary>
+        /// <summary>Shortest route (Dijkstra with a binary heap). Null if unreachable.</summary>
         public List<Node> Route(Node from, Node to)
         {
             var dist = new float[Nodes.Count];
             var prev = new Node[Nodes.Count];
-            var done = new bool[Nodes.Count];
             for (int i = 0; i < dist.Length; i++) dist[i] = float.MaxValue;
             dist[from.Id] = 0f;
-            for (int iteration = 0; iteration < Nodes.Count; iteration++)
+            var open = new SortedSet<(float D, int Id)> { (0f, from.Id) };
+            while (open.Count > 0)
             {
-                Node u = null;
-                float best = float.MaxValue;
-                foreach (Node n in Nodes)
-                    if (!done[n.Id] && dist[n.Id] < best)
-                    {
-                        best = dist[n.Id];
-                        u = n;
-                    }
-                if (u == null || u == to) break;
-                done[u.Id] = true;
+                var (d, id) = open.Min;
+                open.Remove(open.Min);
+                Node u = Nodes[id];
+                if (u == to) break;
+                if (d > dist[id]) continue;
                 foreach (Edge e in u.Edges)
                 {
                     Node v = e.Other(u);
                     // Places are dead ends: never route through a door or bench to reach somewhere else.
                     if (v != to && v.Kind != PlaceKind.Walkway) continue;
-                    float alt = dist[u.Id] + e.Length + (e.Crosswalk != null ? 4f : 0f);
-                    if (alt < dist[v.Id])
-                    {
-                        dist[v.Id] = alt;
-                        prev[v.Id] = u;
-                    }
+                    float alt = d + e.Length + (e.Crosswalk != null ? 4f : 0f);
+                    if (alt >= dist[v.Id]) continue;
+                    if (dist[v.Id] < float.MaxValue) open.Remove((dist[v.Id], v.Id));
+                    dist[v.Id] = alt;
+                    prev[v.Id] = u;
+                    open.Add((alt, v.Id));
                 }
             }
             if (dist[to.Id] == float.MaxValue) return null;

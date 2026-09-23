@@ -21,8 +21,8 @@ namespace OpeningBell.Tests
             var city = Find<CityBuilder>();
             GameBootstrap game = Find<GameBootstrap>();
             game.SkipTo(game.Clock.Now.Date.AddDays(1).AddHours(10.5));
-            DealerLot fresh = city.Dealers.Single(d => d.DealerName == "First Street Motors");
-            DealerLot used = city.Dealers.Single(d => d.DealerName == "Harbor Auto Sales");
+            DealerLot fresh = city.Dealers.Single(d => d.DealerName == "Westgate Motors");
+            DealerLot used = city.Dealers.Single(d => d.DealerName == "Railside Auto Sales");
             yield return WaitUntil(() => fresh.StaffHere && used.StaffHere, 30f, "salespeople at work");
 
             foreach (DealerLot lot in city.Dealers)
@@ -34,14 +34,14 @@ namespace OpeningBell.Tests
             Assert.IsTrue(used.Displays.All(d => d.Used != null && !string.IsNullOrEmpty(d.Used.Description)), "used cars carry their sticker");
 
             Camera cam = player.GetComponentInChildren<Camera>();
-            player.PlaceAt(new Vector3(101f, 0f, 33f), 235f, 8f);
+            player.PlaceAt(new Vector3(fresh.Lot.xMax - 2f, 0f, fresh.Lot.center.y + 12f), 235f, 8f);
             for (int i = 0; i < 4; i++) yield return null;
             yield return CaptureCamera(cam, "dealer-new.png");
             Vector3 board = fresh.Displays[0].Sign.transform.position;
             player.PlaceAt(board + new Vector3(0f, 0f, -2.2f), 0f, 18f);
             for (int i = 0; i < 4; i++) yield return null;
             yield return CaptureCamera(cam, "dealer-board.png");
-            player.PlaceAt(new Vector3(205f, 0f, -69.5f), 300f, 8f);
+            player.PlaceAt(new Vector3(used.Lot.xMax - 1.5f, 0f, used.Lot.yMin + 1f), 300f, 8f);
             for (int i = 0; i < 4; i++) yield return null;
             yield return CaptureCamera(cam, "dealer-used.png");
 

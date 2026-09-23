@@ -15,7 +15,7 @@ namespace OpeningBell.Tests
         public void RoadNetwork_FromPlan_IsConnected_WithJunctionRules()
         {
             RoadNetwork net = RoadNetwork.FromPlan();
-            Assert.AreEqual(CityPlan.Streets.Length * 2, net.Lanes.Count);
+            Assert.AreEqual(net.Map.Segments.Count(s => s.Traffic) * 2, net.Lanes.Count);
 
             // Every lane reachable from every other by driving.
             var seen = new HashSet<RoadNetwork.Lane> { net.Lanes[0] };
@@ -24,12 +24,15 @@ namespace OpeningBell.Tests
                 foreach (RoadNetwork.Movement m in queue.Dequeue().Exits)
                     if (seen.Add(m.Out)) queue.Enqueue(m.Out);
             Assert.AreEqual(net.Lanes.Count, seen.Count, "all lanes reachable");
+            Assert.IsTrue(net.Lanes.All(l => l.Exits.Count > 0), "every lane leads somewhere");
 
-            RoadNetwork.Node lights = net.FindNode("Maple & Exchange");
+            // The highway runs into Maple St at a signalised T with Depot Rd: the through road changes name there.
+            RoadNetwork.Node lights = net.FindNode("KELL HWY & MAPLE ST & DEPOT RD");
             Assert.IsNotNull(lights.Lights);
             Assert.AreEqual(6, lights.Movements.Count, "T junction: 3 approaches × 2 exits");
-            Assert.AreEqual(2, net.FindNode("Oak & Pine").Movements.Count, "corner: one turn each way");
-            Assert.AreEqual(12, net.FindNode("Maple & Cedar").Movements.Count, "crossing: 4 approaches × 3 exits");
+            Assert.AreEqual(2, net.Nodes.Single(n => n.P == new Vector2(80f, -272f)).Movements.Count, "bend: one curve each way");
+            Assert.AreEqual(12, net.FindNode("MAPLE ST & CEDAR AVE").Movements.Count, "crossing: 4 approaches × 3 exits");
+            Assert.AreEqual(1, net.Nodes.Single(n => n.P == new Vector2(-780f, 70f)).Movements.Count, "dead end: turn round");
 
             // Left from Maple into the stem crosses the opposing through lane; the two throughs don't meet.
             RoadNetwork.Movement[] through = lights.Movements.Where(m => m.Turn == RoadNetwork.Turn.Straight).ToArray();
@@ -38,6 +41,44 @@ namespace OpeningBell.Tests
             foreach (RoadNetwork.Movement left in lights.Movements.Where(m => m.Turn == RoadNetwork.Turn.Left && !m.In.IsStem))
                 Assert.IsTrue(left.Conflicts.Any(c => c.Turn == RoadNetwork.Turn.Straight && Vector2.Dot(c.In.Dir, left.In.Dir) < -0.9f));
             Assert.IsTrue(lights.Movements.Where(m => m.In.IsStem).All(m => m.Priority == 0));
+        }
+
+        /// <summary>
+        /// The authored street plan: streets only meet where they share a point, junction arms aren't too close in
+        /// angle, every segment keeps some road between its junctions, and no street is steeper than 10%.
+        /// </summary>
+        [Test]
+        public void StreetPlan_IsSound()
+        {
+            StreetMap map = StreetMap.Plan;
+            var problems = new List<string>();
+            foreach (StreetMap.Segment s in map.Segments)
+            {
+                float run = s.Length - s.AtA.Trim - s.AtB.Trim;
+                if (run < 1f) problems.Add($"{s.Street} {s.A.P}–{s.B.P}: no road left between the junctions");
+                float grade = Mathf.Abs(s.B.Grade - s.A.Grade) / Mathf.Max(1f, run);
+                if (grade > 0.1f) problems.Add($"{s.Street} {s.A.P}–{s.B.P}: {grade:P0} grade ({s.A.Grade:F1} → {s.B.Grade:F1} m)");
+            }
+            for (int i = 0; i < map.Segments.Count; i++)
+            for (int j = i + 1; j < map.Segments.Count; j++)
+            {
+                StreetMap.Segment a = map.Segments[i], b = map.Segments[j];
+                if (a.A == b.A || a.A == b.B || a.B == b.A || a.B == b.B) continue;
+                if (Cross(a.A.P, a.B.P, b.A.P, b.B.P)) problems.Add($"{a.Street} {a.A.P}–{a.B.P} crosses {b.Street} {b.A.P}–{b.B.P} without a junction");
+            }
+            foreach (StreetMap.Node n in map.Nodes)
+                for (int k = 0; k < n.Degree && n.Degree > 1; k++)
+                {
+                    float gap = Mathf.DeltaAngle(n.Approaches[k].Angle * Mathf.Rad2Deg, n.Approaches[(k + 1) % n.Degree].Angle * Mathf.Rad2Deg);
+                    if (Mathf.Abs(gap) < 35f) problems.Add($"{n.Name} at {n.P}: arms only {Mathf.Abs(gap):F0}° apart");
+                }
+            Assert.IsEmpty(problems, string.Join("\n", problems));
+        }
+
+        private static bool Cross(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
+        {
+            float Side(Vector2 p, Vector2 q, Vector2 r) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+            return Side(a, b, c) * Side(a, b, d) < 0f && Side(c, d, a) * Side(c, d, b) < 0f;
         }
 
         [Test]
@@ -57,7 +98,8 @@ namespace OpeningBell.Tests
                 {
                     bool approaching = car.Lane != null && car.Lane.To.Lights != null;
                     float now = approaching ? car.Lane.Length - car.S - TrafficSimulation.CarLength / 2f : float.MaxValue;
-                    if (approaching && toLine.TryGetValue(car, out float before) && before > 0f && now <= 0f)
+                    // Stopping exactly on the line isn't crossing it (a clear 5 cm past is).
+                    if (approaching && toLine.TryGetValue(car, out float before) && before > -0.05f && now < -0.05f)
                     {
                         junctionEntries++;
                         // Crossing the stop line on red is never allowed (on yellow it is, when too close to stop).
@@ -182,13 +224,11 @@ namespace OpeningBell.Tests
         /// <summary>On the asphalt: within a street's half width (not counting the ends inside junction corners).</summary>
         private static bool InRoad(Vector2 p)
         {
-            foreach (var (a, b, _) in CityPlan.Streets)
+            foreach (StreetMap.Segment s in StreetMap.Plan.Segments)
             {
-                Vector2 pa = CityPlan.Nodes[a].P, pb = CityPlan.Nodes[b].P;
-                Vector2 ab = pb - pa;
-                float t = Vector2.Dot(p - pa, ab) / ab.sqrMagnitude;
-                if (t < 0f || t > 1f) continue;
-                if (Vector2.Distance(p, pa + ab * t) < CityPlan.RoadHalfWidth - 0.4f) return true;
+                float t = Vector2.Dot(p - s.A.P, s.Dir);
+                if (t < s.AtA.Trim || t > s.Length - s.AtB.Trim) continue;
+                if (Vector2.Distance(p, s.At(t)) < s.HalfWidth - 0.4f) return true;
             }
             return false;
         }

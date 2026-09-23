@@ -3,28 +3,40 @@ using UnityEngine;
 namespace OpeningBell.City
 {
     /// <summary>
-    /// Paints the town once, top-down, into a texture for the minimap: roads, sidewalks, lawns and paving from
-    /// <see cref="CityPlan.Blocks"/>, then every building footprint from the built colliders (anything solid taller than
-    /// a person that starts at the ground), so the map always matches what was generated. North (+z) is up; texture
-    /// row 0 is the world's south edge.
+    /// Paints the town once, top-down, into a texture for the minimap and the phone's map: land (grass, forest,
+    /// the industrial yards), the bay, canal and river, paving, streets with their sidewalks, alleys and dirt roads,
+    /// then every building footprint from the built colliders (anything solid taller than a person that starts near
+    /// the ground), so the map always matches what was generated. North (+z) is up; row 0 is the south edge.
     /// </summary>
     public static class MapTexture
     {
-        public const float PixelsPerMetre = 2f;
+        public const float PixelsPerMetre = 1f;
 
         private static readonly Color32 Road = new Color(0.22f, 0.23f, 0.25f);
         private static readonly Color32 Walk = new Color(0.6f, 0.6f, 0.58f);
         private static readonly Color32 Lawn = new Color(0.36f, 0.53f, 0.3f);
+        private static readonly Color32 Forest = new Color(0.22f, 0.36f, 0.22f);
+        private static readonly Color32 Yard = new Color(0.47f, 0.46f, 0.42f);
         private static readonly Color32 Paved = new Color(0.47f, 0.47f, 0.46f);
+        private static readonly Color32 Water = new Color(0.25f, 0.42f, 0.52f);
+        private static readonly Color32 Alley = new Color(0.33f, 0.33f, 0.34f);
+        private static readonly Color32 Dirt = new Color(0.5f, 0.42f, 0.31f);
         private static readonly Color32 Building = new Color(0.86f, 0.8f, 0.7f);
-        private static readonly Color32 Line = new Color(0.78f, 0.66f, 0.25f);
 
         public static Texture2D Paint(CityContext c)
         {
             Rect w = CityPlan.World;
             int width = Mathf.CeilToInt(w.width * PixelsPerMetre), height = Mathf.CeilToInt(w.height * PixelsPerMetre);
             var pixels = new Color32[width * height];
-            for (int i = 0; i < pixels.Length; i++) pixels[i] = Road;
+            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                float wx = w.xMin + (x + 0.5f) / PixelsPerMetre, wz = w.yMin + (y + 0.5f) / PixelsPerMetre;
+                bool water = TownTerrain.InCanal(wx, wz) || Mathf.Abs(wz - TownTerrain.River(wx)) < TownTerrain.RiverHalfWidth || wz < TownTerrain.Shore(wx) - 2f;
+                float wild = TownTerrain.Wildness(wx, wz);
+                bool industrial = wx < -255f && wz < -62f && wild < 0.5f;
+                pixels[y * width + x] = water ? Water : industrial ? Yard : Color32.Lerp(Lawn, Forest, wild);
+            }
 
             void Fill(Rect r, Color32 color)
             {
@@ -36,24 +48,40 @@ namespace OpeningBell.City
                 for (int x = x0; x < x1; x++) pixels[y * width + x] = color;
             }
 
-            // Centre lines, then the blocks over the asphalt.
-            foreach (var (a, b, _) in CityPlan.Streets)
+            void Line(Vector2 a, Vector2 b, float half, Color32 color)
             {
-                Vector2 pa = CityPlan.Nodes[a].P, pb = CityPlan.Nodes[b].P;
-                Fill(Rect.MinMaxRect(Mathf.Min(pa.x, pb.x) - 0.3f, Mathf.Min(pa.y, pb.y) - 0.3f, Mathf.Max(pa.x, pb.x) + 0.3f, Mathf.Max(pa.y, pb.y) + 0.3f), Line);
+                Rect box = Rect.MinMaxRect(Mathf.Min(a.x, b.x) - half, Mathf.Min(a.y, b.y) - half, Mathf.Max(a.x, b.x) + half, Mathf.Max(a.y, b.y) + half);
+                int x0 = Mathf.Clamp(Mathf.FloorToInt((box.xMin - w.xMin) * PixelsPerMetre), 0, width);
+                int x1 = Mathf.Clamp(Mathf.CeilToInt((box.xMax - w.xMin) * PixelsPerMetre), 0, width);
+                int y0 = Mathf.Clamp(Mathf.FloorToInt((box.yMin - w.yMin) * PixelsPerMetre), 0, height);
+                int y1 = Mathf.Clamp(Mathf.CeilToInt((box.yMax - w.yMin) * PixelsPerMetre), 0, height);
+                Vector2 ab = b - a;
+                float len2 = Mathf.Max(1e-4f, ab.sqrMagnitude);
+                for (int y = y0; y < y1; y++)
+                for (int x = x0; x < x1; x++)
+                {
+                    var p = new Vector2(w.xMin + (x + 0.5f) / PixelsPerMetre, w.yMin + (y + 0.5f) / PixelsPerMetre);
+                    float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / len2);
+                    if ((a + ab * t - p).sqrMagnitude <= half * half) pixels[y * width + x] = color;
+                }
             }
-            float sw = CityPlan.SidewalkWidth;
-            foreach (var (_, area, _, lawn) in CityPlan.Blocks)
-            {
-                Fill(area, Walk);
-                Fill(Rect.MinMaxRect(area.xMin + sw, area.yMin + sw, area.xMax - sw, area.yMax - sw), lawn ? Lawn : Paved);
-            }
+
+            foreach (Rect r in CityPlan.Paved) Fill(r, Paved);
+            StreetMap map = c.Roads.Map;
+            foreach (StreetDef d in map.Driveways)
+                for (int i = 0; i + 1 < d.Points.Length; i++)
+                    Line(d.Points[i], d.Points[i + 1], CityPlan.HalfWidth(d.Class), d.Class == RoadClass.Alley ? Alley : Dirt);
+            // Sidewalks first, roads over them (so junctions read as asphalt).
+            foreach (StreetMap.Segment s in map.Segments)
+                if (s.Sidewalk > 0f) Line(s.A.P, s.B.P, s.HalfWidth + s.Sidewalk, Walk);
+            foreach (StreetMap.Segment s in map.Segments) Line(s.A.P, s.B.P, s.HalfWidth, Road);
 
             foreach (Collider col in c.Static.GetComponentsInChildren<Collider>())
             {
-                if (col is CapsuleCollider) continue; // tree trunks
+                if (col is CapsuleCollider || col is MeshCollider || col is TerrainCollider) continue; // trunks, ground
                 Bounds b = col.bounds;
-                if (b.size.y < 2.2f || b.min.y > 1f || b.size.y > 50f) continue; // kerbs and fences; boundary walls
+                float ground = TownTerrain.Natural(b.center.x, b.center.z);
+                if (b.size.y < 2.2f || b.min.y > ground + 1.5f || b.size.y > 60f) continue; // kerbs and fences; boundary walls
                 Fill(Rect.MinMaxRect(b.min.x, b.min.z, b.max.x, b.max.z), Building);
             }
 

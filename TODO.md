@@ -47,7 +47,7 @@
 - [x] Market news can tilt sectors (`SectorTilt`): geopolitical and macro headlines (fictional President Hale, the Varenn Mountains, Kessar Strait) sink the index while lifting energy/defence, hit tech on tariffs, banks on a lender run, etc. Market news rate 0.3 → 0.6/day
 - [ ] Art pass 2b: shop, lobby and office furniture (same `Kit.Fit` approach; `ModelSheet` for orientation/shelf heights), ground-floor trims on the enterable buildings, suburban houses for the outer ring
 - [x] Phase 11 (dealerships): First Street Motors (new cars, lot behind the Maple shops, driveway off First St, showroom office) and Harbor Auto Sales (used lot behind Main Street, driveway off Harbor Ave), both 9 AM–7 PM. Weekly stock from the world seed (no save data); aim at a car for its spec card, [E] to test drive (brought round to the exit; free if returned to the lot, $250 recovery plus damage otherwise); [E] at the price board to buy (second press confirms), delivered to a bay; sell/trade in at the sales desk for 85% of private value. Used stickers list every flaw. `DealershipTests`, `DealerPlayTests` (writes `dealer-*.png`)
-- [ ] Next: WORLD_SPEC Phase 12 (mechanics) or core-game features (scanner, statistics/journal, psychology, stop orders). Your call
+- [ ] **Current: TOWN_SPEC.md** (town redesign A3–A18, then furniture/tech/property B1–B22). Work through the phases in order without stopping between them
 
 ## Later phases (do not start early)
 - WORLD_SPEC Phases 12 and 14–17 (property, Phase 14, can now use the town's houses): mechanics, property, advanced vehicles, aviation, world polish

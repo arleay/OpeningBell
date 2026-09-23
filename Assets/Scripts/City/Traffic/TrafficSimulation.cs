@@ -39,6 +39,8 @@ namespace OpeningBell.City
             public RoadNetwork.Movement Occupying;
             public Vector2 Position;
             public Vector2 Heading;
+            /// <summary>Road surface height under the car.</summary>
+            public float Y;
             public float Odometer;
             /// <summary>How far the car may go before it must be stopped (last step).</summary>
             public float Free = float.MaxValue;
@@ -120,6 +122,8 @@ namespace OpeningBell.City
             RoadNetwork.Movement straight = exits.Find(m => m.Turn == RoadNetwork.Turn.Straight);
             if (straight != null && roll < 0.55) return straight;
             var turns = exits.FindAll(m => m.Turn != RoadNetwork.Turn.Straight);
+            // A fork where every exit runs roughly straight on: pick any.
+            if (turns.Count == 0) turns = exits;
             return turns[_rng.Next(turns.Count)];
         }
 
@@ -327,11 +331,13 @@ namespace OpeningBell.City
             {
                 car.Position = car.Lane.At(car.S);
                 car.Heading = car.Lane.Dir;
+                car.Y = car.Lane.HeightAt(car.S);
             }
             else
             {
                 car.Position = car.Move.At(car.S);
                 car.Heading = car.Move.TangentAt(car.S);
+                car.Y = car.Move.HeightAt(car.S);
             }
         }
 

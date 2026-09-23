@@ -29,6 +29,8 @@ namespace OpeningBell.City
             public float Speed;
             public float KeepRight;    // metres right of the sidewalk centre line
             public Vector2 Position;
+            /// <summary>Ground height under the walker (sidewalks climb hills and bridges).</summary>
+            public float Y;
             public Vector2 Heading = Vector2.up;
             public WalkerState State;
             public float Timer;
@@ -79,6 +81,7 @@ namespace OpeningBell.City
                     Speed = 1.15f + 0.4f * (float)_rng.NextDouble(),
                     KeepRight = 0.35f + 0.8f * (float)_rng.NextDouble(),
                     Position = door.P,
+                    Y = door.Y,
                 };
                 if (!PlanFrom(w, door)) continue;
                 _walkers.Add(w);
@@ -191,7 +194,9 @@ namespace OpeningBell.City
             Vector2 dir = (b.P - a.P).normalized;
             bool spur = a.Kind != PlaceKind.Walkway || b.Kind != PlaceKind.Walkway;
             float right = spur ? 0f : w.KeepRight + w.Swerve;
-            Vector2 target = a.P + dir * Mathf.Min(w.S, Vector2.Distance(a.P, b.P)) + RoadNetwork.RightOf(dir) * right;
+            float length = Vector2.Distance(a.P, b.P);
+            Vector2 target = a.P + dir * Mathf.Min(w.S, length) + RoadNetwork.RightOf(dir) * right;
+            w.Y = Mathf.Lerp(a.Y, b.Y, length > 0f ? Mathf.Clamp01(w.S / length) : 1f);
             Vector2 step = target - w.Position;
             float max = w.Speed * 1.6f * dt;
             w.Position = step.magnitude > max ? w.Position + step.normalized * max : target;
@@ -202,6 +207,7 @@ namespace OpeningBell.City
         private void Arrive(Walker w)
         {
             w.Position = w.Destination.P;
+            w.Y = w.Destination.Y;
             if (w.Destination.Kind == PlaceKind.Bench)
             {
                 w.State = WalkerState.Sitting;

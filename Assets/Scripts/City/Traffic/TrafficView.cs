@@ -167,7 +167,7 @@ namespace OpeningBell.City
         private static Vector3 Pose(TrafficSimulation.Car car, out Quaternion rotation)
         {
             rotation = Quaternion.LookRotation(new Vector3(car.Heading.x, 0f, car.Heading.y));
-            return new Vector3(car.Position.x, CityPlan.RoadY, car.Position.y);
+            return new Vector3(car.Position.x, car.Y, car.Position.y);
         }
 
         private string ModelFor(TrafficSimulation.Car car)

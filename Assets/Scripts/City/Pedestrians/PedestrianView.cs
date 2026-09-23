@@ -121,7 +121,7 @@ namespace OpeningBell.City
                 }
                 bool sitting = w.State == PedestrianSimulation.WalkerState.Sitting;
                 Vector2 facing = sitting ? BenchFacing(w) : w.Heading;
-                body.transform.SetPositionAndRotation(new Vector3(w.Position.x, 0f, w.Position.y), Quaternion.LookRotation(new Vector3(facing.x, 0f, facing.y)));
+                body.transform.SetPositionAndRotation(new Vector3(w.Position.x, w.Y, w.Position.y), Quaternion.LookRotation(new Vector3(facing.x, 0f, facing.y)));
                 NpcPose pose = sitting ? NpcPose.Sit : w.State == PedestrianSimulation.WalkerState.Walking && w.Blocked <= 0f ? NpcPose.Walk : NpcPose.Stand;
                 body.Animate(pose, time, w.Speed / 1.35f);
             }

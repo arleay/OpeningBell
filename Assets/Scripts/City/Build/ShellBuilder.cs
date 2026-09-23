@@ -93,17 +93,6 @@ namespace OpeningBell.City
             return outward;
         }
 
-        private static float DistanceToStreet(Vector2 p)
-        {
-            float best = float.MaxValue;
-            foreach (var (a, b, _) in CityPlan.Streets)
-            {
-                Vector2 pa = CityPlan.Nodes[a].P, pb = CityPlan.Nodes[b].P;
-                Vector2 ab = pb - pa;
-                float t = Mathf.Clamp01(Vector2.Dot(p - pa, ab) / ab.sqrMagnitude);
-                best = Mathf.Min(best, Vector2.Distance(p, pa + ab * t));
-            }
-            return best;
-        }
+        private static float DistanceToStreet(Vector2 p) => StreetMap.Plan.DistanceToStreet(p);
     }
 }

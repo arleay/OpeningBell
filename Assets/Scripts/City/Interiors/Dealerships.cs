@@ -19,8 +19,24 @@ namespace OpeningBell.City
         public static readonly string[] NewLineup = { "car_sedan", "car_hatch", "car_suv", "car_pickup", "car_van", "car_gt", "car_luxury", "car_havoc", "car_predator" };
         public static readonly string[] UsedLineup = { "car_sedan", "car_sedan", "car_hatch", "car_suv", "car_pickup", "car_van", "car_gt", "car_luxury", "car_havoc" };
 
-        public static readonly Rect NewLot = Rect.MinMaxRect(63.5f, 13f, 103f, 47.5f);
-        public static readonly Rect UsedLot = Rect.MinMaxRect(170f, -70.5f, 206.5f, -46.5f);
+        // Both lots are laid out in their original local coordinates and moved into place on the highway strip,
+        // south of Maple: Westgate Motors off Depot Rd, Railside Auto Sales off Pine Rd (the rail line behind).
+        private static readonly Vector3 NewOffset = new Vector3(-524.5f, 0f, -71f);
+        private static readonly Vector3 UsedOffset = new Vector3(-465f, 0f, 12.5f);
+        private static readonly Rect NewLocal = Rect.MinMaxRect(63.5f, 13f, 103f, 47.5f);
+        private static readonly Rect UsedLocal = Rect.MinMaxRect(170f, -70.5f, 206.5f, -46.5f);
+        public static readonly Rect NewLot = Shift(NewLocal, NewOffset);
+        public static readonly Rect UsedLot = Shift(UsedLocal, UsedOffset);
+
+        private static Rect Shift(Rect r, Vector3 o) => new Rect(r.x + o.x, r.y + o.z, r.width, r.height);
+        private static (Vector3, float)[] Shift((Vector3 P, float Yaw)[] spots, Vector3 o) => spots.Select(s => (s.P + o, s.Yaw)).ToArray();
+
+        /// <summary>The dealers' lots, levelled into the terrain.</summary>
+        public static void AddPads(CityContext c)
+        {
+            c.Pads.Add(Pad.FromRect(NewLot, 0f));
+            c.Pads.Add(Pad.FromRect(UsedLot, 0f));
+        }
 
         /// <summary>Display spots: two rows of three, noses to the street.</summary>
         private static readonly (Vector3 P, float Yaw)[] NewSpots =
@@ -39,9 +55,10 @@ namespace OpeningBell.City
         private static DealerLot FirstStreetMotors(CityContext c)
         {
             Kit k = c.Kit;
-            Rect lot = NewLot;
-            Transform root = Kit.Group(c.Static, "First Street Motors");
-            Transform dyn = Kit.Group(c.Dynamic, "First Street Motors");
+            Rect lot = NewLocal;
+            Vector3 o = NewOffset;
+            Transform root = Kit.Group(c.Static, "Westgate Motors", o);
+            Transform dyn = Kit.Group(c.Dynamic, "Westgate Motors", o);
             Material asphalt = c.P.Lit(new Color(0.24f, 0.24f, 0.25f), 0.15f);
             Material brand = c.P.Lit(new Color(0.1f, 0.3f, 0.62f), 0.4f);
             Material white = c.P.Lit(new Color(0.92f, 0.92f, 0.9f), 0.2f);
@@ -56,7 +73,7 @@ namespace OpeningBell.City
                 doorX, 1.6f, new[] { (88.4f, 6.2f), (98.8f, 6.6f) });
             k.Span(root, "Roof", new Vector3(office.xMin - 0.3f, top, office.yMin - 0.3f), new Vector3(office.xMax + 0.3f, top + 0.35f, office.yMax + 0.3f), brand);
             k.Span(root, "Sign band", new Vector3(office.xMin, 3.6f, office.yMin - 0.12f), new Vector3(office.xMax, 4.4f, office.yMin), brand, collider: false);
-            k.Text(root, "FIRST STREET MOTORS", new Vector3(doorX, 4f, office.yMin - 0.14f), 0f, 0.36f, Color.white);
+            k.Text(root, "WESTGATE MOTORS", new Vector3(doorX, 4f, office.yMin - 0.14f), 0f, 0.36f, Color.white);
             Door door = c.SwingDoor(dyn, "door", new Vector3(doorX - 0.8f, 0f, office.yMin + 0.125f), 1.6f, 2.25f, c.P.Glass(new Color(0.6f, 0.7f, 0.75f, 0.35f)), glass: true);
             door.LockReason = () => DealerHours.Contains(c.Game.Clock.Now) ? null : "closed (opens 9 AM)";
             k.Span(root, "Sales desk", new Vector3(92f, 0f, 42f), new Vector3(95f, 0.76f, 42.9f), c.P.Lit(new Color(0.3f, 0.3f, 0.32f), 0.4f));
@@ -66,8 +83,8 @@ namespace OpeningBell.City
             c.PointLight(root, new Vector3(88.5f, 4f, 41.5f), 9f, 1f, new Color(1f, 0.96f, 0.9f));
             c.PointLight(root, new Vector3(98.5f, 4f, 41.5f), 9f, 1f, new Color(1f, 0.96f, 0.9f));
 
-            // Pylon at the driveway, read from First St.
-            Pylon(c, root, new Vector3(64.6f, 0f, 37.6f), 90f, brand, "FIRST STREET", "MOTORS", "NEW CARS · OPEN 9 AM – 7 PM");
+            // Pylon at the driveway, read from Depot Rd.
+            Pylon(c, root, new Vector3(64.6f, 0f, 37.6f), 90f, brand, "WESTGATE", "MOTORS", "NEW CARS · OPEN 9 AM – 7 PM");
             // Floodlights over the display rows.
             foreach (float x in new[] { 66f, 85f })
                 LotLight(c, root, new Vector3(x, 0f, 21f));
@@ -78,31 +95,32 @@ namespace OpeningBell.City
             StaffNpc seller = StaffNpc.Create(k, dyn, "Car salesman", 8101, new Color(0.1f, 0.3f, 0.62f),
                 new WorkSchedule { Shift = DealerHours }, new List<Vector3> { station, new Vector3(101.5f, 0f, 43.7f), new Vector3(102f, 0f, 46.8f) },
                 180f, new[] { NpcPose.Typing, NpcPose.Stand, NpcPose.Phone },
-                () => "Welcome to First Street Motors! Everything outside is new, full warranty. Test drives are free.",
+                () => "Welcome to Westgate Motors! Everything outside is new, full warranty. Test drives are free.",
                 () => "New stock comes in every Monday. Got a car to trade? Park it on the lot and I'll make you an offer.",
                 c.Game, c.Hud, c.Player, look: "Suit");
-            TradeInDesk(c, new Vector3(93.5f, 0.95f, 42.45f), new Vector3(3.2f, 0.6f, 1.4f), out GameObject desk);
+            TradeInDesk(c, new Vector3(93.5f, 0.95f, 42.45f) + o, new Vector3(3.2f, 0.6f, 1.4f), out GameObject desk);
 
-            var dealer = new GameObject("First Street Motors lot").AddComponent<DealerLot>();
+            var dealer = new GameObject("Westgate Motors lot").AddComponent<DealerLot>();
             dealer.transform.SetParent(c.Dynamic, false);
-            dealer.Configure(c.Game, c.Hud, k, seller, "fsm", "First Street Motors", used: false, NewLineup, lot,
-                NewSpots,
-                new[] { new Vector3(99f, 0f, 16f), new Vector3(99f, 0f, 22f), new Vector3(99f, 0f, 28f) }, 270f,
-                (new Vector3(69f, 0f, 43f), 270f), DealerHours);
+            dealer.Configure(c.Game, c.Hud, k, seller, "fsm", "Westgate Motors", used: false, NewLineup, NewLot,
+                Shift(NewSpots, o),
+                new[] { new Vector3(99f, 0f, 16f) + o, new Vector3(99f, 0f, 22f) + o, new Vector3(99f, 0f, 28f) + o }, 270f,
+                (new Vector3(69f, 0f, 43f) + o, 270f), DealerHours);
             desk.AddComponent<TradeInDesk>().Configure(dealer);
 
-            c.Place(new Vector3(doorX, 0f, office.yMin - 0.8f), PlaceKind.Door, "First Street Motors");
-            c.Anchor("dealer_new_lot", new Vector3(75f, 0f, 21f));
-            c.Anchor("dealer_new_desk", new Vector3(doorX, 0f, 41f));
+            c.Place(new Vector3(doorX, 0f, office.yMin - 0.8f) + o, PlaceKind.Door, "Westgate Motors");
+            c.Anchor("dealer_new_lot", new Vector3(75f, 0f, 21f) + o);
+            c.Anchor("dealer_new_desk", new Vector3(doorX, 0f, 41f) + o);
             return dealer;
         }
 
         private static DealerLot HarborAutoSales(CityContext c)
         {
             Kit k = c.Kit;
-            Rect lot = UsedLot;
-            Transform root = Kit.Group(c.Static, "Harbor Auto Sales");
-            Transform dyn = Kit.Group(c.Dynamic, "Harbor Auto Sales");
+            Rect lot = UsedLocal;
+            Vector3 o = UsedOffset;
+            Transform root = Kit.Group(c.Static, "Railside Auto Sales", o);
+            Transform dyn = Kit.Group(c.Dynamic, "Railside Auto Sales", o);
             Material asphalt = c.P.Lit(new Color(0.34f, 0.33f, 0.32f), 0.08f);
             Material brand = c.P.Lit(new Color(0.8f, 0.12f, 0.08f), 0.3f);
             Material cream = c.P.Lit(new Color(0.9f, 0.86f, 0.74f), 0.15f);
@@ -120,7 +138,7 @@ namespace OpeningBell.City
             k.Span(root, "Table", new Vector3(173.4f, 0f, -64.1f), new Vector3(175.6f, 0.74f, -63.4f), c.P.Lit(new Color(0.55f, 0.55f, 0.55f), 0.3f));
             c.PointLight(root, new Vector3(174.5f, 2.3f, -64.8f), 7f, 0.9f, new Color(1f, 0.9f, 0.75f));
 
-            Pylon(c, root, new Vector3(205.2f, 0f, -48.5f), 270f, brand, "HARBOR", "AUTO SALES", "USED CARS · OPEN 9 AM – 7 PM");
+            Pylon(c, root, new Vector3(205.2f, 0f, -48.5f), 270f, brand, "RAILSIDE", "AUTO SALES", "USED CARS · OPEN 9 AM – 7 PM");
             // Pennant strings over the rows, the used-lot trademark.
             Pennants(c, root, new Vector3(172f, 3.6f, -53.2f), new Vector3(205f, 3.6f, -53.2f));
             Pennants(c, root, new Vector3(172f, 3.6f, -60.8f), new Vector3(205f, 3.6f, -60.8f));
@@ -132,21 +150,21 @@ namespace OpeningBell.City
             StaffNpc seller = StaffNpc.Create(k, dyn, "Used car dealer", 8202, new Color(0.8f, 0.12f, 0.08f),
                 new WorkSchedule { Shift = DealerHours }, new List<Vector3> { station, new Vector3(179f, 0f, -65f), new Vector3(179f, 0f, -67.5f) },
                 0f, new[] { NpcPose.Stand, NpcPose.Phone, NpcPose.Drink },
-                () => "Harbor Auto Sales! Every car's got its sticker, every flaw's on it. Take one out, no charge.",
+                () => "Railside Auto Sales! Every car's got its sticker, every flaw's on it. Take one out, no charge.",
                 () => "Cheap and honest, pick one. Low condition means a tune-up soon. Selling? Park it here and I'll make an offer.",
                 c.Game, c.Hud, c.Player, look: "Casual");
-            TradeInDesk(c, new Vector3(174.5f, 0.9f, -63.75f), new Vector3(2.4f, 0.5f, 1f), out GameObject desk);
+            TradeInDesk(c, new Vector3(174.5f, 0.9f, -63.75f) + o, new Vector3(2.4f, 0.5f, 1f), out GameObject desk);
 
-            var dealer = new GameObject("Harbor Auto Sales lot").AddComponent<DealerLot>();
+            var dealer = new GameObject("Railside Auto Sales lot").AddComponent<DealerLot>();
             dealer.transform.SetParent(c.Dynamic, false);
-            dealer.Configure(c.Game, c.Hud, k, seller, "has", "Harbor Auto Sales", used: true, UsedLineup, lot,
-                UsedSpots,
-                new[] { new Vector3(184f, 0f, -67.5f), new Vector3(191f, 0f, -67.5f) }, 90f,
-                (new Vector3(199.5f, 0f, -65f), 90f), DealerHours);
+            dealer.Configure(c.Game, c.Hud, k, seller, "has", "Railside Auto Sales", used: true, UsedLineup, UsedLot,
+                Shift(UsedSpots, o),
+                new[] { new Vector3(184f, 0f, -67.5f) + o, new Vector3(191f, 0f, -67.5f) + o }, 90f,
+                (new Vector3(199.5f, 0f, -65f) + o, 90f), DealerHours);
             desk.AddComponent<TradeInDesk>().Configure(dealer);
 
-            c.Anchor("dealer_used_lot", new Vector3(186.5f, 0f, -53.2f));
-            c.Anchor("dealer_used_desk", new Vector3(174.5f, 0f, -62.5f));
+            c.Anchor("dealer_used_lot", new Vector3(186.5f, 0f, -53.2f) + o);
+            c.Anchor("dealer_used_desk", new Vector3(174.5f, 0f, -62.5f) + o);
             return dealer;
         }
 

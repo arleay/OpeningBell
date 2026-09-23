@@ -65,6 +65,9 @@ namespace OpeningBell.City
             _c.Static = Kit.Group(transform, "Static");
             _c.Dynamic = Kit.Group(transform, "Dynamic");
 
+            // Lots first: the terrain (built with the streets) is levelled under them.
+            TownBuilder.AddPads(_c);
+            Dealerships.AddPads(_c);
             ShellBuilder.Build(_c);
             TownBuilder.Build(_c, player.transform);
             ApartmentBuilding.Build(_c);
@@ -192,7 +195,7 @@ namespace OpeningBell.City
                 SidewalkGraph provisional = SidewalkGraph.Build(_c.Roads, System.Array.Empty<(Vector2, PlaceKind, string)>());
                 StreetBuilder.Build(_c, provisional, signals, walkSignals);
                 // Now with every door and bench known. Crosswalk objects must be the final graph's, for the signals.
-                SidewalkGraph final = SidewalkGraph.Build(_c.Roads, _c.Places);
+                SidewalkGraph final = SidewalkGraph.Build(_c.Roads, _c.Places, _c.WalkPaths);
                 foreach (WalkSignal w in walkSignals)
                     w.Crosswalk = final.Crosswalks.Find(cw => Vector2.Distance(cw.Center, w.Crosswalk.Center) < 0.1f);
                 return final;

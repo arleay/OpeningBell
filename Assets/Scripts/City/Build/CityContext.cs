@@ -25,6 +25,15 @@ namespace OpeningBell.City
         public readonly Dictionary<string, Vector3> Anchors = new Dictionary<string, Vector3>();
         /// <summary>Doors and benches pedestrians can use.</summary>
         public readonly List<(Vector2 P, PlaceKind Kind, string Tag)> Places = new List<(Vector2, PlaceKind, string)>();
+        /// <summary>Building pads levelled into the terrain (added by builders before the streets are built).</summary>
+        public readonly List<Pad> Pads = new List<Pad>();
+        /// <summary>Walkways off the sidewalks (park paths, towpath, pier): points as (x, height, z).</summary>
+        public readonly List<Vector3[]> WalkPaths = new List<Vector3[]>();
+        public Terrain Terrain;
+
+        /// <summary>Ground height at (x, z): the terrain where there is one, else the plan's land.</summary>
+        public float GroundY(float x, float z) =>
+            Terrain != null ? Terrain.SampleHeight(new Vector3(x, 0f, z)) + Terrain.transform.position.y : TownTerrain.Height(x, z);
 
         public bool IsTenant => Game.Economy.Owns(OfficeLeaseId);
 

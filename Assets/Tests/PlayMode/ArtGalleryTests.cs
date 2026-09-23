@@ -75,6 +75,44 @@ namespace OpeningBell.Tests
             yield return Shot(new Vector3(6f, 0f, -7.25f), 90f, 0f, "art-night.png");
         }
 
+        /// <summary>The whole town from the air (TOWN_SPEC): overview-*.png.</summary>
+        [UnityTest]
+        public IEnumerator Town_Overview_IsPhotographed()
+        {
+            yield return LoadMain();
+            _player = Find<FirstPersonController>();
+            GameBootstrap game = Find<GameBootstrap>();
+            game.SkipTo(game.Clock.Now.Date.AddHours(13));
+            for (int i = 0; i < 10; i++) yield return null;
+            Camera cam = _player.GetComponentInChildren<Camera>();
+            float far = cam.farClipPlane;
+            cam.farClipPlane = 3000f;
+            bool fog = RenderSettings.fog;
+            RenderSettings.fog = false;
+            (Vector3 At, float Yaw, float Pitch, string File)[] shots =
+            {
+                (new Vector3(0f, 520f, -820f), 0f, 38f, "overview-south.png"),
+                (new Vector3(-900f, 380f, 0f), 90f, 30f, "overview-west.png"),
+                (new Vector3(900f, 380f, 60f), -90f, 30f, "overview-east.png"),
+                (new Vector3(0f, 900f, 0f), 0f, 89f, "overview-top.png"),
+                (new Vector3(-150f, 60f, -120f), 60f, 18f, "overview-southside.png"),
+                (new Vector3(260f, 40f, 120f), 150f, 20f, "overview-canal.png"),
+                (new Vector3(-100f, 70f, 330f), 170f, 18f, "overview-hill.png"),
+            };
+            // The camera flies alone (the player's body would be in the shot).
+            _player.PlaceAt(new Vector3(0f, 0.2f, -5f), 0f, 0f);
+            _player.enabled = false;
+            foreach (var (at, yaw, pitch, file) in shots)
+            {
+                cam.transform.SetPositionAndRotation(at, Quaternion.Euler(pitch, yaw, 0f));
+                yield return null;
+                yield return CaptureCamera(cam, file);
+            }
+            _player.enabled = true;
+            cam.farClipPlane = far;
+            RenderSettings.fog = fog;
+        }
+
         /// <summary>The showroom supercar parked on Main Street: a three-quarter view and the driver's view.</summary>
         [UnityTest]
         public IEnumerator Supercar_IsPhotographed()

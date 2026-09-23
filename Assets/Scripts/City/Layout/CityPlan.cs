@@ -1,12 +1,13 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace OpeningBell.City
 {
     public enum NodeControl
     {
-        /// <summary>Corner or uncontrolled junction: first come, first served.</summary>
+        /// <summary>Uncontrolled: first come, first served.</summary>
         None,
-        /// <summary>T junction: the stem stops, the through street has priority.</summary>
+        /// <summary>The minor street stops; the main street (the one passing through) has priority.</summary>
         StopOnStem,
         Lights,
     }
@@ -18,6 +19,20 @@ namespace OpeningBell.City
         Concrete,
         Glass,
         Townhouse,
+    }
+
+    /// <summary>
+    /// Road classes (TOWN_SPEC): width, sidewalks and whether traffic uses them. Alleys and dirt roads are
+    /// "driveways": they join streets at the kerb rather than at junctions, and traffic keeps off them.
+    /// </summary>
+    public enum RoadClass
+    {
+        Highway,
+        Street,
+        Residential,
+        Industrial,
+        Alley,
+        Dirt,
     }
 
     /// <summary>A plain building volume: outside only, no interior.</summary>
@@ -39,127 +54,171 @@ namespace OpeningBell.City
         }
     }
 
+    /// <summary>A named polyline road. Streets meet wherever they share a point exactly.</summary>
+    public sealed class StreetDef
+    {
+        public readonly string Name;
+        public readonly RoadClass Class;
+        public readonly Vector2[] Points;
+
+        public StreetDef(string name, RoadClass cls, params Vector2[] points)
+        {
+            Name = name;
+            Class = cls;
+            Points = points;
+        }
+
+        public bool IsDriveway => Class == RoadClass.Alley || Class == RoadClass.Dirt;
+    }
+
+    /// <summary>Houses along one side of a street between two points on its centre line.</summary>
+    public readonly struct Frontage
+    {
+        public readonly string Street;
+        public readonly Vector2 From, To;
+        /// <summary>+1: houses on the left of From→To; -1: on the right.</summary>
+        public readonly int Side;
+        public readonly HouseTier Tier;
+
+        public Frontage(string street, Vector2 from, Vector2 to, int side, HouseTier tier)
+        {
+            Street = street;
+            From = from;
+            To = to;
+            Side = side;
+            Tier = tier;
+        }
+    }
+
     /// <summary>
-    /// The authored town layout. The Phase 9 core (the apartment on Maple St, the shops, the Calder Building and a
-    /// low-rise town centre) sits in the middle of a small open town: an outer grid of streets (Oak, Birch, Willow,
-    /// Pine) with houses and yards, an open field and green edges instead of a wall of tall blocks. Everything is
-    /// generated from these numbers. +x is east, +z is north; the player's apartment sits at the origin.
+    /// The authored town layout (TOWN_SPEC). The old core (the apartment on Maple St at the origin, the shops, the
+    /// Calder Building) is where it always was; the town now spreads around it: the highway entrance west, the
+    /// industrial district south-west, working-class streets south of the rail line, the waterfront on the bay,
+    /// the canal and the entertainment district across it, the residential slope north and the Crest hill.
+    /// Everything is generated from these numbers. +x is east, +z is north.
     /// </summary>
     public static class CityPlan
     {
-        public const float RoadHalfWidth = 5f;
-        public const float SidewalkWidth = 3.5f;
-        // Lanes sit 2 m off the centre line: leaves room for a car parked at the kerb beside passing traffic.
-        public const float LaneOffset = 2f;
+        /// <summary>Road surfaces sit this far below the sidewalk / lot level (a kerb).</summary>
         public const float RoadY = -0.15f;
-        /// <summary>Stop lines sit just outside the crosswalk band (5–8.5 m from the junction centre).</summary>
+        public const float SidewalkWidth = 3.5f;
+        public const float RoadHalfWidth = 5f; // a Street; the old core is all Streets
+        public const float LaneOffset = 2f;
         public const float StopLine = 9f;
         public const float CrosswalkNear = RoadHalfWidth;
         public const float CrosswalkFar = RoadHalfWidth + SidewalkWidth;
 
-        public static readonly Rect World = Rect.MinMaxRect(-275f, -150f, 255f, 200f);
+        /// <summary>The playable area (the map shows it; outside is forest, hills and water).</summary>
+        public static readonly Rect World = Rect.MinMaxRect(-800f, -420f, 760f, 540f);
 
-        // Street lines: x = -235 Pine, -140 Willow, -45 Cedar, 55 First, 135 Exchange, 215 Harbor;
-        // z = -110 Oak, -14 Maple, 70 Grove, 160 Birch. First and Exchange only run Maple–Grove (the core).
-        // Four-way crossings are first come, first served; T junctions stop on the stem. Lights only work at a T
-        // (their two phases are "through" and "stem"), so new crossings don't get them. No dead ends: every lane
-        // needs an exit.
-        public static readonly (string Name, Vector2 P, NodeControl Control)[] Nodes =
+        public static float HalfWidth(RoadClass c) => c switch
         {
-            ("Maple & Cedar", new Vector2(-45f, -14f), NodeControl.None),
-            ("Maple & First", new Vector2(55f, -14f), NodeControl.StopOnStem),
-            ("Maple & Exchange", new Vector2(135f, -14f), NodeControl.Lights),
-            ("Maple & Harbor", new Vector2(215f, -14f), NodeControl.StopOnStem),
-            ("Grove & Cedar", new Vector2(-45f, 70f), NodeControl.None),
-            ("Grove & First", new Vector2(55f, 70f), NodeControl.StopOnStem),
-            ("Grove & Exchange", new Vector2(135f, 70f), NodeControl.StopOnStem),
-            ("Grove & Harbor", new Vector2(215f, 70f), NodeControl.StopOnStem),
-            ("Maple & Willow", new Vector2(-140f, -14f), NodeControl.None), // 8
-            ("Maple & Pine", new Vector2(-235f, -14f), NodeControl.StopOnStem),
-            ("Grove & Willow", new Vector2(-140f, 70f), NodeControl.None), // 10
-            ("Grove & Pine", new Vector2(-235f, 70f), NodeControl.StopOnStem),
-            ("Oak & Pine", new Vector2(-235f, -110f), NodeControl.None), // 12
-            ("Oak & Willow", new Vector2(-140f, -110f), NodeControl.StopOnStem),
-            ("Oak & Cedar", new Vector2(-45f, -110f), NodeControl.StopOnStem),
-            ("Oak & Harbor", new Vector2(215f, -110f), NodeControl.None), // 15
-            ("Birch & Pine", new Vector2(-235f, 160f), NodeControl.None), // 16
-            ("Birch & Willow", new Vector2(-140f, 160f), NodeControl.StopOnStem),
-            ("Birch & Cedar", new Vector2(-45f, 160f), NodeControl.StopOnStem),
-            ("Birch & Harbor", new Vector2(215f, 160f), NodeControl.None), // 19
+            RoadClass.Highway => 6f,
+            RoadClass.Street => 5f,
+            RoadClass.Residential => 4f,
+            RoadClass.Industrial => 5.5f,
+            RoadClass.Alley => 3f,
+            _ => 2.6f,
         };
 
-        public static readonly (int A, int B, string Street)[] Streets =
+        public static float Sidewalk(RoadClass c) => c switch
         {
-            (0, 1, "MAPLE ST"), (1, 2, "MAPLE ST"), (2, 3, "MAPLE ST"), (9, 8, "MAPLE ST"), (8, 0, "MAPLE ST"),
-            (4, 5, "GROVE ST"), (5, 6, "GROVE ST"), (6, 7, "GROVE ST"), (11, 10, "GROVE ST"), (10, 4, "GROVE ST"),
-            (0, 4, "CEDAR AVE"), (14, 0, "CEDAR AVE"), (4, 18, "CEDAR AVE"),
-            (1, 5, "FIRST ST"), (2, 6, "EXCHANGE ST"),
-            (3, 7, "HARBOR AVE"), (15, 3, "HARBOR AVE"), (7, 19, "HARBOR AVE"),
-            (12, 13, "OAK ST"), (13, 14, "OAK ST"), (14, 15, "OAK ST"),
-            (16, 17, "BIRCH ST"), (17, 18, "BIRCH ST"), (18, 19, "BIRCH ST"),
-            (12, 9, "PINE RD"), (9, 11, "PINE RD"), (11, 16, "PINE RD"),
-            (13, 8, "WILLOW AVE"), (8, 10, "WILLOW AVE"), (10, 17, "WILLOW AVE"),
+            RoadClass.Street => SidewalkWidth,
+            RoadClass.Residential => 2.5f,
+            RoadClass.Industrial => 2f,
+            _ => 0f,
         };
 
-        private static readonly Color Grass = new Color(0.33f, 0.45f, 0.25f);
-        private static readonly Color Paving = new Color(0.42f, 0.42f, 0.41f);
-
-        /// <summary>
-        /// Curb-to-curb blocks. Each gets a full sidewalk ring; buildings sit inside the ring. Lawn blocks are grass
-        /// underfoot (footsteps and the look); the rest are paved.
-        /// </summary>
-        public static readonly (string Name, Rect Area, Color Ground, bool Lawn)[] Blocks =
+        /// <summary>Lane centre off the road centre: room for a car parked at the kerb beside passing traffic.</summary>
+        public static float LaneOffsetFor(RoadClass c) => c switch
         {
-            // The core
-            ("Residential", Rect.MinMaxRect(-40f, -9f, 50f, 65f), Grass, true),
-            ("Commercial", Rect.MinMaxRect(60f, -9f, 130f, 65f), Paving, false),
-            ("Downtown", Rect.MinMaxRect(140f, -9f, 210f, 65f), new Color(0.55f, 0.53f, 0.5f), false),
-            // Neighbourhoods west of the core, between Maple and Grove
-            ("Willow Park", Rect.MinMaxRect(-135f, -9f, -50f, 65f), Grass, true),
-            ("Pine Hill", Rect.MinMaxRect(-230f, -9f, -145f, 65f), Grass, true),
-            // South of Maple
-            ("Southside", Rect.MinMaxRect(-40f, -105f, 210f, -19f), Grass, true),
-            ("Willow South", Rect.MinMaxRect(-135f, -105f, -50f, -19f), Grass, true),
-            ("Pine South", Rect.MinMaxRect(-230f, -105f, -145f, -19f), Grass, true),
-            // North of Grove
-            ("Northside", Rect.MinMaxRect(-40f, 75f, 210f, 155f), Grass, true),
-            ("Willow North", Rect.MinMaxRect(-135f, 75f, -50f, 155f), Grass, true),
-            ("Pine North", Rect.MinMaxRect(-230f, 75f, -145f, 155f), Grass, true),
-            // Green edges beyond the outer streets
-            ("South Edge", Rect.MinMaxRect(-275f, -150f, 255f, -115f), Grass, true),
-            ("North Edge", Rect.MinMaxRect(-275f, 165f, 255f, 200f), Grass, true),
-            ("West Edge", Rect.MinMaxRect(-275f, -115f, -240f, 165f), Grass, true),
-            ("East Edge", Rect.MinMaxRect(220f, -115f, 255f, 165f), Grass, true),
+            RoadClass.Highway => 2.4f,
+            RoadClass.Residential => 1.8f,
+            RoadClass.Industrial => 2.4f,
+            _ => LaneOffset,
         };
 
-        /// <summary>
-        /// Rows of walkable houses (<see cref="HouseBuilder"/>): along the north or south side of a block from X0 to X1,
-        /// facing the street on that side. Starter homes nearest the core, family homes further out, mansions on Birch.
-        /// </summary>
-        public static readonly (string Block, float X0, float X1, bool FacesNorth, HouseTier Tier)[] HouseRows =
+        public static bool HasTraffic(RoadClass c) => c <= RoadClass.Industrial;
+
+        private static Vector2 P(float x, float z) => new Vector2(x, z);
+
+        /// <summary>Most important first: the first street through a junction is its main street.</summary>
+        public static readonly StreetDef[] Streets =
         {
-            ("Willow Park", -135f, -50f, false, HouseTier.Starter), ("Willow Park", -135f, -50f, true, HouseTier.Starter),
-            ("Willow South", -135f, -50f, false, HouseTier.Starter), ("Willow South", -135f, -50f, true, HouseTier.Starter),
-            ("Willow North", -135f, -50f, false, HouseTier.Family), ("Willow North", -135f, -50f, true, HouseTier.Family),
-            ("Pine Hill", -230f, -145f, false, HouseTier.Family), ("Pine Hill", -230f, -145f, true, HouseTier.Family),
-            ("Pine South", -230f, -145f, false, HouseTier.Starter), ("Pine South", -230f, -145f, true, HouseTier.Starter),
-            ("Pine North", -230f, -145f, false, HouseTier.Family), ("Pine North", -230f, -145f, true, HouseTier.Mansion),
-            // Opposite the apartment on Maple (the main street's shops take over east of First), and along Oak
-            ("Southside", -40f, 55f, true, HouseTier.Starter), ("Southside", -40f, 210f, false, HouseTier.Starter),
-            // Along Grove up to the town field; Birch has family homes, then the mansions
-            ("Northside", -40f, 125f, false, HouseTier.Starter), ("Northside", -40f, 60f, true, HouseTier.Family),
-            ("Northside", 60f, 210f, true, HouseTier.Mansion),
+            new StreetDef("KELL HWY", RoadClass.Highway, P(-780, 70), P(-700, 62), P(-620, 40), P(-545, 8), P(-470, -14)),
+            new StreetDef("MAPLE ST", RoadClass.Street, P(-470, -14), P(-360, -14), P(-250, -14), P(-140, -14), P(-45, -14), P(55, -14),
+                P(135, -14), P(215, -14), P(290, -14), P(345, -14), P(450, -14), P(560, -14)),
+            new StreetDef("HARBOR RD", RoadClass.Street, P(-470, -270), P(-360, -270), P(-250, -270), P(-140, -270), P(-45, -270), P(80, -272),
+                P(215, -270), P(290, -270)),
+            new StreetDef("GROVE ST", RoadClass.Street, P(-360, 70), P(-250, 70), P(-140, 70), P(-45, 70), P(55, 70), P(135, 70), P(215, 70), P(290, 70)),
+            new StreetDef("CANAL ST", RoadClass.Street, P(290, -270), P(290, -160), P(290, -64), P(290, -14), P(290, 70), P(290, 170)),
+            new StreetDef("MILL BRIDGE", RoadClass.Street, P(290, 170), P(345, 170)),
+            new StreetDef("QUAY ST", RoadClass.Street, P(345, -150), P(345, -14), P(345, 50), P(345, 110), P(345, 170)),
+            new StreetDef("HARBOR AVE", RoadClass.Street, P(215, -270), P(215, -215), P(215, -160), P(215, -64), P(215, -14), P(215, 70), P(215, 160), P(215, 230)),
+            new StreetDef("EXCHANGE ST", RoadClass.Street, P(135, -160), P(135, -64), P(135, -14), P(135, 70), P(135, 160)),
+            new StreetDef("FIRST ST", RoadClass.Street, P(55, -160), P(55, -64), P(55, -14), P(55, 70)),
+            new StreetDef("CEDAR AVE", RoadClass.Street, P(-45, -270), P(-45, -215), P(-45, -160), P(-45, -64), P(-45, -14), P(-45, 70), P(-45, 160)),
+            new StreetDef("PINE RD", RoadClass.Street, P(-250, -270), P(-250, -215), P(-250, -160), P(-250, -64), P(-250, -14), P(-250, 70), P(-250, 160), P(-250, 250)),
+            new StreetDef("LUMBER RD", RoadClass.Street, P(-360, -14), P(-360, 70), P(-360, 150), P(-310, 178), P(-250, 160)),
+            new StreetDef("RAIL ROW", RoadClass.Street, P(-250, -64), P(-140, -64), P(-45, -64), P(55, -64), P(135, -64), P(215, -64), P(290, -64)),
+            new StreetDef("FOUNDRY ST", RoadClass.Street, P(-470, -160), P(-360, -160), P(-250, -160), P(-140, -160), P(-45, -160), P(55, -160),
+                P(135, -160), P(215, -160), P(290, -160)),
+            new StreetDef("NEON ROW", RoadClass.Street, P(345, 50), P(450, 50), P(560, 50)),
+            new StreetDef("BAYVIEW AVE", RoadClass.Street, P(450, -150), P(450, -14), P(450, 50), P(450, 110)),
+            new StreetDef("LANTERN ST", RoadClass.Street, P(345, 110), P(450, 110), P(560, 110)),
+            new StreetDef("BAY BLVD", RoadClass.Street, P(345, -150), P(450, -150), P(560, -150), P(630, -165)),
+            new StreetDef("EAST END RD", RoadClass.Street, P(560, -150), P(560, -14), P(560, 50), P(560, 110), P(560, 150)),
+            new StreetDef("DEPOT RD", RoadClass.Industrial, P(-470, -14), P(-470, -100), P(-470, -160), P(-470, -270)),
+            new StreetDef("MILL RD", RoadClass.Industrial, P(-470, -100), P(-400, -100), P(-360, -125), P(-360, -160)),
+            new StreetDef("WILLOW AVE", RoadClass.Residential, P(-140, -270), P(-150, -215), P(-140, -160), P(-150, -110), P(-140, -64), P(-140, -14),
+                P(-140, 70), P(-140, 150)),
+            new StreetDef("BIRCH ST", RoadClass.Residential, P(-250, 160), P(-140, 150), P(-45, 160), P(45, 168), P(135, 160), P(215, 160)),
+            new StreetDef("HILLCREST DR", RoadClass.Residential, P(-45, 160), P(-25, 210), P(25, 245), P(95, 262), P(160, 252), P(215, 230)),
+            new StreetDef("ALDER WAY", RoadClass.Residential, P(-140, 150), P(-120, 205), P(-100, 250), P(-100, 298)),
+            new StreetDef("RIDGE RD", RoadClass.Residential, P(-250, 250), P(-180, 280), P(-100, 298), P(-20, 302), P(60, 305), P(140, 300), P(200, 288)),
+            new StreetDef("SUMMIT WAY", RoadClass.Residential, P(25, 245), P(40, 275), P(60, 305)),
+            new StreetDef("GULL ST", RoadClass.Residential, P(-45, -215), P(20, -205), P(80, -218), P(135, -212), P(215, -215)),
+            new StreetDef("TERN LN", RoadClass.Residential, P(-250, -215), P(-190, -222), P(-150, -215)),
+            new StreetDef("CREST RD", RoadClass.Residential, P(560, 150), P(615, 180), P(655, 228), P(615, 268), P(650, 312), P(595, 345), P(525, 358)),
+
+            // Alleys behind the Maple St shops and the main street, and the lane to the parking behind the Maple shops.
+            new StreetDef("ALLEY", RoadClass.Alley, P(-250, 16), P(-140, 16)),
+            new StreetDef("ALLEY", RoadClass.Alley, P(-140, 16), P(-45, 16)),
+            new StreetDef("ALLEY", RoadClass.Alley, P(-250, -48), P(-140, -48)),
+            new StreetDef("ALLEY", RoadClass.Alley, P(-140, -48), P(-45, -48)),
+            new StreetDef("ALLEY", RoadClass.Alley, P(55, -49), P(135, -49)),
+            new StreetDef("ALLEY", RoadClass.Alley, P(135, -49), P(215, -49)),
+            new StreetDef("ALLEY", RoadClass.Alley, P(55, 30), P(100, 30)),
+            // Dirt: to the trailer park, up to the overlook, to the campsite, to the water tower.
+            new StreetDef("OLD MILL RD", RoadClass.Dirt, P(-470, -230), P(-540, -230), P(-620, -205), P(-690, -150), P(-712, -95)),
+            new StreetDef("LOOKOUT RD", RoadClass.Dirt, P(-250, 235), P(-300, 240), P(-335, 300), P(-365, 372), P(-395, 405)),
+            new StreetDef("CAMP RD", RoadClass.Dirt, P(-365, 372), P(-330, 400), P(-300, 425)),
+            new StreetDef("TOWER RD", RoadClass.Dirt, P(615, 268), P(680, 262), P(700, 300)),
         };
 
-        /// <summary>The open field on Grove (the rest of Northside's frontage): grass and a few trees, no buildings.</summary>
-        public static readonly Rect TownField = Rect.MinMaxRect(128f, 78.5f, 206.5f, 112f);
-
-        public static Rect Block(string name)
+        /// <summary>Signalised junctions; every other junction of three or more streets stops the minor street.</summary>
+        public static readonly Vector2[] Lights =
         {
-            foreach (var b in Blocks)
-                if (b.Name == name) return b.Area;
-            throw new System.ArgumentException(name);
-        }
+            P(-470, -14), P(-360, -14), P(-250, -14), P(-45, -14), P(135, -14), P(215, -14), P(290, -14), P(345, -14), P(450, -14), P(135, 70),
+        };
+
+        /// <summary>Uncontrolled crossings (quiet residential and waterfront corners).</summary>
+        public static readonly Vector2[] Uncontrolled =
+        {
+            P(-140, 150), P(-100, 298), P(25, 245), P(60, 305), P(-150, -215), P(-250, 160),
+        };
+
+        /// <summary>Road grade overrides (metres) where the natural ground is too steep or a road runs into a hill.</summary>
+        public static readonly Dictionary<Vector2, float> Grades = new Dictionary<Vector2, float>
+        {
+            [P(-780, 70)] = 6f, [P(-700, 62)] = 5f, [P(-620, 40)] = 2.5f, [P(-545, 8)] = 0.6f,
+            // Crest Rd climbs steadily round the hill (cut into it); the mansions sit at the top.
+            [P(615, 180)] = 8.5f, [P(655, 228)] = 13.5f, [P(615, 268)] = 18f, [P(650, 312)] = 22f, [P(595, 345)] = 26f, [P(525, 358)] = 29f,
+            [P(25, 245)] = 9.4f, [P(40, 275)] = 11.8f,
+        };
+
+        /// <summary>The highway runs into the west hills here (a closed tunnel beyond).</summary>
+        public static readonly Vector2 HighwayTunnel = P(-735, 66);
 
         // ---- special buildings (interiors) ----
 
@@ -171,10 +230,21 @@ namespace OpeningBell.City
         public static readonly Rect SkateShop = Rect.MinMaxRect(78.5f, -5.5f, 94f, 9f);
         public static readonly Rect BikeShop = Rect.MinMaxRect(94.5f, -5.5f, 111.5f, 9f);
 
-        /// <summary>Everything else with walls: low-rise facades along the main streets. Houses are <see cref="HouseRows"/>.</summary>
+        /// <summary>Paved ground (plazas, lots, the core blocks); everywhere else is the terrain's grass and dirt.</summary>
+        public static readonly Rect[] Paved =
+        {
+            Rect.MinMaxRect(63.5f, -5.5f, 126.5f, 61.5f),   // commercial block
+            Rect.MinMaxRect(143.5f, -5.5f, 206.5f, 61.5f),  // downtown
+            Rect.MinMaxRect(62.5f, -55.5f, 206.5f, -18.5f), // main street, south side of Maple, and its alley
+        };
+
+        /// <summary>The residential block's lawn with the apartment building: the neighbourhood park.</summary>
+        public static readonly Rect MaplePark = Rect.MinMaxRect(-36.5f, -5.5f, 46.5f, 61.5f);
+
+        /// <summary>Everything else with walls: low-rise facades along the main streets.</summary>
         public static readonly Shell[] Shells =
         {
-            // Residential block
+            // Maple Park block
             new Shell(-36.5f, -5.5f, -26f, 5f, 8.5f, FacadeStyle.Townhouse),
             new Shell(-25.5f, -5.5f, -16f, 5f, 9.5f, FacadeStyle.Brick),
             new Shell(-15.5f, -5.5f, -6.5f, 5f, 8f, FacadeStyle.Townhouse),
@@ -185,7 +255,7 @@ namespace OpeningBell.City
             // Commercial block (coffee shop, skate shop, bike shop and mart are special)
             new Shell(63.5f, 50f, 94f, 61.5f, 11f, FacadeStyle.Stucco, storefront: true),
             new Shell(97f, 50f, 126.5f, 61.5f, 12f, FacadeStyle.Concrete),
-            // Town centre (Calder is special): low-rise, not a financial district
+            // Town centre (Calder is special)
             new Shell(172f, -5.5f, 206.5f, 24f, 16f, FacadeStyle.Glass, sign: "MERIDIAN"),
             new Shell(144f, 27f, 168f, 61.5f, 14f, FacadeStyle.Concrete, sign: "PARKING"),
             new Shell(172f, 30f, 206.5f, 61.5f, 12f, FacadeStyle.Brick),
@@ -195,6 +265,48 @@ namespace OpeningBell.City
             new Shell(112.5f, -45f, 132f, -22.5f, 7.5f, FacadeStyle.Brick, storefront: true),
             new Shell(138f, -45f, 170f, -22.5f, 11f, FacadeStyle.Concrete, storefront: true),
             new Shell(170.5f, -45f, 206.5f, -22.5f, 9f, FacadeStyle.Townhouse, storefront: true),
+        };
+
+        private static Frontage F(string street, float x0, float z0, float x1, float z1, int side, HouseTier tier) =>
+            new Frontage(street, P(x0, z0), P(x1, z1), side, tier);
+
+        /// <summary>Walkable houses (<see cref="HouseBuilder"/>): working-class south of the rail line, families on the
+        /// slope north of Grove, bigger homes up on Ridge Rd, mansions on Crest Rd.</summary>
+        public static readonly Frontage[] Frontages =
+        {
+            // Behind the Maple St shops, facing Grove
+            F("GROVE ST", -250, 70, -140, 70, -1, HouseTier.Starter), F("GROVE ST", -140, 70, -45, 70, -1, HouseTier.Starter),
+            // North of Grove
+            F("GROVE ST", -250, 70, -140, 70, 1, HouseTier.Starter), F("GROVE ST", -140, 70, -45, 70, 1, HouseTier.Starter),
+            F("GROVE ST", -45, 70, 55, 70, 1, HouseTier.Family), F("GROVE ST", 55, 70, 135, 70, 1, HouseTier.Family),
+            F("BIRCH ST", -250, 160, -140, 150, -1, HouseTier.Family), F("BIRCH ST", -140, 150, -45, 160, -1, HouseTier.Family),
+            F("BIRCH ST", -45, 160, 45, 168, -1, HouseTier.Family), F("BIRCH ST", 45, 168, 135, 160, -1, HouseTier.Family),
+            F("BIRCH ST", -250, 160, -140, 150, 1, HouseTier.Family), F("HILLCREST DR", 25, 245, 95, 262, -1, HouseTier.Family),
+            F("HILLCREST DR", 95, 262, 160, 252, -1, HouseTier.Family), F("HILLCREST DR", -25, 210, 25, 245, -1, HouseTier.Family),
+            F("RIDGE RD", -180, 280, -100, 298, 1, HouseTier.Family), F("RIDGE RD", -100, 298, -20, 302, 1, HouseTier.Family),
+            F("RIDGE RD", -20, 302, 60, 305, 1, HouseTier.Family), F("RIDGE RD", 60, 305, 140, 300, 1, HouseTier.Family),
+            F("CREST RD", 650, 312, 595, 345, -1, HouseTier.Mansion), F("CREST RD", 595, 345, 525, 358, -1, HouseTier.Mansion),
+            F("CREST RD", 615, 180, 655, 228, 1, HouseTier.Mansion),
+            // South of the rail line: small houses
+            F("FOUNDRY ST", -250, -160, -140, -160, 1, HouseTier.Starter), F("FOUNDRY ST", -140, -160, -45, -160, 1, HouseTier.Starter),
+            F("FOUNDRY ST", -140, -160, -45, -160, -1, HouseTier.Starter), F("FOUNDRY ST", -45, -160, 55, -160, -1, HouseTier.Starter),
+            F("FOUNDRY ST", -45, -160, 55, -160, 1, HouseTier.Starter), F("FOUNDRY ST", 55, -160, 135, -160, 1, HouseTier.Starter),
+            F("GULL ST", -45, -215, 20, -205, -1, HouseTier.Starter), F("GULL ST", 20, -205, 80, -218, -1, HouseTier.Starter),
+            F("GULL ST", 80, -218, 135, -212, -1, HouseTier.Starter),
+        };
+
+        /// <summary>District names for the map and for places you've discovered.</summary>
+        public static readonly (string Name, Rect Area)[] Districts =
+        {
+            ("Kell Highway", Rect.MinMaxRect(-560f, -60f, -255f, 160f)),
+            ("Maple Street", Rect.MinMaxRect(-255f, -60f, 135f, 66f)),
+            ("Downtown", Rect.MinMaxRect(135f, -60f, 300f, 170f)),
+            ("Foundry", Rect.MinMaxRect(-560f, -310f, -255f, -60f)),
+            ("Southside", Rect.MinMaxRect(-255f, -250f, 300f, -60f)),
+            ("Waterfront", Rect.MinMaxRect(-255f, -330f, 300f, -250f)),
+            ("Canal Row", Rect.MinMaxRect(300f, -330f, 600f, 180f)),
+            ("Grove Hill", Rect.MinMaxRect(-360f, 66f, 300f, 330f)),
+            ("Crest", Rect.MinMaxRect(500f, 150f, 720f, 400f)),
         };
     }
 }
