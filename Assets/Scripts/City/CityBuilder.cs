@@ -43,6 +43,7 @@ namespace OpeningBell.City
         /// <summary>First Street Motors (new) and Harbor Auto Sales (used).</summary>
         public List<DealerLot> Dealers { get; private set; }
         public MechanicShop Mechanic { get; private set; }
+        public Forest Woods { get; private set; }
         public Minimap Minimap { get; private set; }
         public Phone Phone { get; private set; }
         public TitleScreen Title { get; private set; }
@@ -75,6 +76,7 @@ namespace OpeningBell.City
             MechanicShop.AddPads(_c);
             Residential.AddPads(_c);
             Waterfront.AddPads(_c);
+            Outskirts.AddPads(_c);
             ShellBuilder.Build(_c);
             TownBuilder.Build(_c, player.transform);
             ApartmentBuilding.Build(_c);
@@ -90,6 +92,7 @@ namespace OpeningBell.City
             Mechanic = MechanicShop.Build(_c);
             Residential.BuildApartments(_c);
             Waterfront.Build(_c);
+            Outskirts.Build(_c);
 
             // Places (doors, benches) are registered by the builders above; the street pass adds benches too,
             // so gather everything first, then build the walk graph the markings and signals need.
@@ -97,6 +100,8 @@ namespace OpeningBell.City
             var walkSignals = new List<WalkSignal>();
             var benchesAndStreets = new StreetPass(_c);
             SidewalkGraph walks = benchesAndStreets.Build(signals, walkSignals);
+            // The woods last: they fill whatever ground is left.
+            Woods = Forest.Build(_c, viewCamera);
 
             StaticBatchingUtility.Combine(_c.Static.gameObject);
 

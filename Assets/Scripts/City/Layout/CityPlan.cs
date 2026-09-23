@@ -191,7 +191,6 @@ namespace OpeningBell.City
             new StreetDef("ALLEY", RoadClass.Alley, P(-140, -48), P(-45, -48)),
             new StreetDef("ALLEY", RoadClass.Alley, P(55, -49), P(135, -49)),
             new StreetDef("ALLEY", RoadClass.Alley, P(135, -49), P(215, -49)),
-            new StreetDef("ALLEY", RoadClass.Alley, P(55, 30), P(100, 30)),
             // Yard road through the Foundry, beside the rail line: trucks, the building supply, the mechanic's back lot.
             new StreetDef("YARD RD", RoadClass.Alley, P(-250, -80), P(-470, -80)),
             // Dirt: to the trailer park, up to the overlook, to the campsite, to the water tower.
