@@ -33,6 +33,7 @@ namespace OpeningBell.City
         private System.Func<float> _night;
         private Light _headlights;
         private AudioSource _engine;
+        private EngineAudio _recorded;
 
         public bool IsDriving => _vehicle != null;
         public OwnedVehicle Vehicle => _vehicle;
@@ -96,8 +97,23 @@ namespace OpeningBell.City
             _car.Impact += OnImpact;
             _headlights = _car.GetComponentInChildren<Light>(true);
             // TryGetComponent, not ??: Unity's missing-component placeholder isn't C# null.
-            _engine = _car.TryGetComponent(out AudioSource existing) ? existing : EngineSound(_car.gameObject);
-            _engine.Play();
+            // A recorded engine when the model names one; the synthesized loop otherwise.
+            EngineSoundSet set = _game.VehicleLibrary != null && _game.Vehicles.Catalog.TryGetModel(_vehicle.ModelId, out VehicleModel model)
+                ? _game.VehicleLibrary.EngineSound(model.EngineSound) : null;
+            if (set != null)
+            {
+                if (!_car.TryGetComponent(out _recorded))
+                {
+                    _recorded = _car.gameObject.AddComponent<EngineAudio>();
+                    _recorded.Configure(set);
+                }
+                if (_car.EngineOn) _recorded.StartEngine();
+            }
+            else
+            {
+                _engine = _car.TryGetComponent(out AudioSource existing) ? existing : EngineSound(_car.gameObject);
+                _engine.Play();
+            }
             _chasePosition = _car.transform.position - _car.transform.forward * 6f + Vector3.up * 2.5f;
             _entering = false;
             _hud.ShowToast("W gas · S brake/reverse · A/D steer · Space handbrake · C camera · E get out", 7f);
@@ -118,6 +134,7 @@ namespace OpeningBell.City
             _car.SetParked(true);
             if (_headlights != null) _headlights.enabled = false;
             if (_engine != null) _engine.Stop();
+            if (_recorded != null) _recorded.Stop();
             Transform car = _car.transform;
             _game.Vehicles.Park(_vehicle, car.position.x, car.position.y, car.position.z, car.eulerAngles.y);
             Vector3 spot = FreeSpotBeside(car);
@@ -204,7 +221,9 @@ namespace OpeningBell.City
             _game.PlayerSavePosition = t.position + t.rotation * (Vector3.left * 1.4f);
             if (_headlights != null) _headlights.enabled = _night() > 0.5f;
             // Engine note follows revs; louder under load.
-            if (_engine != null)
+            if (_recorded != null)
+                _recorded.Step(Mathf.Max(_car.EngineRpm, (float)_car.Spec.IdleRpm), _car.Throttle, _car.EngineOn);
+            else if (_engine != null)
             {
                 _engine.pitch = Mathf.Clamp(_car.EngineRpm / 1800f, 0.35f, 4f);
                 _engine.volume = _car.EngineOn ? 0.18f + 0.35f * _car.Throttle : 0f;
@@ -234,7 +253,7 @@ namespace OpeningBell.City
             _camera.rotation = Quaternion.LookRotation(focus - _camera.position);
         }
 
-        /// <summary>TODO(audio): a synthesized engine loop until recorded engine sounds exist.</summary>
+        /// <summary>A synthesized engine loop, for cars without a recorded engine.</summary>
         private static AudioSource EngineSound(GameObject car)
         {
             var source = car.AddComponent<AudioSource>();

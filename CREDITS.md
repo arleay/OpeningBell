@@ -18,6 +18,9 @@
 | Stylized Nature MegaKit trees, bushes, fern and grass, via [poly.pizza](https://poly.pizza/u/Quaternius) (converted to FBX with `Tools/Blender/convert_quaternius.py`) | Quaternius | CC0 1.0 | Park, street and yard plants (`Quaternius/Nature`) |
 | Cars (sedan, taxi, police, SUV, hatchback, sports sedan, pickup) via [poly.pizza](https://poly.pizza/u/Quaternius) (re-laid out as the Kenney car kit) | Quaternius | CC0 1.0 | Traffic and player cars (`Quaternius/Cars`) |
 
+| Engine recordings (EJ25, GTI, S54, 2JZ, V8, V10: engine and exhaust loops by rpm, startups), from the [Multiversal Vehicle Controller: Community](https://assetstore.unity.com/packages/tools/physics/multiversal-vehicle-controller-community-car-physics-controller-304216) Getting Started Demo | BxB Studio | Unity Asset Store EULA (used in the game, not redistributed as files) | Car engine sound (`Assets/Audio/Engines`) |
+| BMW M4 GT3 Evo model (`Assets/Art/ThirdParty/Cars/BmwM4Gt3`) | unknown: **source and licence to confirm before any release** | ? | The Aurel Vector supercar |
+
 The Kenney building kits (City Commercial, City Suburban, Modular Buildings) have bevelled edges added by
 `Tools/Blender/bevel_kenney.py`.
 

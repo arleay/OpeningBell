@@ -59,6 +59,22 @@ namespace OpeningBell.Tests
             Assert.IsEmpty(problems, string.Join("; ", problems));
         }
 
+        /// <summary>Every buyable car names a recorded engine whose loops are ordered by rpm and span idle to redline.</summary>
+        [Test]
+        public void Cars_HaveRecordedEngines()
+        {
+            var library = AssetDatabase.LoadAssetAtPath<VehicleLibrary>("Assets/ScriptableObjects/Vehicles/VehicleLibrary.asset");
+            foreach (VehicleModel m in library.Models.Where(m => m.Kind == VehicleKind.Car))
+            {
+                EngineSoundSet set = library.EngineSound(m.EngineSound);
+                Assert.IsNotNull(set, $"{m.Id} engine '{m.EngineSound}'");
+                Assert.Greater(set.Engine.Length, 5, m.Id);
+                Assert.IsTrue(set.EngineRpm.Zip(set.EngineRpm.Skip(1), (a, b) => b > a).All(x => x), $"{m.Id} rpm order");
+                Assert.LessOrEqual(set.EngineRpm.First(), m.Car.IdleRpm * 1.2, $"{m.Id} idle covered");
+                Assert.GreaterOrEqual(set.EngineRpm.Last(), m.Car.RedlineRpm * 0.7, $"{m.Id} redline near a recording");
+            }
+        }
+
         [Test]
         public void Bikes_TopSpeedsFollowFromPhysics()
         {

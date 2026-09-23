@@ -93,6 +93,7 @@ MonoBehaviour:
       FuelPerKwh: 0.3
       IdleFuelPerHour: 0.8
     Mesh: 
+    EngineSound: 
   - Id: skate_cruiser
     Name: Harbor Cruiser
     Kind: 0
@@ -173,6 +174,7 @@ MonoBehaviour:
       FuelPerKwh: 0.3
       IdleFuelPerHour: 0.8
     Mesh: 
+    EngineSound: 
   - Id: skate_longboard
     Name: Downhill Longboard
     Kind: 0
@@ -253,6 +255,7 @@ MonoBehaviour:
       FuelPerKwh: 0.3
       IdleFuelPerHour: 0.8
     Mesh: 
+    EngineSound: 
   - Id: bike_bmx
     Name: Rook BMX
     Kind: 1
@@ -333,6 +336,7 @@ MonoBehaviour:
       FuelPerKwh: 0.3
       IdleFuelPerHour: 0.8
     Mesh: 
+    EngineSound: 
   - Id: bike_commuter
     Name: Everyday Commuter 3
     Kind: 1
@@ -413,6 +417,7 @@ MonoBehaviour:
       FuelPerKwh: 0.3
       IdleFuelPerHour: 0.8
     Mesh: 
+    EngineSound: 
   - Id: bike_mtb
     Name: Ridgeback Trail
     Kind: 1
@@ -493,6 +498,7 @@ MonoBehaviour:
       FuelPerKwh: 0.3
       IdleFuelPerHour: 0.8
     Mesh: 
+    EngineSound: 
   - Id: bike_road
     Name: Veloce Sprint
     Kind: 1
@@ -573,6 +579,7 @@ MonoBehaviour:
       FuelPerKwh: 0.3
       IdleFuelPerHour: 0.8
     Mesh: 
+    EngineSound: 
   - Id: ebike_commuter
     Name: Volt Commuter
     Kind: 2
@@ -653,6 +660,7 @@ MonoBehaviour:
       FuelPerKwh: 0.3
       IdleFuelPerHour: 0.8
     Mesh: 
+    EngineSound: 
   - Id: ebike_speed
     Name: Volt Speed
     Kind: 2
@@ -733,6 +741,7 @@ MonoBehaviour:
       FuelPerKwh: 0.3
       IdleFuelPerHour: 0.8
     Mesh: 
+    EngineSound: 
   - Id: car_sedan
     Name: Kestrel Sedan
     Kind: 3
@@ -817,6 +826,7 @@ MonoBehaviour:
       FuelPerKwh: 0.3
       IdleFuelPerHour: 0.8
     Mesh: sedan
+    EngineSound: EJ25
   - Id: car_hatch
     Name: Brisk GTi
     Kind: 3
@@ -902,6 +912,7 @@ MonoBehaviour:
       FuelPerKwh: 0.31
       IdleFuelPerHour: 0.8
     Mesh: hatchback-sports
+    EngineSound: GTI
   - Id: car_suv
     Name: Ridgeline SUV
     Kind: 3
@@ -983,6 +994,7 @@ MonoBehaviour:
       FuelPerKwh: 0.31
       IdleFuelPerHour: 0.9
     Mesh: suv
+    EngineSound: 2JZ
   - Id: car_pickup
     Name: Haulmark Pickup
     Kind: 3
@@ -1066,6 +1078,7 @@ MonoBehaviour:
       FuelPerKwh: 0.33
       IdleFuelPerHour: 1.3
     Mesh: truck
+    EngineSound: V8
   - Id: car_van
     Name: Courier Van
     Kind: 3
@@ -1149,6 +1162,7 @@ MonoBehaviour:
       FuelPerKwh: 0.26
       IdleFuelPerHour: 0.9
     Mesh: van
+    EngineSound: EJ25
   - Id: car_gt
     Name: Vantage GT
     Kind: 3
@@ -1234,6 +1248,7 @@ MonoBehaviour:
       FuelPerKwh: 0.3
       IdleFuelPerHour: 0.8
     Mesh: sedan-sports
+    EngineSound: S54
   - Id: car_luxury
     Name: Strata Luxe
     Kind: 3
@@ -1317,6 +1332,7 @@ MonoBehaviour:
       FuelPerKwh: 0.31
       IdleFuelPerHour: 1.1
     Mesh: suv-luxury
+    EngineSound: V8
   - Id: car_super
     Name: Aurel Vector
     Kind: 3
@@ -1400,7 +1416,8 @@ MonoBehaviour:
       FuelCapacity: 80
       FuelPerKwh: 0.32
       IdleFuelPerHour: 0.8
-    Mesh: race-future
+    Mesh: gt3
+    EngineSound: V10
   parts:
   - Id: wheels_soft60
     Name: Soft 60mm wheels (80A)
@@ -1511,7 +1528,17 @@ MonoBehaviour:
     FuelFraction: 0.3
     Seller: Earl
     Description: 2009 Haulmark Pickup. V8, thirsty, pulls like a train. Ignore the dent.
+  - Id: used_super_1
+    ModelId: car_super
+    Price: 189000
+    OdometerKm: 3200
+    Condition: 0.96
+    TireCondition: 0.85
+    FuelFraction: 0.7
+    Seller: Vance Motorsport
+    Description: Aurel Vector GT3, ex-team car. Full carbon aero, rear wing, roll cage. Road-registered, barely. Serious offers only.
   carMeshes:
+  - {fileID: 919132149155446097, guid: 5a1c006f089f240439fb497e74be8f7c, type: 3}
   - {fileID: 919132149155446097, guid: b456159d3a58a144ab1b34adb277d040, type: 3}
   - {fileID: 919132149155446097, guid: cb61e7f639a3397438ed2066a91045b5, type: 3}
   - {fileID: 919132149155446097, guid: ee825e100a3512340812fc72c20abc53, type: 3}
@@ -1551,5 +1578,368 @@ MonoBehaviour:
   - police
   - delivery-flat
   - truck-flat
+  engineSounds:
+  - Name: 2JZ
+    Engine:
+    - {fileID: 8300000, guid: 8374b8b0182605c4087e77a5f0d67a78, type: 3}
+    - {fileID: 8300000, guid: a97ef281522208e469e8893e0e45a349, type: 3}
+    - {fileID: 8300000, guid: fbfb89232b66a98408046a0a058a5560, type: 3}
+    - {fileID: 8300000, guid: 7b1bd15e996c0744cb73fa883664fadb, type: 3}
+    - {fileID: 8300000, guid: d4a6c5d68c4c0934baf5bbe1c90e92c7, type: 3}
+    - {fileID: 8300000, guid: 7327da1287e721446bd5f20d85daa787, type: 3}
+    - {fileID: 8300000, guid: b79897aff721dd4489d677b4449c9ada, type: 3}
+    - {fileID: 8300000, guid: afc694ad89d8f8441b0481f9a5d4b3f7, type: 3}
+    - {fileID: 8300000, guid: 85f088852f3f6ab4da2a01d48755cb42, type: 3}
+    - {fileID: 8300000, guid: b9ac9cda32a26e942a404f4aac9d6341, type: 3}
+    - {fileID: 8300000, guid: 2290c755498319d40ac0ca6ceec84970, type: 3}
+    - {fileID: 8300000, guid: fa25565e8bea1a042982e1d787d12b9c, type: 3}
+    - {fileID: 8300000, guid: 6ee05d51bc8b6b44dadd1f7f582a1ecb, type: 3}
+    - {fileID: 8300000, guid: a11f85faead613347900faef40b7440b, type: 3}
+    - {fileID: 8300000, guid: 6cf135915074cfa46a16014fec2fadff, type: 3}
+    EngineRpm:
+    - 684
+    - 1150
+    - 1402
+    - 1866
+    - 2185
+    - 2673
+    - 3207
+    - 3651
+    - 4141
+    - 4714
+    - 5127
+    - 5610
+    - 6190
+    - 6731
+    - 7106
+    Exhaust:
+    - {fileID: 8300000, guid: 75ce57c6d24408349aa2cc5555bcb257, type: 3}
+    - {fileID: 8300000, guid: 6409f09fa2cf4ae4083363ca92dbe1a5, type: 3}
+    - {fileID: 8300000, guid: ad334642ce00a46489b405a2b3b2999a, type: 3}
+    - {fileID: 8300000, guid: d57e358e2a1a2414faad9d3d9b309a9a, type: 3}
+    - {fileID: 8300000, guid: df88c1e9989aeee419cea46f0996d953, type: 3}
+    - {fileID: 8300000, guid: 1e7c30ceea2bf9549b13917274a8cd57, type: 3}
+    - {fileID: 8300000, guid: ad356fb9f17aaac459dd60b2d6fe188a, type: 3}
+    - {fileID: 8300000, guid: a8959595ebe347a479570ea788119f84, type: 3}
+    - {fileID: 8300000, guid: 2977026367d7b064ab22d17645622b85, type: 3}
+    - {fileID: 8300000, guid: e3ddbc840ad72d64aaa3ef3909f39321, type: 3}
+    - {fileID: 8300000, guid: f4ad8e02e3ab6a34388a3aec2500bc64, type: 3}
+    ExhaustRpm:
+    - 852
+    - 1312
+    - 1835
+    - 2186
+    - 2808
+    - 3363
+    - 3687
+    - 4328
+    - 4963
+    - 5565
+    - 6396
+    Startup: {fileID: 8300000, guid: 33a7c9f05d20c824684d7403d2df9610, type: 3}
+  - Name: EJ25
+    Engine:
+    - {fileID: 8300000, guid: 92284d19a8f747b4a88fec80ac7399e8, type: 3}
+    - {fileID: 8300000, guid: 6d7f75a1ae5fce74eadecbc52ceb2d37, type: 3}
+    - {fileID: 8300000, guid: bc0f574e1a6e641448c5b17193f2e069, type: 3}
+    - {fileID: 8300000, guid: e6b303ea221575a44a68d4454c08373e, type: 3}
+    - {fileID: 8300000, guid: c26c06f2b74cc184b870212fa9d421e6, type: 3}
+    - {fileID: 8300000, guid: be9f545f7ebe06b41b534bce923c5f9c, type: 3}
+    - {fileID: 8300000, guid: ca435fd2d5b2cce4da9c02cfc5259264, type: 3}
+    - {fileID: 8300000, guid: 6cac38d1e07cce8439da50a879995128, type: 3}
+    - {fileID: 8300000, guid: 8a5f6d060d0579f40806219d1b0d8f43, type: 3}
+    - {fileID: 8300000, guid: c5f95e7ebf04e9e469384289360c330d, type: 3}
+    - {fileID: 8300000, guid: 0a74db875b8e5dc42bce8fe80bb0eee5, type: 3}
+    - {fileID: 8300000, guid: 610dd9c31c4cd7a479fbea408ef014ff, type: 3}
+    - {fileID: 8300000, guid: a784bafab7a81fa448febddd1ddf8309, type: 3}
+    - {fileID: 8300000, guid: 87c16c3f518ddc745a5ee331ee0348a4, type: 3}
+    - {fileID: 8300000, guid: c6d33f05953ac424a8ba046440870764, type: 3}
+    EngineRpm:
+    - 734
+    - 1094
+    - 1334
+    - 1576
+    - 1824
+    - 2068
+    - 2450
+    - 2691
+    - 3189
+    - 3683
+    - 4188
+    - 4815
+    - 5403
+    - 5877
+    - 6439
+    Exhaust:
+    - {fileID: 8300000, guid: 0c8519bc528a92b47bbb422b16755d68, type: 3}
+    - {fileID: 8300000, guid: 07144a9acc97cef43ba02aa1af8c7d88, type: 3}
+    - {fileID: 8300000, guid: d760d3deb60f6ca42b4c23d39a92f154, type: 3}
+    - {fileID: 8300000, guid: a645a38321bd27143a4af90289b8a1e1, type: 3}
+    - {fileID: 8300000, guid: e9feb031e818ba44fbb1c149f0da8d27, type: 3}
+    - {fileID: 8300000, guid: de3db0e5326037446921671920094b32, type: 3}
+    - {fileID: 8300000, guid: 00a602f49549b5c4c89f9a8ec1498527, type: 3}
+    - {fileID: 8300000, guid: 2ac81510a8185bf469c26b4baa28b665, type: 3}
+    - {fileID: 8300000, guid: a6d2e3ed4de46c245b4d7bfd7a248818, type: 3}
+    - {fileID: 8300000, guid: 79514ad4d6c08cd47885c49f0dbec955, type: 3}
+    - {fileID: 8300000, guid: 183ea59af5d2baf4f85020592b684caa, type: 3}
+    - {fileID: 8300000, guid: 71070210203c30f499e837b483619c55, type: 3}
+    - {fileID: 8300000, guid: 9ea1413327735c949b614e25bcce55b9, type: 3}
+    ExhaustRpm:
+    - 945
+    - 1140
+    - 1590
+    - 2165
+    - 2598
+    - 3069
+    - 3669
+    - 4152
+    - 4671
+    - 5156
+    - 6354
+    - 6874
+    - 7307
+    Startup: {fileID: 0}
+  - Name: GTI
+    Engine:
+    - {fileID: 8300000, guid: 5f2ebb740e196eb42bf41625bf615046, type: 3}
+    - {fileID: 8300000, guid: 0bf597a72a8f9284ba2ed2ea24d0378d, type: 3}
+    - {fileID: 8300000, guid: 133e693332ed0bf4e94cbf519fe990bb, type: 3}
+    - {fileID: 8300000, guid: 3c1a81d2a34564842b1364ab1eb793fc, type: 3}
+    - {fileID: 8300000, guid: 0fdc68ab63f2e7a488b3d7004b278a29, type: 3}
+    - {fileID: 8300000, guid: c2aac6677daf3bc43aeba041bc2c6750, type: 3}
+    - {fileID: 8300000, guid: fc392e3b4015bd2478fe407ba2fd9edb, type: 3}
+    - {fileID: 8300000, guid: de5381b24a14fe64e8859daf112d06b6, type: 3}
+    - {fileID: 8300000, guid: 5a4772e828115914fbe0e9c752442550, type: 3}
+    - {fileID: 8300000, guid: 03454a996780efb42b7dd34e953f8d79, type: 3}
+    - {fileID: 8300000, guid: 0bb98bb22f4919247a914485c3db0ee3, type: 3}
+    - {fileID: 8300000, guid: a7ab1ac9cccaf404da2aa791f944a32b, type: 3}
+    - {fileID: 8300000, guid: f4df969b4176b6444bd77fd017ca68a9, type: 3}
+    - {fileID: 8300000, guid: 5531f42dd7d09ad489391fdad05f4440, type: 3}
+    - {fileID: 8300000, guid: eb9a7813866f6014eb2e4f52a828d8d7, type: 3}
+    EngineRpm:
+    - 734
+    - 1094
+    - 1334
+    - 1576
+    - 1824
+    - 2068
+    - 2450
+    - 2691
+    - 3189
+    - 3683
+    - 4188
+    - 4815
+    - 5403
+    - 5877
+    - 6439
+    Exhaust:
+    - {fileID: 8300000, guid: 22a88e5e7f2e12845acc9a83dcb94639, type: 3}
+    - {fileID: 8300000, guid: c07dd55284638414eaeeb42ad0e25eb8, type: 3}
+    - {fileID: 8300000, guid: 8e7bf1bb506ec6248a52dc751b46ab6b, type: 3}
+    - {fileID: 8300000, guid: f9f4c424997086045a578efbf905e58c, type: 3}
+    - {fileID: 8300000, guid: a29350530d4b9fd4ab5b7d598332a588, type: 3}
+    - {fileID: 8300000, guid: 0065904a793ff7a448ce8ecc3b982b98, type: 3}
+    - {fileID: 8300000, guid: fa36bb633da32ae4898e2b0fffe55429, type: 3}
+    - {fileID: 8300000, guid: 4579ebb085c37e4458a3a43b9b1af91f, type: 3}
+    - {fileID: 8300000, guid: 5f879d22d4598a04f962202d59b03b98, type: 3}
+    - {fileID: 8300000, guid: b25dcfea62e4ecd4f9db50dcd5307510, type: 3}
+    - {fileID: 8300000, guid: cea742f0adc63ee48921b17d910434a8, type: 3}
+    - {fileID: 8300000, guid: 69d607e433244d94eafabf191dd6233b, type: 3}
+    - {fileID: 8300000, guid: c0958491e11581248b67684208efaeda, type: 3}
+    - {fileID: 8300000, guid: 96d4f6fe3f430884c913d70c8f793651, type: 3}
+    - {fileID: 8300000, guid: 63b03b3ea20a71147b2b1baf00754cc2, type: 3}
+    ExhaustRpm:
+    - 734
+    - 1094
+    - 1334
+    - 1576
+    - 1824
+    - 2068
+    - 2450
+    - 2691
+    - 3189
+    - 3683
+    - 4188
+    - 4815
+    - 5403
+    - 5877
+    - 6439
+    Startup: {fileID: 8300000, guid: aa61dc06a115f1e4ea6ecf5ff85c0e8a, type: 3}
+  - Name: S54
+    Engine:
+    - {fileID: 8300000, guid: 2e44c0daa70d7dc4ca6ea0ee528dd775, type: 3}
+    - {fileID: 8300000, guid: 902f4cbaef2963e4e82126d52685d29b, type: 3}
+    - {fileID: 8300000, guid: dc8cc3f3a49bc0b4c8e82225bc65ca12, type: 3}
+    - {fileID: 8300000, guid: 38b2f54ac2916a049909b5483ad9b048, type: 3}
+    - {fileID: 8300000, guid: a5a26657739adb84fbf264d540f2ef4e, type: 3}
+    - {fileID: 8300000, guid: 9887c8b9f19757b4f9039b6541154d7d, type: 3}
+    - {fileID: 8300000, guid: 8a0804b99763ce240a9351e89b3b2850, type: 3}
+    - {fileID: 8300000, guid: 7e43bab6ff5c51145af5b5a5eb617916, type: 3}
+    - {fileID: 8300000, guid: 93c730354447fab46a0539c29f395cba, type: 3}
+    - {fileID: 8300000, guid: 28665b3aa1aa6414bbd950364da2fa64, type: 3}
+    - {fileID: 8300000, guid: 27b43edfffba74646ae037c633e98db4, type: 3}
+    - {fileID: 8300000, guid: ddeb3c0346315c1449a8fe1ea90ebb0d, type: 3}
+    - {fileID: 8300000, guid: e7cf3ce789b50ce4789e8f89d22b0fbb, type: 3}
+    EngineRpm:
+    - 975
+    - 1521
+    - 2064
+    - 2726
+    - 3216
+    - 3738
+    - 4344
+    - 5598
+    - 6154
+    - 6695
+    - 7251
+    - 7631
+    - 8272
+    Exhaust:
+    - {fileID: 8300000, guid: dbf3a2035e5fa3e44bc668860895b17a, type: 3}
+    - {fileID: 8300000, guid: a8f156dec30f75840a06767bf2844302, type: 3}
+    - {fileID: 8300000, guid: 7520f721e0d923043a81a206936177fe, type: 3}
+    - {fileID: 8300000, guid: 14cb0993bfaf0ae4b8d075941d8389b8, type: 3}
+    - {fileID: 8300000, guid: c18f85082767675489ac1ace953048c7, type: 3}
+    - {fileID: 8300000, guid: a3ec413eeb0f98240b55742afcdece64, type: 3}
+    - {fileID: 8300000, guid: 62a38862528cca34494ea82ec5b61566, type: 3}
+    - {fileID: 8300000, guid: ef6ebf3745584d64ea0f99ddb9d210cc, type: 3}
+    - {fileID: 8300000, guid: bce6f66877d5fa04bbea6c9b8c2cc99b, type: 3}
+    - {fileID: 8300000, guid: 11359ba389e88e947b76d9e203b5baf4, type: 3}
+    - {fileID: 8300000, guid: 8f696a4e4e3c29846a919360b390181a, type: 3}
+    - {fileID: 8300000, guid: 616bcca675b088540b66c4a9a4151ccd, type: 3}
+    ExhaustRpm:
+    - 975
+    - 1521
+    - 2064
+    - 2726
+    - 3738
+    - 4344
+    - 5598
+    - 6154
+    - 6695
+    - 7251
+    - 7631
+    - 8272
+    Startup: {fileID: 8300000, guid: c8962cf3b2e8f4349a697e89c8dc2dc0, type: 3}
+  - Name: V10
+    Engine:
+    - {fileID: 8300000, guid: d84540fbc78c17b45b068558619abac2, type: 3}
+    - {fileID: 8300000, guid: c0836cd21e942d34a9e96636358b0eda, type: 3}
+    - {fileID: 8300000, guid: 9e47000d421b88f4ea00c754f496995f, type: 3}
+    - {fileID: 8300000, guid: 6d34ceec8c608ce4192f53c6c39f96a0, type: 3}
+    - {fileID: 8300000, guid: e731bcab716c26044aea3e9704cd29c3, type: 3}
+    - {fileID: 8300000, guid: ab684a0b1cd204a4cbf6628de9e060c6, type: 3}
+    - {fileID: 8300000, guid: fbef38eea59443f4bbc9aaa3910627d2, type: 3}
+    - {fileID: 8300000, guid: 07630b71ad87fba47b1dd7ca10924529, type: 3}
+    - {fileID: 8300000, guid: 59effcdd399c8cd4a8a498be8dd921cc, type: 3}
+    - {fileID: 8300000, guid: b43c46ef6b14cb149b40e8f119b62ce1, type: 3}
+    - {fileID: 8300000, guid: c03191b4552d1d94ca475b3574fd9615, type: 3}
+    - {fileID: 8300000, guid: 162b33c9bb2033e44987ac25ca46025f, type: 3}
+    - {fileID: 8300000, guid: c6afd216eab7fb14fa81580ec5033293, type: 3}
+    - {fileID: 8300000, guid: 7d2afcf4107a8904fa78652a04551872, type: 3}
+    - {fileID: 8300000, guid: 43f10c8932e55a644a97f1bee080a755, type: 3}
+    EngineRpm:
+    - 800
+    - 1800
+    - 3000
+    - 3500
+    - 4000
+    - 4500
+    - 5000
+    - 5500
+    - 5900
+    - 6300
+    - 6700
+    - 7000
+    - 7500
+    - 8200
+    - 9000
+    Exhaust:
+    - {fileID: 8300000, guid: 9c79119f4d03c934b8a92637f2ad1c20, type: 3}
+    - {fileID: 8300000, guid: 1a22c3237128a684aa4e9a7bad5b1c71, type: 3}
+    - {fileID: 8300000, guid: ab1a97f6c50cbe64081dc4c5d3b50df1, type: 3}
+    - {fileID: 8300000, guid: d122205af32e4554caf556efa2c5d0db, type: 3}
+    - {fileID: 8300000, guid: 446bc915c53ae134091393c5ac590843, type: 3}
+    - {fileID: 8300000, guid: 395d37fc626b0864eae059811bb8d2d3, type: 3}
+    - {fileID: 8300000, guid: 2b53b2f6ddb17de44b318a00f3cdc057, type: 3}
+    - {fileID: 8300000, guid: 3d1a5aa3ac27e3548853777bcd0b625b, type: 3}
+    - {fileID: 8300000, guid: e547aea454c85dc42bed3a0631183a1e, type: 3}
+    - {fileID: 8300000, guid: 5db463df7e517cc4ab99e14fd6b796e4, type: 3}
+    - {fileID: 8300000, guid: d223399ec8b447446a38b3c0c6170c9e, type: 3}
+    - {fileID: 8300000, guid: 345ea01c0abd6734d8f733e6b604dee7, type: 3}
+    - {fileID: 8300000, guid: ab5be98c31308c643b9b4c3cc56641ae, type: 3}
+    - {fileID: 8300000, guid: ba919b1d51847ba44887f22aae5db8f5, type: 3}
+    - {fileID: 8300000, guid: 79d448be614e6e449916cd312b04279e, type: 3}
+    ExhaustRpm:
+    - 800
+    - 1800
+    - 3000
+    - 3500
+    - 4000
+    - 4500
+    - 5000
+    - 5500
+    - 5900
+    - 6300
+    - 6700
+    - 7000
+    - 7500
+    - 8200
+    - 9000
+    Startup: {fileID: 8300000, guid: f6d9ee695ba558b4a948a28e60354983, type: 3}
+  - Name: V8
+    Engine:
+    - {fileID: 8300000, guid: e7772d61e93b89d4e9ac7d7c2a20c0e8, type: 3}
+    - {fileID: 8300000, guid: e3af55b1e7e0092468e4f0b73c7c5581, type: 3}
+    - {fileID: 8300000, guid: 746ebd57dd583f94cbd87264feadf1a2, type: 3}
+    - {fileID: 8300000, guid: 488fc4d6c2a32d84ebb806ed7ca8d263, type: 3}
+    - {fileID: 8300000, guid: a7c98b88598d61e428e761317801c2fe, type: 3}
+    - {fileID: 8300000, guid: f61c637dcc74d9a4083e346bee7926aa, type: 3}
+    - {fileID: 8300000, guid: 0c37717ab9e5e0c44ad54c8ad69fb7cc, type: 3}
+    - {fileID: 8300000, guid: 1ac69aaa960fc0e409cff70beeda57f0, type: 3}
+    - {fileID: 8300000, guid: c9ca9951296c0d14286bdd1a440d6eda, type: 3}
+    - {fileID: 8300000, guid: 5aa01c07c1be95442b807792dc83f8d5, type: 3}
+    - {fileID: 8300000, guid: 6b3a6c823e91a8c4e8a2a35b84bbd4c4, type: 3}
+    - {fileID: 8300000, guid: 9167b964ab96a584bb27d03e76839207, type: 3}
+    EngineRpm:
+    - 700
+    - 1030
+    - 1537
+    - 2677
+    - 3690
+    - 4273
+    - 4906
+    - 5590
+    - 6325
+    - 7473
+    - 7947
+    - 8833
+    Exhaust:
+    - {fileID: 8300000, guid: e8e173432386b6644adba7e6e49f2dcb, type: 3}
+    - {fileID: 8300000, guid: dccfa5731d2422e4ab0804ca5d7e47d5, type: 3}
+    - {fileID: 8300000, guid: e0139be6327beb04db55a0818e83fc20, type: 3}
+    - {fileID: 8300000, guid: cd27b6aa58217fa45a18acb3233b6935, type: 3}
+    - {fileID: 8300000, guid: f7a2f1202a8def64187369c565e78e5e, type: 3}
+    - {fileID: 8300000, guid: 9dac29fbdab14924da7311b3d8be891c, type: 3}
+    - {fileID: 8300000, guid: b24dbf97695a94844a77640524c75e59, type: 3}
+    - {fileID: 8300000, guid: 41e0ca47e5ae00f4dbbc8d1d2f04e72f, type: 3}
+    - {fileID: 8300000, guid: 63e1ad8014fe94e4a9cb660daa600c52, type: 3}
+    - {fileID: 8300000, guid: 12356425b3f071a4cba89314eeb2e53a, type: 3}
+    - {fileID: 8300000, guid: c501a55c6b0674b42a7866008bc6d629, type: 3}
+    - {fileID: 8300000, guid: 91d6a27370f8f5d4ba953e86c9c7e2d2, type: 3}
+    ExhaustRpm:
+    - 700
+    - 1030
+    - 1537
+    - 2677
+    - 3690
+    - 4273
+    - 4906
+    - 5590
+    - 6325
+    - 7473
+    - 7947
+    - 8833
+    Startup: {fileID: 8300000, guid: 4fc4a66e553918f41b2332ff5fa75f53, type: 3}
   tuneUpPrice: 60
   newTiresPrice: 45

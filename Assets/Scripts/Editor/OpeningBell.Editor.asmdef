@@ -2,7 +2,8 @@
     "name": "OpeningBell.Editor",
     "rootNamespace": "OpeningBell.EditorTools",
     "references": [
-        "OpeningBell.City"
+        "OpeningBell.City",
+        "OpeningBell.Runtime"
     ],
     "includePlatforms": [
         "Editor"

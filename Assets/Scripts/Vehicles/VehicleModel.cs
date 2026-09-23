@@ -65,6 +65,8 @@ namespace OpeningBell.Vehicles
         public CarSpec Car = new CarSpec();
         /// <summary>Cars: which 3D model to show (file name in the car kit, e.g. "sedan").</summary>
         public string Mesh = "";
+        /// <summary>Cars: which recorded engine to hear (a folder under Assets/Audio/Engines, e.g. "V8").</summary>
+        public string EngineSound = "";
     }
 
     /// <summary>A used vehicle offered by a private seller (classifieds): a model plus its history.</summary>

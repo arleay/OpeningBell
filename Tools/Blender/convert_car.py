@@ -3,7 +3,7 @@ drives: a root with children "body" and "wheel-front-left/-right", "wheel-back-l
 Unity's +z, wheels on the ground, sized to a real length.
 
     blender -b -P Tools/Blender/convert_car.py -- <in.glb> <out.fbx> [--length 4.7] [--max-tris 60000]
-        [--wheels REGEX] [--front +y|-y]
+        [--wheels REGEX] [--front +y|-y] [--scale 1.35]
 
 Wheel parts are found by object name (--wheels, default tyres/rims/hubs/discs; brake calipers stay on the body
 since they steer but don't spin) and grouped into four wheels by which corner they sit in. The front is
@@ -15,8 +15,9 @@ import bpy, sys, os, re, mathutils
 args = sys.argv[sys.argv.index("--") + 1:]
 src, out = args[0], args[1]
 opt = dict(zip(args[2::2], args[3::2]))
-# CarFactory scales every car model by 1.35 (the Kenney kit's were small), so the file is exported smaller.
-FACTORY_SCALE = 1.35
+# CarFactory scales every car model by 1.35 (the Kenney kit's were small), so its files are exported smaller.
+# A controller that uses the model at real size (no rescale) wants --scale 1.
+FACTORY_SCALE = float(opt.get("--scale", 1.35))
 length = float(opt.get("--length", 4.7))
 max_tris = int(opt.get("--max-tris", 60000))
 wheel_re = re.compile(opt.get("--wheels", r"tire|tyre|wheel|rim|hub|disk|disc"), re.I)
@@ -154,6 +155,14 @@ for img in bpy.data.images:
     img.file_format = "PNG"
     img.save()
     img.filepath = img.filepath_raw
+
+# Each wheel's pivot at its own centre: wheel-collider controllers tell front from rear (and left from right) by the
+# wheel transforms' positions, not their meshes.
+for w in wheels:
+    lo, hi = bounds([w])
+    c = (lo + hi) / 2
+    w.data.transform(mathutils.Matrix.Translation(-c))
+    w.location = c
 
 root = bpy.data.objects.new(os.path.splitext(os.path.basename(out))[0], None)
 bpy.context.scene.collection.objects.link(root)
