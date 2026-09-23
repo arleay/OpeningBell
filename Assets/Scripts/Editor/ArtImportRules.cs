@@ -14,12 +14,14 @@ namespace OpeningBell.EditorTools
         public const string Kenney = "Assets/Art/ThirdParty/Kenney/";
         /// <summary>Quaternius static props (food): no rig, readable meshes like the Kenney kits.</summary>
         public const string Props = "Assets/Art/ThirdParty/Quaternius/Props/";
+        /// <summary>Quaternius trees, bushes and grass (converted from the Stylized Nature MegaKit GLBs, 1 unit tall).</summary>
+        public const string Nature = "Assets/Art/ThirdParty/Quaternius/Nature/";
 
         /// <summary>One-shot clips that staff play on repeat while working.</summary>
         private static readonly string[] AlsoLooped = { "Interact", "PickUp_Table", "Fixing_Kneeling" };
 
         /// <summary>Bump when a rule changes: Unity re-imports what this postprocessor touched.</summary>
-        public override uint GetVersion() => 8;
+        public override uint GetVersion() => 9;
 
         private void OnPreprocessModel()
         {
@@ -33,7 +35,7 @@ namespace OpeningBell.EditorTools
                 importer.importAnimation = assetPath.StartsWith(Animations);
                 importer.materialImportMode = ModelImporterMaterialImportMode.ImportViaMaterialDescription;
             }
-            else if ((assetPath.StartsWith(Kenney) && !assetPath.Contains("/CarKit/")) || assetPath.StartsWith(Props))
+            else if ((assetPath.StartsWith(Kenney) && !assetPath.Contains("/CarKit/")) || assetPath.StartsWith(Props) || assetPath.StartsWith(Nature))
             {
                 importer.animationType = ModelImporterAnimationType.None;
                 importer.importAnimation = false;
@@ -46,6 +48,15 @@ namespace OpeningBell.EditorTools
 
         private void OnPreprocessTexture()
         {
+            if (assetPath.StartsWith(Nature))
+            {
+                var nature = (TextureImporter)assetImporter;
+                if (assetPath.EndsWith("_Normal.png")) nature.textureType = TextureImporterType.NormalMap;
+                // Leaf cards are alpha-tested: without coverage-preserving mips distant canopies thin out to sticks.
+                nature.mipMapsPreserveCoverage = true;
+                nature.alphaTestReferenceValue = 0.5f;
+                return;
+            }
             if (!assetPath.StartsWith(Kenney)) return;
             // Palette textures: flat colour cells. Mipmaps would blend neighbouring cells on distant buildings.
             var importer = (TextureImporter)assetImporter;

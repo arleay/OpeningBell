@@ -58,6 +58,7 @@ namespace OpeningBell.EditorTools
         public static void Rebuild()
         {
             var report = new StringBuilder();
+            NatureMaterials(report);
             Dictionary<string, AnimationClip> clips = Clips(ClipsPath);
             var existing = AssetDatabase.LoadAssetAtPath<CityArt>(ArtPath);
             // The root-motion copy is only needed to measure speeds; without it keep what was measured before.
@@ -83,14 +84,17 @@ namespace OpeningBell.EditorTools
                 }
             }
 
-            // Quaternius props (food), collected like the kits.
-            report.AppendLine("== Props");
-            foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { ArtImportRules.Props.TrimEnd('/') }).OrderBy(AssetDatabase.GUIDToAssetPath))
+            // Quaternius props (food) and plants (trees, bushes, grass), collected like the kits.
+            foreach (string folder in new[] { ArtImportRules.Props, ArtImportRules.Nature })
             {
-                var model = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
-                if (!seen.Add(model.name)) continue;
-                models.Add(model);
-                report.AppendLine(Describe(model));
+                report.AppendLine("== " + Path.GetFileName(folder.TrimEnd('/')));
+                foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { folder.TrimEnd('/') }).OrderBy(AssetDatabase.GUIDToAssetPath))
+                {
+                    var model = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
+                    if (!seen.Add(model.name)) continue;
+                    models.Add(model);
+                    report.AppendLine(Describe(model));
+                }
             }
 
             var people = new List<GameObject>();
@@ -266,6 +270,82 @@ namespace OpeningBell.EditorTools
             }
             report.AppendLine($"controller: {machine.states.Length} states; clips available: {string.Join(" ", clips.Keys)}");
             return controller;
+        }
+
+        /// <summary>Plant materials whose texture file isn't named after the material (the rest match by name).</summary>
+        private static readonly Dictionary<string, string> NatureTextures = new Dictionary<string, string>
+        {
+            ["Leaves_Pine"] = "Leaf_Pine_C",
+            ["Leaves_NormalTree"] = "Leaves_NormalTree_C",
+        };
+
+        /// <summary>
+        /// URP materials for the Quaternius plants, built here rather than trusting the FBX hand-off (the converted
+        /// files lose some texture links, and foliage comes in as blended transparency). Leaves are alpha-tested
+        /// and two-sided (single-plane cards); bark gets its normal map. Each model's embedded materials are remapped
+        /// onto these by name.
+        /// </summary>
+        private static void NatureMaterials(StringBuilder report)
+        {
+            string folder = ArtImportRules.Nature + "Materials/";
+            Directory.CreateDirectory(folder);
+            var made = new Dictionary<string, Material>();
+            Shader lit = Shader.Find("Universal Render Pipeline/Lit");
+            foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { ArtImportRules.Nature.TrimEnd('/') }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var importer = (ModelImporter)AssetImporter.GetAtPath(path);
+                bool changed = false;
+                // Material names off the renderers: the file's own, or ours after a remap (ours are named the same).
+                var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                foreach (string name in model.GetComponentsInChildren<Renderer>().SelectMany(r => r.sharedMaterials).Where(m => m != null).Select(m => m.name).Distinct().ToList())
+                {
+                    var source = new AssetImporter.SourceAssetIdentifier(typeof(Material), name);
+                    var embedded = new { name };
+                    if (!made.TryGetValue(embedded.name, out Material mat))
+                    {
+                        string texName = NatureTextures.TryGetValue(embedded.name, out string t) ? t : embedded.name;
+                        string texPath = ArtImportRules.Nature + "Textures/" + texName + ".png";
+                        var albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+                        var normal = AssetDatabase.LoadAssetAtPath<Texture2D>(ArtImportRules.Nature + "Textures/" + texName + "_Normal.png");
+                        bool cutout = albedo != null && ((TextureImporter)AssetImporter.GetAtPath(texPath)).DoesSourceTextureHaveAlpha()
+                            && !embedded.name.Contains("Bark");
+                        string matPath = folder + embedded.name + ".mat";
+                        mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                        if (mat == null)
+                        {
+                            mat = new Material(lit);
+                            AssetDatabase.CreateAsset(mat, matPath);
+                        }
+                        mat.shader = lit;
+                        mat.SetTexture("_BaseMap", albedo);
+                        // The kit's leaves are painted bright; knocked back a little so canopies read as foliage, not neon.
+                        mat.SetColor("_BaseColor", cutout ? new Color(0.8f, 0.85f, 0.78f) : Color.white);
+                        mat.SetFloat("_Smoothness", 0.08f);
+                        mat.SetTexture("_BumpMap", normal);
+                        if (normal != null) mat.EnableKeyword("_NORMALMAP");
+                        else mat.DisableKeyword("_NORMALMAP");
+                        mat.SetFloat("_AlphaClip", cutout ? 1f : 0f);
+                        mat.SetFloat("_Cutoff", 0.5f);
+                        mat.SetFloat("_Cull", cutout ? 0f : 2f);
+                        if (cutout) mat.EnableKeyword("_ALPHATEST_ON");
+                        else mat.DisableKeyword("_ALPHATEST_ON");
+                        mat.SetOverrideTag("RenderType", cutout ? "TransparentCutout" : "Opaque");
+                        mat.renderQueue = cutout ? (int)UnityEngine.Rendering.RenderQueue.AlphaTest : -1;
+                        mat.doubleSidedGI = cutout;
+                        mat.enableInstancing = true;
+                        EditorUtility.SetDirty(mat);
+                        made[embedded.name] = mat;
+                        report.AppendLine($"nature material {embedded.name}: {(albedo != null ? albedo.name : "NO TEXTURE")}{(normal != null ? " +normal" : "")}{(cutout ? " cutout" : "")}");
+                    }
+                    Object current = importer.GetExternalObjectMap().TryGetValue(source, out Object o) ? o : null;
+                    if (current == mat) continue;
+                    importer.AddRemap(source, mat);
+                    changed = true;
+                }
+                if (changed) importer.SaveAndReimport();
+            }
+            AssetDatabase.SaveAssets();
         }
 
         private static string Describe(GameObject model)

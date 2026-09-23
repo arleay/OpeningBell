@@ -9,7 +9,6 @@ namespace OpeningBell.City
     /// </summary>
     public static class TownBuilder
     {
-        private static readonly string[] Trees = { "tree_oak", "tree_default", "tree_fat", "tree_detailed", "tree_oak_dark", "tree_default_dark" };
 
         private static float LotWidth(HouseTier t) => t switch { HouseTier.Starter => 17f, HouseTier.Family => 21f, _ => 42f };
         private static float Setback(HouseTier t) => t switch { HouseTier.Starter => 6.5f, HouseTier.Family => 7f, _ => 9f };
@@ -79,14 +78,11 @@ namespace OpeningBell.City
 
         private static void YardTree(CityContext c, Transform parent, System.Random rng, Vector2 p, bool small = false)
         {
-            float scale = (small ? 2.6f : 4.2f) * (0.85f + 0.3f * (float)rng.NextDouble());
-            GameObject tree = c.Kit.Model(parent, Trees[rng.Next(Trees.Length)], new Vector3(p.x, 0f, p.y), (float)rng.NextDouble() * 360f, scale);
+            float height = (small ? 4.5f : 8f) * (0.85f + 0.3f * (float)rng.NextDouble());
+            string[] kinds = StreetBuilder.ParkTrees;
+            GameObject tree = c.Kit.Model(parent, kinds[rng.Next(kinds.Length)], new Vector3(p.x, 0f, p.y), (float)rng.NextDouble() * 360f, height);
             if (tree == null) return;
-            StreetBuilder.Naturalize(c.Kit, tree);
-            var trunk = tree.AddComponent<CapsuleCollider>(); // model units: the trunk's lower 0.6
-            trunk.radius = 0.04f;
-            trunk.height = 0.6f;
-            trunk.center = new Vector3(0f, 0.3f, 0f);
+            StreetBuilder.Trunk(tree);
         }
     }
 }

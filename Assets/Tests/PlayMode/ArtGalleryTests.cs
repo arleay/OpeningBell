@@ -46,6 +46,15 @@ namespace OpeningBell.Tests
             float face = Mathf.Atan2(-w.Heading.x, -w.Heading.y) * Mathf.Rad2Deg;
             yield return Shot(new Vector3(ahead.x, 0f, ahead.y), face, 6f, "art-people.png");
 
+            // A traffic sedan side-on from the kerb, 4.5 m off.
+            Transform car = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
+                .Where(t => t.name == "Traffic sedan" && t.position.y > -50f)
+                .OrderBy(t => Vector3.Distance(t.position, new Vector3(20f, 0f, -7f))).FirstOrDefault();
+            Assert.IsNotNull(car, "a sedan in traffic");
+            Vector3 side = car.position + car.right * 4.5f - car.forward * 1.5f;
+            float look = Mathf.Atan2(car.position.x - side.x, car.position.z - side.z) * Mathf.Rad2Deg;
+            yield return Shot(new Vector3(side.x, 0f, side.z), look, 12f, "art-car.png");
+
             yield return Shot(new Vector3(6f, 0f, -7.25f), 90f, 0f, "art-street.png");
             yield return Shot(new Vector3(4f, 0f, -12.8f), 10f, -8f, "art-home.png");
             yield return Shot(new Vector3(84f, 0f, -12.8f), -25f, -8f, "art-shops.png");

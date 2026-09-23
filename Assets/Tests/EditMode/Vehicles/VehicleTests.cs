@@ -34,6 +34,30 @@ namespace OpeningBell.Tests
 
         private static readonly RideInput Pedal = new RideInput { Throttle = 1 };
 
+        /// <summary>
+        /// Every car mesh traffic draws on has CarFactory's layout: a "body" and four named wheels, standing on the
+        /// ground, front towards +z (front wheels ahead of the back ones), sized like a car once scaled.
+        /// </summary>
+        [Test]
+        public void CarMeshes_HaveTheCarKitLayout()
+        {
+            var library = AssetDatabase.LoadAssetAtPath<VehicleLibrary>("Assets/ScriptableObjects/Vehicles/VehicleLibrary.asset");
+            var problems = new System.Collections.Generic.List<string>();
+            foreach (string name in library.TrafficMix.Distinct())
+            {
+                GameObject car = library.CarMesh(name);
+                if (car == null) { problems.Add(name + ": missing"); continue; }
+                var parts = car.GetComponentsInChildren<Renderer>().ToDictionary(r => r.name, r => r.bounds);
+                string[] missing = OpeningBell.City.CarFactory.WheelNames.Append("body").Where(n => !parts.ContainsKey(n)).ToArray();
+                if (missing.Length > 0) { problems.Add(name + ": no " + string.Join(", ", missing)); continue; }
+                if (parts["wheel-front-left"].center.z <= parts["wheel-back-left"].center.z) problems.Add(name + ": faces -z");
+                if (Mathf.Abs(parts["wheel-front-left"].min.y) > 0.05f) problems.Add(name + $": wheels at y {parts["wheel-front-left"].min.y:F2}");
+                float length = parts["body"].size.z * OpeningBell.City.CarFactory.Scale;
+                if (length < 3f || length > 6f) problems.Add(name + $": {length:F1} m long");
+            }
+            Assert.IsEmpty(problems, string.Join("; ", problems));
+        }
+
         [Test]
         public void Bikes_TopSpeedsFollowFromPhysics()
         {

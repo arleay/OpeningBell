@@ -203,13 +203,13 @@ namespace OpeningBell.City
         }
 
         /// <summary>
-        /// The residential block's lawn: park trees (trunks are solid), bushes, flowers, grass tufts and rocks
+        /// The residential block's lawn: park trees (trunks are solid), bushes, flowers and grass tufts
         /// (walk-through), kept clear of buildings and the bench paths. Nothing without the nature kit.
         /// </summary>
         private static void Park(CityContext c, Transform root)
         {
             Kit k = c.Kit;
-            if (k.Art == null || k.Art.Model("tree_oak") == null) return;
+            if (k.Art == null || k.Art.Model(BroadTrees[0]) == null) return;
             Rect lawn = Rect.MinMaxRect(-36f, -5f, 46f, 61f);
             var keepClear = new List<Rect> { Grow(CityPlan.ApartmentBuilding, 3f), Rect.MinMaxRect(-40f, 21f, -30f, 27f), Rect.MinMaxRect(-40f, 35f, -30f, 41f) };
             foreach (Shell s in CityPlan.Shells)
@@ -227,11 +227,11 @@ namespace OpeningBell.City
 
             (string[] Names, int Count, float Scale, float Spacing, bool Solid)[] layers =
             {
-                (new[] { "tree_oak", "tree_default", "tree_detailed", "tree_fat", "tree_plateau", "tree_oak_dark", "tree_default_dark" }, 16, 4.6f, 9f, true),
-                (new[] { "plant_bush", "plant_bushDetailed", "plant_bushLarge", "plant_bushSmall" }, 30, 3.6f, 0f, false),
-                (new[] { "flower_purpleA", "flower_redA", "flower_yellowA", "flower_yellowB" }, 40, 2.6f, 0f, false),
-                (new[] { "grass", "grass_large", "grass_leafs" }, 90, 3.2f, 0f, false),
-                (new[] { "rock_smallA", "rock_smallC", "stump_round" }, 8, 3.5f, 0f, false),
+                // Quaternius plants: the scale is the height in metres.
+                (ParkTrees, 16, 9.5f, 9f, true),
+                (new[] { "q_bush_leafy", "q_bush_flowers", "q_bush_small", "q_bush_small_flowers" }, 30, 1.1f, 0f, false),
+                (new[] { "q_plant", "q_bush_small_flowers", "q_fern" }, 40, 0.55f, 0f, false),
+                (new[] { "q_grass_tall" }, 90, 0.6f, 0f, false),
             };
             foreach (var (names, count, scale, spacing, solid) in layers)
             {
@@ -245,12 +245,28 @@ namespace OpeningBell.City
                     i++;
                     if (!solid || go == null) continue;
                     trees.Add(p);
-                    var trunk = go.AddComponent<CapsuleCollider>(); // model units: the trunk's lower 0.6
-                    trunk.radius = 0.04f;
-                    trunk.height = 0.6f;
-                    trunk.center = new Vector3(0f, 0.3f, 0f);
+                    Trunk(go);
                 }
             }
+        }
+
+        /// <summary>Street and yard trees (Quaternius, 1 unit tall: scale by the height in metres).</summary>
+        internal static readonly string[] BroadTrees = { "q_tree_a", "q_tree_b", "q_tree_common" };
+        /// <summary>Broad trees and pines together, pines twice over: the town's parks and yards lean evergreen.
+        /// (q_tree_c/d are squat and thick-trunked: open ground only, not a sidewalk.)</summary>
+        internal static readonly string[] ParkTrees = { "q_tree_a", "q_tree_b", "q_tree_c", "q_tree_d", "q_tree_common", "q_pine_a", "q_pine_b", "q_pine_c", "q_pine_a", "q_pine_b", "q_pine_c" };
+
+        /// <summary>
+        /// A solid trunk on a tree placed at <c>scale = height</c>: the collider is in model units, so metres are
+        /// divided by the scale (0.2 m radius, the lower 3 m).
+        /// </summary>
+        internal static void Trunk(GameObject tree)
+        {
+            float s = tree.transform.localScale.y;
+            var trunk = tree.AddComponent<CapsuleCollider>();
+            trunk.radius = 0.2f / s;
+            trunk.height = 3f / s;
+            trunk.center = new Vector3(0f, 1.5f / s, 0f);
         }
 
         /// <summary>The nature kit's own palette is teal and orange; the city wants ordinary greens and browns.</summary>
@@ -309,13 +325,11 @@ namespace OpeningBell.City
         {
             Transform tree = Kit.Group(parent, "Tree", new Vector3(p.x, 0f, p.y));
             k.Box(tree, "Pit", new Vector3(0f, 0.005f, 0f), new Vector3(1.2f, 0.02f, 1.2f), k.P.Lit(new Color(0.26f, 0.2f, 0.15f)), collider: false);
-            // Kenney Nature Kit trees at ~4.5× (5–7 m street trees); the pick and turn are stable per spot.
-            string[] kinds = { "tree_default", "tree_detailed", "tree_oak", "tree_fat", "tree_plateau", "tree_default_dark", "tree_oak_dark", "tree_detailed_dark" };
+            // 6–8 m street trees; the pick and turn are stable per spot.
             float hash = Mathf.Abs(Mathf.Sin(p.x * 12.9898f + p.y * 78.233f) * 43758.5453f) % 1f;
-            GameObject model = k.Model(tree, kinds[(int)(hash * kinds.Length)], Vector3.zero, hash * 360f, 4.2f + 0.7f * hash);
+            GameObject model = k.Model(tree, BroadTrees[(int)(hash * BroadTrees.Length)], Vector3.zero, hash * 360f, 6f + 2f * hash);
             if (model != null)
             {
-                Naturalize(k, model);
                 var trunk = tree.gameObject.AddComponent<CapsuleCollider>();
                 trunk.center = new Vector3(0f, 1.3f, 0f);
                 trunk.radius = 0.14f;
@@ -407,13 +421,13 @@ namespace OpeningBell.City
         /// <summary>A clump of big trees far off in the fog (and sometimes a house among them).</summary>
         private static bool DistantTrees(CityContext c, Transform parent, Vector2 centre, float size, System.Random rng)
         {
-            string[] kinds = { "tree_default", "tree_oak", "tree_fat", "tree_default_dark", "tree_oak_dark" };
+            string[] kinds = ParkTrees;
             if (c.Kit.Art == null || c.Kit.Art.Model(kinds[0]) == null) return false;
             for (int t = 0; t < 5; t++)
             {
                 Vector2 p = centre + new Vector2((float)(rng.NextDouble() - 0.5), (float)(rng.NextDouble() - 0.5)) * size;
-                Naturalize(c.Kit, c.Kit.Model(parent, kinds[rng.Next(kinds.Length)], new Vector3(p.x, CityPlan.RoadY, p.y),
-                    (float)rng.NextDouble() * 360f, 9f + (float)rng.NextDouble() * 7f));
+                c.Kit.Model(parent, kinds[rng.Next(kinds.Length)], new Vector3(p.x, CityPlan.RoadY, p.y),
+                    (float)rng.NextDouble() * 360f, 10f + (float)rng.NextDouble() * 7f);
             }
             return true;
         }
