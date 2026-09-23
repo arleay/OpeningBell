@@ -82,13 +82,13 @@ namespace OpeningBell.Tests
             Assert.Greater(ridge.GradeAt(s), 10f, "Ridge Rd up the hill");
             Assert.IsTrue(Physics.Raycast(new Vector3(-20f, 60f, 302f), Vector3.down, out RaycastHit hill, 100f));
             Assert.That(hill.point.y, Is.EqualTo(ridge.GradeAt(s) + CityPlan.RoadY).Within(0.2f), "the road surface is where the plan says");
-            Assert.IsTrue(Physics.Raycast(new Vector3(315f, 20f, 40f), Vector3.down, out RaycastHit canal, 40f));
+            Assert.IsTrue(Physics.Raycast(new Vector3(315f, 20f, 60f), Vector3.down, out RaycastHit canal, 40f));
             Assert.Less(canal.point.y, TownTerrain.CanalWater - 0.5f, "the canal bed is under water");
 
             // Walk into the canal: climb back out onto the bank.
             player.PlaceAt(new Vector3(296f, 0.2f, 40f), 90f, 0f);
             yield return new WaitForSeconds(1.3f); // a safe spot is remembered each second
-            player.PlaceAt(new Vector3(315f, TownTerrain.CanalFloor + 0.1f, 40f), 90f, 0f);
+            player.PlaceAt(new Vector3(315f, TownTerrain.CanalFloor + 0.1f, 60f), 90f, 0f);
             for (int i = 0; i < 5; i++) yield return null;
             Assert.Less(player.transform.position.x, 300f, "back on the bank");
             Assert.IsNotNull(city.Anchors["station_platform"], "the station is built");

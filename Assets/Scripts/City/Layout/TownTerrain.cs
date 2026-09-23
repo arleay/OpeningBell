@@ -16,8 +16,9 @@ namespace OpeningBell.City
         public const float Span = 80f;    // heights from Base to Base + Span
 
         public const float SeaLevel = -2.5f;
-        public const float CanalWater = -3f;
-        public const float CanalFloor = -4.4f;
+        /// <summary>The canal is held low (a tide gate at the bay, a weir at the river) so its towpath passes under the bridges.</summary>
+        public const float CanalWater = -4.6f;
+        public const float CanalFloor = -6.3f;
         public const float RiverWater = -3f;
 
         /// <summary>The canal: a walled channel from the bay north to the river.</summary>

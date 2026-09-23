@@ -254,10 +254,10 @@ namespace OpeningBell.City
                     float z1 = Mathf.Min(z + 10f, TownTerrain.CanalWallsNorth);
                     float b0 = Bank(x - side * 1.5f, z), b1 = Bank(x - side * 1.5f, z1);
                     Vector3 a = new Vector3(x, TownTerrain.CanalFloor - 0.5f, z), b = new Vector3(x, TownTerrain.CanalFloor - 0.5f, z1);
-                    // Water side face (facing into the canal).
-                    if (side < 0f) walls.Quad(b, a, new Vector3(x, b0, z), new Vector3(x, b1, z1));
-                    else walls.Quad(a, b, new Vector3(x, b1, z1), new Vector3(x, b0, z));
-                    if (NearBridge(z, z1)) continue;
+                    // Water side face, facing into the canal (a quad faces right of its first edge seen from above).
+                    if (side < 0f) walls.Quad(a, b, new Vector3(x, b1, z1), new Vector3(x, b0, z));
+                    else walls.Quad(b, a, new Vector3(x, b0, z), new Vector3(x, b1, z1));
+                    if (NearBridge(z, z1) || Waterfront.ParapetGap(side < 0f, z, z1)) continue;
                     // Parapet 0.4 wide, 0.8 high, set back on the bank.
                     float px = x - side * 0.4f;
                     walls.Quad(new Vector3(x, b0, z), new Vector3(x, b1, z1), new Vector3(x, b1 + 0.8f, z1), new Vector3(x, b0 + 0.8f, z));

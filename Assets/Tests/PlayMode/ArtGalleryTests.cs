@@ -114,6 +114,9 @@ namespace OpeningBell.Tests
                 (new Vector3(-10f, 1.7f, -158f), 90f, 4f, "res-foundry-st.png"),
                 (new Vector3(-60f, 16f, 185f), 60f, 10f, "res-hill.png"),
                 (new Vector3(100f, 12f, -50f), 200f, 10f, "res-walkups.png"),
+                (new Vector3(302.5f, -2.3f, -40f), 0f, 3f, "water-towpath.png"),
+                (new Vector3(40f, 8f, -262f), 160f, 12f, "water-pier.png"),
+                (new Vector3(250f, 10f, -262f), 200f, 14f, "water-marina.png"),
             };
             // The camera flies alone (the player's body would be in the shot).
             _player.PlaceAt(new Vector3(0f, 0.2f, -5f), 0f, 0f);

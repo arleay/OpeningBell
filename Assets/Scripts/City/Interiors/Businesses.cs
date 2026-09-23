@@ -7,7 +7,7 @@ namespace OpeningBell.City
     {
         Laundromat, Pawn, Liquor, Barber, Thrift, Diner, Pharmacy, Hardware, Tattoo, Bakery, AutoParts, SmokeShop,
         Bank, Restaurant, Books, Repair, UsedFurniture, Bar, Discount, Florist, Gym, Vacant, Arcade, Nightclub,
-        FastFood, Pizza, MotelOffice, Supermarket, CarWash, Moto,
+        FastFood, Pizza, MotelOffice, Supermarket, CarWash, Moto, FishMarket,
     }
 
     /// <summary>One storefront: where it stands (front centre on the sidewalk edge, facing out of <see cref="Inward"/>), its size and trade.</summary>
@@ -62,6 +62,7 @@ namespace OpeningBell.City
             Trade.MotelOffice => Hours.Of(0, 24),
             Trade.Supermarket => Hours.Of(6, 23),
             Trade.Gym => Hours.Of(5, 23),
+            Trade.FishMarket => Hours.Of(6, 16),
             Trade.Discount => Hours.Of(8, 21),
             _ => Hours.Of(10, 19),
         };
@@ -98,6 +99,7 @@ namespace OpeningBell.City
             [Trade.Supermarket] = ("Casual", "Hi, find everything okay?", new[] { "Produce is fresh on Mondays.", "The deli closes at eight." }, new[] { ("Groceries", 38m, "Paper or plastic?"), ("Sandwich", 6.5m, "Enjoy.") }),
             [Trade.CarWash] = ("Worker", "Basic or deluxe?", new[] { "Pull in when the light's green.", "Deluxe includes the wax." }, new[] { ("Car wash", 12m, "Pull on through.") }),
             [Trade.Moto] = ("Punk", "Looking at bikes?", new[] { "Helmets are on the back wall.", "New models in the spring." }, new[] { ("Riding gloves", 40m, "Stay safe out there.") }),
+            [Trade.FishMarket] = ("Worker", "Came in on the boats this morning.", new[] { "Salmon's running. Get it while it's cheap.", "We close when it's gone." }, new[] { ("Fresh salmon", 14m, "Keep it cold."), ("Crab", 18m, "Watch the claws.") }),
         };
 
         public static void Build(CityContext c, Business b, int seed)
@@ -269,6 +271,7 @@ namespace OpeningBell.City
                 case Trade.AutoParts:
                 case Trade.Hardware:
                 case Trade.Supermarket:
+                case Trade.FishMarket:
                     Aisles(c, r, b.Trade, hw, front, back, rng);
                     break;
                 case Trade.Barber:
@@ -393,6 +396,7 @@ namespace OpeningBell.City
             {
                 Trade.Liquor => new[] { "Bottle1", "Bottle2", "Bottle1" },
                 Trade.Supermarket => new[] { "Bread", "Jar_Large", "Soda", "Apple", "Orange", "KetchupBottle", "PeanutButter" },
+                Trade.FishMarket => new[] { "Fish", "Fish", "Lettuce_Whole", "Fish" },
                 Trade.Discount => new[] { "Soda", "ChocolateBar", "Jar_Large", "Bottle2" },
                 _ => null,
             };
