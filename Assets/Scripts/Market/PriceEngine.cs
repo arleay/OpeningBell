@@ -40,7 +40,7 @@ namespace OpeningBell.Market
         /// Share of each layer's variance left to random diffusion once day drifts and gaps take their part, so
         /// close-to-close volatility still matches the specs on average.
         /// </summary>
-        private const double FairDiffusion = 0.5, MarketDiffusion = 0.78;
+        private const double FairDiffusion = 0.15, MarketDiffusion = 0.78;
         /// <summary>Spread of the market's daily drift, in market-volatility units.</summary>
         private const double MarketDayDriftSpread = 0.65;
 
@@ -196,7 +196,8 @@ namespace OpeningBell.Market
 
             // ---- information: fair value moves with the market, the sector, the company's own news and the day's drift.
             double price = sec.FairLog + sec.DeviationLog;
-            double drift = regular ? flow.Day.DriftAt(minutesSinceOpen) * spec.DailyVolatility / _stepsPerSession : 0;
+            // Day drifts are drawn in daily-vol units; 0.78 keeps total daily σ on spec now that trend days carry most of it.
+            double drift = regular ? 0.78 * flow.Day.DriftAt(minutesSinceOpen) * spec.DailyVolatility / _stepsPerSession : 0;
             double systematic = spec.MarketBeta * marketReturn + spec.SectorBeta * _sectorReturns[sec.SectorIndex];
             sec.FairLog += systematic + sigma * FairDiffusion * rng.NextGaussian() + newsFair + drift;
 

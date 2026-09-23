@@ -169,7 +169,7 @@ namespace OpeningBell.Tests
         public void HugePlayerOrders_MoveThePrice_RetailOnesDont()
         {
             // Averaged over several markets: a single push can land on a resting wall and get absorbed, like in reality.
-            double Move(long shares) => Enumerable.Range(0, 8).Average(seed => MoveIn((ulong)(31 + seed), shares));
+            double Move(long shares) => Enumerable.Range(0, 24).Average(seed => MoveIn((ulong)(31 + seed), shares));
 
             double MoveIn(ulong seed, long shares)
             {

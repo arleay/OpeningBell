@@ -57,7 +57,7 @@ namespace OpeningBell.Market
             bool up = rng.NextDouble() < upOdds;
 
             // Rough frequencies of US single-stock days: ranges and trend days dominate, the rest are spice.
-            if (u < 0.30) p.Type = DayType.Range;
+            if (u < 0.22) p.Type = DayType.Range;
             else if (u < 0.55) p.Type = up ? DayType.TrendUp : DayType.TrendDown;
             else if (u < 0.61) p.Type = DayType.GapAndGo;
             else if (u < 0.67) p.Type = DayType.GapAndFade;
@@ -79,26 +79,26 @@ namespace OpeningBell.Market
                 case DayType.TrendUp:
                 case DayType.TrendDown:
                     sign = p.Type == DayType.TrendUp ? 1 : -1;
-                    p.Drift = sign * (0.75 + 0.3 * Math.Abs(n()));
+                    p.Drift = sign * (1.2 + 0.35 * Math.Abs(n()));
                     p.Momentum = 1.5; p.MeanReversion = 0.6; p.Breakout = 1.3; p.LevelRespect = 0.8; p.Institutional = 1.4;
-                    p.RelativeVolume = 1.2; p.Volatility = 1.05;
+                    p.RelativeVolume = 1.2; p.Volatility = 0.85;
                     break;
                 case DayType.GapAndGo:
                     p.Gap = sign * (0.8 + 0.4 * Math.Abs(n()));
-                    p.Drift = sign * (0.6 + 0.3 * Math.Abs(n()));
+                    p.Drift = sign * (1.1 + 0.35 * Math.Abs(n()));
                     p.Momentum = 1.5; p.Breakout = 1.4; p.MeanReversion = 0.6; p.Institutional = 1.3;
                     p.RelativeVolume = 1.8; p.Volatility = 1.2;
                     break;
                 case DayType.GapAndFade:
                     p.Gap = sign * (0.8 + 0.4 * Math.Abs(n()));
-                    p.Drift = -sign * (0.6 + 0.3 * Math.Abs(n()));
+                    p.Drift = -sign * (0.9 + 0.3 * Math.Abs(n()));
                     p.MeanReversion = 1.3; p.Breakout = 0.8; p.Institutional = 1.2;
                     p.RelativeVolume = 1.5; p.Volatility = 1.15;
                     break;
                 case DayType.MorningReversal:
-                    p.Drift = sign * (0.5 + 0.25 * Math.Abs(n()));
+                    p.Drift = sign * (0.7 + 0.25 * Math.Abs(n()));
                     p.FlipMinute = 25 + 80 * rng.NextDouble();
-                    p.DriftAfterFlip = -sign * (0.8 + 0.3 * Math.Abs(n()));
+                    p.DriftAfterFlip = -sign * (1.2 + 0.35 * Math.Abs(n()));
                     p.Momentum = 1.1; p.RelativeVolume = 1.2; p.Volatility = 1.1;
                     break;
                 case DayType.Chop:
@@ -107,8 +107,8 @@ namespace OpeningBell.Market
                     p.RelativeVolume = 1.15; p.Liquidity = 0.85;
                     break;
                 case DayType.Grind:
-                    p.Drift = sign * (0.45 + 0.2 * Math.Abs(n()));
-                    p.Volatility = 0.6; p.RelativeVolume = 0.65; p.Momentum = 0.9; p.MeanReversion = 1.1; p.Retail = 0.7;
+                    p.Drift = sign * (0.85 + 0.25 * Math.Abs(n()));
+                    p.Volatility = 0.6; p.RelativeVolume = 0.65; p.Momentum = 1.2; p.MeanReversion = 0.8; p.Retail = 0.7;
                     p.Liquidity = 1.2;
                     break;
                 case DayType.Panic:

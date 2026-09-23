@@ -44,10 +44,10 @@ namespace OpeningBell.Market
     {
         // Participant weights (tuned against the statistics tests, not outcomes). Noise is per step; the others are
         // persistent pressures, which add up linearly over time, so they are in daily volatilities per session:
-        // saturated momentum alone would carry a stock about 0.8 σ over a whole session.
-        private const double NoiseWeight = 1.0;
-        private const double MomentumWeight = 0.8;
-        private const double MeanReversionWeight = 1.2;
+        // saturated momentum alone would carry a stock about 1.3 σ over a whole session.
+        private const double NoiseWeight = 0.7;
+        private const double MomentumWeight = 1.3;
+        private const double MeanReversionWeight = 0.9;
         private const double FomoWeight = 0.3;
         /// <summary>Informed traders close a gap to fair value with this time constant (minutes).</summary>
         private const double ValueMinutesRegular = 30, ValueMinutesExtended = 90;
@@ -104,7 +104,9 @@ namespace OpeningBell.Market
             double vol = Math.Sqrt(f.Var) + 1e-12;
             double z5 = f.Mom5 * Math.Sqrt(5 * _stepsPerMinute) / vol;
             double z30 = f.Mom30 * Math.Sqrt(30 * _stepsPerMinute) / vol;
-            double momentum = MomentumWeight * f.Day.Momentum * RegimeMomentum(f.Regime) * unit * Math.Tanh(0.6 * z5 + 0.4 * z30);
+            // Momentum desks are mostly absent outside the session; without this, thin premarket drifts in smooth waves.
+            double momentum = MomentumWeight * f.Day.Momentum * RegimeMomentum(f.Regime) * unit * Math.Tanh(0.6 * z5 + 0.4 * z30)
+                              * (step.Regular ? 1 : ExtendedParticipation);
 
             double reversion = 0;
             if (sec.Vwap > 0m)
@@ -348,6 +350,8 @@ namespace OpeningBell.Market
             FlowState f = sec.Flow;
             f.NewsFlow += immediate;
             double sd = sec.Spec.DailyVolatility;
+            // A real headline puts the stock "in play": the rest of the day trades heavier (up to 3× relative volume).
+            f.Day.RelativeVolume *= 1 + Math.Min(2, 2.5 * Math.Abs(immediate) / sd);
             if (Math.Abs(immediate) > 0.2 * sd && f.Metas.Count < MaxMetas)
             {
                 int side = Math.Sign(immediate);
@@ -420,18 +424,18 @@ namespace OpeningBell.Market
             switch (f.Regime)
             {
                 case Regime.Range:
-                    if (z30 > 2.2 && u < 0.2) next = Regime.Trend;
+                    if (z30 > 1.6 && u < 0.3) next = Regime.Trend;
                     else if (u < 0.012) next = Regime.Compression;
                     break;
                 case Regime.Compression:
                     if (u < 0.004 + 0.0012 * (f.RegimeMinutes - 15)) next = Regime.Expansion;
                     break;
                 case Regime.Expansion:
-                    if (z30 > 1.5 && u < 0.12) next = Regime.Trend;
+                    if (z30 > 1.2 && u < 0.25) next = Regime.Trend;
                     else if (u < 0.03) next = Regime.Range;
                     break;
                 case Regime.Trend:
-                    if (u < 0.01 + (z30 < 0.6 ? 0.04 : 0)) next = Regime.Range;
+                    if (u < 0.006 + (z30 < 0.4 ? 0.03 : 0)) next = Regime.Range;
                     break;
             }
             if (next != f.Regime)
