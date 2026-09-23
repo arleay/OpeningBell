@@ -85,6 +85,17 @@ namespace OpeningBell.Market
 
         private static bool SmallCap(SecuritySpec spec) => spec.DailyVolatility >= 0.05 || spec.FloatShares < 30_000_000;
 
+        /// <summary>
+        /// Someone outside the simulation (the player) traded <paramref name="signedShares"/> aggressively. Impact follows
+        /// the square-root law of real markets: about 0.8 daily volatility × √(size / ADV), delivered over the next
+        /// few steps. 1% of ADV moves ~0.08 σ, a whole day's volume ~0.8 σ; retail size is invisible.
+        /// </summary>
+        public void ApplyExternalFlow(SecurityRuntimeState sec, long signedShares)
+        {
+            double fraction = Math.Abs(signedShares) / (double)sec.Spec.AverageDailyVolume;
+            sec.Flow.NewsFlow += Math.Sign(signedShares) * 0.8 * sec.Spec.DailyVolatility * Math.Sqrt(fraction);
+        }
+
         /// <summary>Queues a news catalyst for the next tick (see NewsEngine for how the moves are drawn).</summary>
         public void ApplyNews(SecurityRuntimeState sec, double fairShift, double overreaction, double severity, double attentionScale)
         {
@@ -218,6 +229,7 @@ namespace OpeningBell.Market
                 out decimal bid, out decimal ask, out long bidSize, out long askSize);
 
             decimal last = sec.Last;
+            decimal tickHigh = 0m, tickLow = 0m;
             int direction = 0;
             if (shares > 0)
             {
@@ -230,10 +242,13 @@ namespace OpeningBell.Market
                 double extreme = direction >= 0 ? flow.PathLow : flow.PathHigh;
                 decimal extremePrice = PriceTick.RoundNearest((decimal)Math.Exp(Math.Max(MinLogPrice, extreme)));
                 long wickShares = 0;
+                tickHigh = tickLow = last;
                 if (Math.Abs(extremePrice - last) >= 2 * tick && extremePrice > 0m)
                 {
                     wickShares = Math.Max(1, shares / 4);
                     RecordPrint(sec, time, extremePrice, wickShares, regular);
+                    tickHigh = Math.Max(last, extremePrice);
+                    tickLow = Math.Min(last, extremePrice);
                 }
                 RecordPrint(sec, time, last, shares - wickShares, regular);
             }
@@ -242,7 +257,7 @@ namespace OpeningBell.Market
                 shares = 0;
             }
 
-            sec.Quote = new Quote(bid, ask, bidSize, askSize, last, shares, direction, time);
+            sec.Quote = new Quote(bid, ask, bidSize, askSize, last, shares, direction, time, tickHigh, tickLow);
         }
 
         /// <summary>Mean volume multiplier from the day mix, busy flow and the opening/closing crosses; dividing keeps ADV calibrated.</summary>

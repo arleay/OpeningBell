@@ -19,8 +19,16 @@ namespace OpeningBell.Market
 
         public DateTime Time { get; }
 
-        public Quote(decimal bid, decimal ask, long bidSize, long askSize, decimal last, long lastVolume, int lastDirection, DateTime time)
+        /// <summary>Highest and lowest prints during the latest tick (a sweep's wick), for stop triggers. Last if none.</summary>
+        public decimal TickHigh => _tickHigh > 0m ? _tickHigh : Last;
+        public decimal TickLow => _tickLow > 0m ? _tickLow : Last;
+        private readonly decimal _tickHigh, _tickLow;
+
+        public Quote(decimal bid, decimal ask, long bidSize, long askSize, decimal last, long lastVolume, int lastDirection, DateTime time,
+            decimal tickHigh = 0m, decimal tickLow = 0m)
         {
+            _tickHigh = tickHigh;
+            _tickLow = tickLow;
             Bid = bid;
             Ask = ask;
             BidSize = bidSize;

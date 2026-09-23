@@ -9,10 +9,15 @@ namespace OpeningBell.Trading
         Sell,
     }
 
+    // Saved by value: append only.
     public enum OrderType
     {
         Market,
         Limit,
+        /// <summary>Waits until price trades at or through StopPrice, then becomes a market order.</summary>
+        Stop,
+        /// <summary>Waits until price trades at or through StopPrice, then becomes a limit order at LimitPrice.</summary>
+        StopLimit,
     }
 
     public enum OrderStatus
@@ -33,10 +38,32 @@ namespace OpeningBell.Trading
         public string Ticker { get; }
         public OrderSide Side { get; }
         public OrderType Type { get; }
-        public long Quantity { get; }
+        public long Quantity { get; private set; }
 
-        /// <summary>0 for market orders.</summary>
-        public decimal LimitPrice { get; }
+        /// <summary>0 for market and stop orders.</summary>
+        public decimal LimitPrice { get; internal set; }
+
+        /// <summary>Trigger price for stop and stop-limit orders (0 otherwise).</summary>
+        public decimal StopPrice { get; internal set; }
+
+        /// <summary>A stop that has been triggered now works as a market (Stop) or limit (StopLimit) order.</summary>
+        public bool Triggered { get; internal set; }
+
+        /// <summary>One-cancels-other group (a take-profit and stop-loss pair); 0 = not linked.</summary>
+        public long OcoGroup { get; internal set; }
+
+        /// <summary>Good 'til cancelled: survives the close (brackets protecting a position overnight).</summary>
+        public bool Gtc { get; internal set; }
+
+        public bool IsStop => Type == OrderType.Stop || Type == OrderType.StopLimit;
+
+        /// <summary>How the order executes right now: an untriggered stop doesn't; a triggered one is market or limit.</summary>
+        public OrderType ActiveType => Type switch
+        {
+            OrderType.Stop => OrderType.Market,
+            OrderType.StopLimit => OrderType.Limit,
+            _ => Type,
+        };
 
         public OrderStatus Status { get; internal set; } = OrderStatus.Pending;
         public string StatusReason { get; internal set; }
@@ -68,6 +95,9 @@ namespace OpeningBell.Trading
             SubmittedAt = submittedAt;
             UpdatedAt = submittedAt;
         }
+
+        /// <summary>Shrinks an order (the other leg of a bracket filled, or the position got smaller).</summary>
+        internal void ReduceTo(long quantity) => Quantity = Math.Max(FilledQuantity, quantity);
 
         internal void Restore(OrderStatus status, string reason, DateTime updatedAt, long filledQuantity,
             decimal filledNotional, decimal commission, bool isResting, decimal reservePrice)

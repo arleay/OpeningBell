@@ -232,7 +232,7 @@ Market:
 - [x] M4 Participant groups: noise/retail+FOMO, value/informed, institutions (meta-orders), momentum, mean reversion, breakout, news traders, index arbitrage, resting stops
 - [x] M5 Participants → flow → book walk → price (replaces the deviation noise)
 - [x] M6 Market memory: PDH/PDL/PDC, previous week, premarket range, opening range (5/30 m), swings with equal-high merging, round numbers, day extremes
-- [ ] M7 Stop orders: resting conditional flow in the market; player stop/stop-limit + brackets
+- [x] M7 Stop orders: resting conditional flow in the market; player stop/stop-limit (trigger on the tick range, regular session only, gap-through fills at the market), brackets (OCO, good until cancelled), price edits for dragging lines, square-root market impact for large player orders
 - [ ] M8 Supply/demand zones and liquidity concentration
 - [ ] M9 Derived ICT/SMC detection
 - [ ] M10 Time macros, premarket ramp (opening and closing crosses done)

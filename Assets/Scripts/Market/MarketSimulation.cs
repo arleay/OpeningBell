@@ -86,6 +86,11 @@ namespace OpeningBell.Market
         public bool TryGetSecurity(string ticker, out SecurityRuntimeState security) =>
             _byTicker.TryGetValue(ticker, out security);
 
+        public void ReportAggressiveFlow(string ticker, long signedShares)
+        {
+            if (_byTicker.TryGetValue(ticker, out SecurityRuntimeState sec)) _engine.ApplyExternalFlow(sec, signedShares);
+        }
+
         public bool TryGetQuote(string ticker, out Quote quote)
         {
             if (_byTicker.TryGetValue(ticker, out var sec))

@@ -30,14 +30,29 @@ namespace OpeningBell.Trading
             _rules = rules;
         }
 
-        public void Evaluate(Order order, in Quote quote, List<Execution> results)
+        /// <param name="stopsActive">Stops only trigger when true (the regular session): a thin premarket print
+        /// shouldn't set off a stop-loss.</param>
+        public void Evaluate(Order order, in Quote quote, List<Execution> results, bool stopsActive = true)
         {
             results.Clear();
             long remaining = order.RemainingQuantity;
             if (remaining <= 0) return;
             bool buy = order.Side == OrderSide.Buy;
+            bool justTriggered = false;
 
-            if (order.Type == OrderType.Market)
+            if (order.IsStop && !order.Triggered)
+            {
+                // Triggered by any trade at or through the stop this tick (including a sweep's wick), or by the quote
+                // having already moved past it (a gap). It then goes to the book like any market or limit order, so a
+                // gap through the stop fills at the market, not at the stop.
+                decimal stop = order.StopPrice;
+                bool hit = buy ? quote.TickHigh >= stop || quote.Ask >= stop : quote.TickLow <= stop || quote.Bid <= stop;
+                if (!stopsActive || !hit) return;
+                order.Triggered = true;
+                justTriggered = true;
+            }
+
+            if (order.ActiveType == OrderType.Market)
             {
                 WalkBook(quote, buy, remaining, null, null, results);
                 return;
@@ -49,7 +64,8 @@ namespace OpeningBell.Trading
             {
                 // A new marketable order takes the book, including any price improvement. A resting order was
                 // passed through during continuous trading, so it fills at its own limit.
-                WalkBook(quote, buy, remaining, limit, order.IsResting ? limit : (decimal?)null, results);
+                bool resting = order.IsResting && !justTriggered;
+                WalkBook(quote, buy, remaining, limit, resting ? limit : (decimal?)null, results);
                 return;
             }
 

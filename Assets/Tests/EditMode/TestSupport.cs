@@ -55,10 +55,15 @@ namespace OpeningBell.Tests
 
         public bool TryGetQuote(string ticker, out Quote quote) => _quotes.TryGetValue(ticker, out quote);
 
+        /// <summary>Aggressive flow reported by the order manager (signed shares), for impact tests.</summary>
+        public readonly List<(string Ticker, long Shares)> ReportedFlow = new List<(string, long)>();
+
+        public void ReportAggressiveFlow(string ticker, long signedShares) => ReportedFlow.Add((ticker, signedShares));
+
         public void SetQuote(string ticker, decimal bid, decimal ask, long size = 1000, decimal? last = null,
-            long lastVolume = 0, int direction = 0)
+            long lastVolume = 0, int direction = 0, decimal tickHigh = 0m, decimal tickLow = 0m)
         {
-            _quotes[ticker] = new Quote(bid, ask, size, size, last ?? (bid + ask) / 2m, lastVolume, direction, Now);
+            _quotes[ticker] = new Quote(bid, ask, size, size, last ?? (bid + ask) / 2m, lastVolume, direction, Now, tickHigh, tickLow);
         }
 
         /// <summary>Optionally sets a new quote, then raises a tick.</summary>

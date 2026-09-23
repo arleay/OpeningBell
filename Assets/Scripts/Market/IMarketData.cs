@@ -14,5 +14,8 @@ namespace OpeningBell.Market
 
         /// <summary>(previous, current)</summary>
         event Action<MarketSession, MarketSession> SessionChanged;
+
+        /// <summary>Tells the market someone traded aggressively (positive = bought), so large orders have impact.</summary>
+        void ReportAggressiveFlow(string ticker, long signedShares);
     }
 }

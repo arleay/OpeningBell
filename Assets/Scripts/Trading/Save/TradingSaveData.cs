@@ -43,6 +43,10 @@ namespace OpeningBell.Trading
         public string Ticker, LimitPrice, StatusReason, FilledNotional, Commission, ReservePrice;
         public int Side, Type, Status;
         public bool IsResting;
+        // Stops and brackets (added with the order-flow market; empty/zero in older saves).
+        public string StopPrice;
+        public bool Triggered, Gtc;
+        public long OcoGroup;
     }
 
     [Serializable]
@@ -104,6 +108,7 @@ namespace OpeningBell.Trading
                     SubmittedAt = o.SubmittedAt.Ticks, UpdatedAt = o.UpdatedAt.Ticks, FilledQuantity = o.FilledQuantity,
                     FilledNotional = S(o.FilledNotional), Commission = S(o.Commission), ReservePrice = S(o.ReservePrice),
                     IsResting = o.IsResting,
+                    StopPrice = S(o.StopPrice), Triggered = o.Triggered, Gtc = o.Gtc, OcoGroup = o.OcoGroup,
                 });
             }
 
@@ -151,6 +156,10 @@ namespace OpeningBell.Trading
                 var order = new Order(o.Id, o.Ticker, (OrderSide)o.Side, (OrderType)o.Type, o.Quantity, D(o.LimitPrice), new DateTime(o.SubmittedAt));
                 order.Restore((OrderStatus)o.Status, Nullable(o.StatusReason), new DateTime(o.UpdatedAt), o.FilledQuantity,
                     D(o.FilledNotional), D(o.Commission), o.IsResting, D(o.ReservePrice));
+                order.StopPrice = D(o.StopPrice);
+                order.Triggered = o.Triggered;
+                order.Gtc = o.Gtc;
+                order.OcoGroup = o.OcoGroup;
                 foreach (Fill f in fills)
                     if (f.OrderId == order.Id) order.AttachFill(f);
                 restoredOrders.Add(order);

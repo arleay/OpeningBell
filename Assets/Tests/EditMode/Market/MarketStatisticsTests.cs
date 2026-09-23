@@ -166,6 +166,33 @@ namespace OpeningBell.Tests
         }
 
         [Test]
+        public void HugePlayerOrders_MoveThePrice_RetailOnesDont()
+        {
+            // Averaged over several markets: a single push can land on a resting wall and get absorbed, like in reality.
+            double Move(long shares) => Enumerable.Range(0, 8).Average(seed => MoveIn((ulong)(31 + seed), shares));
+
+            double MoveIn(ulong seed, long shares)
+            {
+                MarketSimulation sim = TestMarkets.Create(seed, TestMarkets.Monday, TestMarkets.Basic());
+                sim.AdvanceTo(TestMarkets.Monday.AddHours(11));
+                var account = new OpeningBell.Trading.Account(sim);
+                account.Deposit(100_000_000m);
+                var orders = new OpeningBell.Trading.OrderManager(sim, account, new OpeningBell.Trading.BrokerRules { BookLevelsPerTick = 50 });
+                decimal before = sim.Securities[0].Last;
+                if (shares > 0) orders.SubmitMarket("AAA", OpeningBell.Trading.OrderSide.Buy, shares);
+                sim.AdvanceTo(TestMarkets.Monday.AddHours(11).AddMinutes(3));
+                return Math.Log((double)sim.Securities[0].Last / (double)before);
+            }
+
+            double control = Move(0), retail = Move(100), huge = Move(100_000); // AAA trades 2M a day: 5% of ADV
+            TestContext.WriteLine($"3-minute move: none {control:P3}, 100 shares {retail:P3}, 100k shares {huge:P3}");
+            Assert.AreEqual(control, retail, 0.0005, "retail size is invisible");
+            // Square-root law: 5% of ADV ≈ 0.8 σ × √0.05 ≈ 0.54% push, some of it absorbed by resting walls.
+            Assert.Greater(huge - control, 0.0015, "5% of a day's volume in one go pushes the price up");
+            Assert.Less(huge - control, 0.02, "but it doesn't launch the stock");
+        }
+
+        [Test]
         public void TenStocksAndTheIndex_RunFarFasterThan120x()
         {
             var specs = Enumerable.Range(0, 10).Select(i => TestMarkets.Spec("S" + i, (Sector)(i % 7), 10 + 9 * i, vol: 0.02 + 0.004 * i)).ToArray();
