@@ -17,7 +17,7 @@ MonoBehaviour:
     CompanyName: Navira Technologies
     Sector: 0
     BasePrice: 142.5
-    DailyVolatility: 0.022
+    DailyVolatility: 0.0308
     AverageDailyVolume: 18000000
     SharesOutstanding: 2100000000
     FloatShares: 2000000000

@@ -17,7 +17,7 @@ MonoBehaviour:
     CompanyName: Apex Robotics
     Sector: 0
     BasePrice: 23.75
-    DailyVolatility: 0.035
+    DailyVolatility: 0.049
     AverageDailyVolume: 4200000
     SharesOutstanding: 310000000
     FloatShares: 250000000

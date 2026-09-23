@@ -17,7 +17,7 @@ MonoBehaviour:
     CompanyName: Vista Entertainment
     Sector: 6
     BasePrice: 31.6
-    DailyVolatility: 0.02
+    DailyVolatility: 0.028
     AverageDailyVolume: 2500000
     SharesOutstanding: 400000000
     FloatShares: 390000000

@@ -17,7 +17,7 @@ MonoBehaviour:
     CompanyName: Matrix Data Systems
     Sector: 0
     BasePrice: 67.1
-    DailyVolatility: 0.028
+    DailyVolatility: 0.0392
     AverageDailyVolume: 9000000
     SharesOutstanding: 800000000
     FloatShares: 780000000

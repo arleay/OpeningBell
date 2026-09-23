@@ -17,7 +17,7 @@ MonoBehaviour:
     CompanyName: Galaxy Aerospace
     Sector: 4
     BasePrice: 12.85
-    DailyVolatility: 0.04
+    DailyVolatility: 0.056
     AverageDailyVolume: 5500000
     SharesOutstanding: 220000000
     FloatShares: 160000000

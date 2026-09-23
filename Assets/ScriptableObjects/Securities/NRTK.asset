@@ -17,7 +17,7 @@ MonoBehaviour:
     CompanyName: Nortek Industries
     Sector: 4
     BasePrice: 87.3
-    DailyVolatility: 0.015
+    DailyVolatility: 0.021
     AverageDailyVolume: 1800000
     SharesOutstanding: 350000000
     FloatShares: 345000000

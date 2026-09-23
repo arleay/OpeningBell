@@ -9,7 +9,7 @@ namespace OpeningBell.Market
     /// </summary>
     internal static class FlowCodec
     {
-        private const long Version = 2; // 2: legs and jitter appended at the end
+        private const long Version = 3; // 2: legs appended at the end; 3: leg pulse in place of v2's jitter word
 
         public static List<long> Capture(FlowState f)
         {
@@ -62,7 +62,7 @@ namespace OpeningBell.Market
             o.Add((long)f.Leg);
             D(o, f.LegRate);
             D(o, f.LegMinutes);
-            D(o, f.Jitter);
+            D(o, f.LegPulse);
             return o;
         }
 
@@ -107,7 +107,8 @@ namespace OpeningBell.Market
                 f.Leg = (LegKind)L();
                 f.LegRate = R();
                 f.LegMinutes = R();
-                f.Jitter = R();
+                double pulse = R();
+                if (version >= 3) f.LegPulse = pulse; // v2 held a (now removed) jitter value here
             }
         }
 

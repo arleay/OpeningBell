@@ -17,7 +17,7 @@ MonoBehaviour:
     CompanyName: Oceanic Energy
     Sector: 2
     BasePrice: 54.2
-    DailyVolatility: 0.018
+    DailyVolatility: 0.0252
     AverageDailyVolume: 7000000
     SharesOutstanding: 900000000
     FloatShares: 880000000

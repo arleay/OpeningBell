@@ -250,6 +250,93 @@ namespace OpeningBell.Tests
             return "untested";
         }
 
+        /// <summary>
+        /// The game's own stocks, settings and news, judged on what the player looks at: 5-minute session candles.
+        /// Candle bodies (a real tape averages about half the bar's range; mostly-wick dojis are the minority) and how
+        /// efficiently price travels over an hour of bars (a random walk scores about 0.29; trends score higher).
+        /// Writes TestResults/game-5m-*.png and game-5m-stats.txt.
+        /// </summary>
+        [Test]
+        public void GameStocks_FiveMinuteCandles_HaveBodiesAndTravel()
+        {
+            var catalog = UnityEditor.AssetDatabase.LoadAssetAtPath<SecurityCatalog>("Assets/ScriptableObjects/Securities/SecurityCatalog.asset");
+            var settings = UnityEditor.AssetDatabase.LoadAssetAtPath<MarketSettings>("Assets/ScriptableObjects/Settings/MarketSettings.asset");
+            var library = UnityEditor.AssetDatabase.LoadAssetAtPath<NewsLibrary>("Assets/ScriptableObjects/News/NewsLibrary.asset");
+            DateTime monday = TestMarkets.Monday;
+            var sim = new MarketSimulation(settings.Config, catalog.CreateSpecs(), catalog.Index, new OpeningBell.Core.SeededRandomService(7),
+                monday.AddHours(3), library.Templates);
+
+            const int days = 10;
+            double bodySum = 0, efficiencySum = 0, rangeSum = 0;
+            int bars = 0, dojis = 0, hours = 0, sessions = 0;
+            var perTicker = new Dictionary<string, double[]>(); // body sum, bars, dojis, efficiency sum, hours, ticks per bar, σ-normalised range
+            double normRangeSum = 0;
+            var report = new StringBuilder();
+            DateTime date = monday;
+            for (int d = 0; d < days; d++)
+            {
+                while (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday) date = date.AddDays(1);
+                sim.AdvanceTo(date.AddHours(16.1));
+                foreach (SecurityRuntimeState s in sim.Securities)
+                {
+                    CandleSeries m5 = s.Candles.Get(Timeframe.Minute5);
+                    var session = new List<Candle>();
+                    for (int i = 0; i < m5.Count; i++)
+                        if (m5[i].Start.Date == date && m5[i].Start.TimeOfDay >= TimeSpan.FromHours(9.5) && m5[i].Start.TimeOfDay < TimeSpan.FromHours(16))
+                            session.Add(m5[i]);
+                    if (session.Count < 60) continue;
+                    sessions++;
+                    if (!perTicker.TryGetValue(s.Ticker, out double[] t)) perTicker[s.Ticker] = t = new double[7];
+                    double barSigma = s.Spec.DailyVolatility / Math.Sqrt(78); // a random walk's 5-minute σ at the stock's daily volatility
+                    foreach (Candle c in session)
+                    {
+                        t[1]++;
+                        t[5] += (double)((c.High - c.Low) / PriceTick.For(c.Close));
+                        double normRange = (double)((c.High - c.Low) / c.Close) / barSigma;
+                        t[6] += normRange;
+                        normRangeSum += normRange;
+                        double range = (double)(c.High - c.Low);
+                        if (range <= 0) { dojis++; bars++; continue; }
+                        double body = Math.Abs((double)(c.Close - c.Open)) / range;
+                        bodySum += body;
+                        t[0] += body;
+                        if (body < 0.2) { dojis++; t[2]++; }
+                        bars++;
+                    }
+                    for (int k = 0; k + 12 <= session.Count; k += 12)
+                    {
+                        double path = 0;
+                        for (int j = k + 1; j < k + 12; j++) path += Math.Abs((double)(session[j].Close - session[j - 1].Close));
+                        double net = Math.Abs((double)(session[k + 11].Close - session[k].Close));
+                        if (path > 0) { efficiencySum += net / path; hours++; t[3] += net / path; t[4]++; }
+                    }
+                    double hi = (double)session.Max(c => c.High), lo = (double)session.Min(c => c.Low);
+                    rangeSum += (hi - lo) / lo / s.Spec.DailyVolatility;
+                    if (d < 3 && (s.Ticker == "BLZE" || s.Ticker == "APEX" || s.Ticker == "NVRA" || s.Ticker == "CYRA"))
+                        Render(new DayRecord { Ticker = s.Ticker, Date = date, Minutes = session },
+                            Path.Combine(Results, $"game-5m-{s.Ticker}-{date:MMdd}-{s.DayType}.png"));
+                }
+                date = date.AddDays(1);
+            }
+
+            double meanBody = bodySum / bars, dojiShare = dojis / (double)bars, efficiency = efficiencySum / hours, meanRange = rangeSum / sessions;
+            report.AppendLine($"{sessions} sessions, {bars} five-minute bars");
+            double meanNormRange = normRangeSum / bars;
+            report.AppendLine($"mean body/range {meanBody:F2}, doji share {dojiShare:P0}, hourly efficiency {efficiency:F2} (random walk 0.29), session range {meanRange:F2} daily σ, bar range {meanNormRange:F2} bar σ");
+            foreach (var (ticker, t) in perTicker.OrderBy(p => p.Key).Select(p => (p.Key, p.Value)))
+                report.AppendLine($"  {ticker}: body {t[0] / t[1]:F2}, doji {t[2] / t[1]:P0}, efficiency {t[3] / Math.Max(1, t[4]):F2}, bar range {t[5] / t[1]:F1} ticks = {t[6] / t[1]:F2} bar σ");
+            Directory.CreateDirectory(Results);
+            File.WriteAllText(Path.Combine(Results, "game-5m-stats.txt"), report.ToString());
+            TestContext.WriteLine(report.ToString());
+
+            Assert.Greater(meanBody, 0.4, "candles have bodies, not just wicks");
+            Assert.Less(dojiShare, 0.3, "dojis are the minority");
+            Assert.Greater(efficiency, 0.33, "price travels: more directional than a random walk");
+            // A random walk's 5-minute bar spans about 1.6 bar σ high to low, but daily volatility also holds the overnight
+            // gap and extended hours, so session bars carry less; below ~1 they shrink into tick-and-spread noise.
+            Assert.Greater(meanNormRange, 1.0, "bars move: price travels inside them, not just across the day");
+        }
+
         private static void Render(DayRecord r, string file)
         {
             const int w = 1600, h = 760, volH = 140;

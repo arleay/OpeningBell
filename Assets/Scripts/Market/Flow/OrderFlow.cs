@@ -45,12 +45,10 @@ namespace OpeningBell.Market
         // Participant weights (tuned against the statistics tests, not outcomes). Noise is per step; the others are
         // persistent pressures, which add up linearly over time, so they are in daily volatilities per session:
         // saturated momentum alone would carry a stock about 1.3 σ over a whole session.
-        private const double NoiseWeight = 0.1;
+        private const double NoiseWeight = 0.5;
         private const double MomentumWeight = 1.3;
         private const double MeanReversionWeight = 0.6;
         private const double FomoWeight = 0.3;
-        /// <summary>Jitter size per step and how fast it fades (seconds).</summary>
-        private const double JitterWeight = 0.25, JitterSeconds = 60;
         /// <summary>Informed traders close a gap to fair value with this time constant (minutes).</summary>
         private const double ValueMinutesRegular = 30, ValueMinutesExtended = 90;
         /// <summary>Book depth outside regular hours relative to the regular session.</summary>
@@ -80,14 +78,12 @@ namespace OpeningBell.Market
         private readonly double _valueKappaRegular, _valueKappaExtended;
         /// <summary>Steps in a regular session: a persistent pressure of sd/_stepsPerSession moves price 1 σ a session.</summary>
         private readonly double _stepsPerSession;
-        private readonly double _jitterDecay;
 
         public OrderFlow(MarketConfig config, MarketSchedule schedule)
         {
             _schedule = schedule;
             _stepsPerMinute = 60 / config.TickSeconds;
             _stepsPerSession = schedule.RegularSessionSeconds / config.TickSeconds;
-            _jitterDecay = Math.Exp(-config.TickSeconds / JitterSeconds);
             _valueKappaRegular = 1 - Math.Exp(-config.TickSeconds / (ValueMinutesRegular * 60));
             _valueKappaExtended = 1 - Math.Exp(-config.TickSeconds / (ValueMinutesExtended * 60));
         }
@@ -106,11 +102,6 @@ namespace OpeningBell.Market
 
             // ---- participants
             double noise = s * NoiseWeight * Math.Sqrt(f.Day.Retail) * StudentT4(rng);
-            // Texture: fast-reverting jitter (quote flicker, small prints) that shapes candles and wicks but nets out
-            // within a few minutes, so it doesn't pile up into chop the way persistent noise does.
-            double jitterLevel = f.Jitter * _jitterDecay + s * JitterWeight * StudentT4(rng);
-            double jitter = jitterLevel - f.Jitter;
-            f.Jitter = jitterLevel;
             double gap = sec.FairLog - price;
             double value = gap * (step.Regular ? _valueKappaRegular : _valueKappaExtended);
 
@@ -154,8 +145,8 @@ namespace OpeningBell.Market
             // Index arbitrage / hedging: when the market or the sector moves, programs trade the stock with it at once.
             double program = step.Systematic;
 
-            double push = noise + jitter + value + momentum + reversion + fomo + burst + news + institutional + program;
-            gross = Math.Abs(noise) + Math.Abs(jitter) + Math.Abs(value) + Math.Abs(momentum) + Math.Abs(reversion) + Math.Abs(fomo)
+            double push = noise + value + momentum + reversion + fomo + burst + news + institutional + program;
+            gross = Math.Abs(noise) + Math.Abs(value) + Math.Abs(momentum) + Math.Abs(reversion) + Math.Abs(fomo)
                     + Math.Abs(burst) + Math.Abs(news) + Math.Abs(institutional) + Math.Abs(program);
 
             // ---- the book

@@ -17,7 +17,7 @@ MonoBehaviour:
     CompanyName: Blaze Automotive
     Sector: 3
     BasePrice: 8.4
-    DailyVolatility: 0.045
+    DailyVolatility: 0.063
     AverageDailyVolume: 6500000
     SharesOutstanding: 180000000
     FloatShares: 120000000

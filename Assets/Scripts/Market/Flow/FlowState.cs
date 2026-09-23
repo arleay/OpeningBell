@@ -66,8 +66,8 @@ namespace OpeningBell.Market
         /// <summary>Log move per step the leg carries into fair value and price together (program-like flow).</summary>
         public double LegRate;
         public double LegMinutes;
-        /// <summary>Current fast-reverting jitter of price (log).</summary>
-        public double Jitter;
+        /// <summary>Log intensity of the current leg's delivery (AR(1) around 0): legs arrive in bursts, not ramps.</summary>
+        public double LegPulse;
 
         // The last step's traded range (for wicks and, later, stop triggers).
         public double PathHigh, PathLow;

@@ -17,7 +17,7 @@ MonoBehaviour:
     CompanyName: Solara Power
     Sector: 2
     BasePrice: 18.4
-    DailyVolatility: 0.038
+    DailyVolatility: 0.0532
     AverageDailyVolume: 4800000
     SharesOutstanding: 260000000
     FloatShares: 230000000

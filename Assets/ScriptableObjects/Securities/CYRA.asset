@@ -17,7 +17,7 @@ MonoBehaviour:
     CompanyName: Cyra Pharmaceuticals
     Sector: 1
     BasePrice: 4.12
-    DailyVolatility: 0.06
+    DailyVolatility: 0.084
     AverageDailyVolume: 3000000
     SharesOutstanding: 95000000
     FloatShares: 60000000

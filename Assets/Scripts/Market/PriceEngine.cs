@@ -43,6 +43,9 @@ namespace OpeningBell.Market
         private const double FairDiffusion = 0.08, MarketDiffusion = 0.4;
         /// <summary>Spread of the market's daily drift, in market-volatility units.</summary>
         private const double MarketDayDriftSpread = 0.9;
+        /// <summary>Spread (log) and memory (seconds) of how unevenly a leg is delivered.</summary>
+        private const double LegPulseSigma = 0.9, LegPulseSeconds = 90;
+        private readonly double _pulseDecay, _pulseShock;
         /// <summary>Size of the index's legs in market daily volatilities.</summary>
         private const double MarketLegScale = 0.6;
 
@@ -84,6 +87,8 @@ namespace OpeningBell.Market
             _newsDelivery = 1 - Math.Exp(-_dt / (config.NewsDeliveryMinutes * 60));
             _newsActivityDecay = Math.Exp(-_dt * Math.Log(2) / (config.NewsActivityHalfLifeMinutes * 60));
             _stepsPerSession = schedule.RegularSessionSeconds / _dt;
+            _pulseDecay = Math.Exp(-_dt / LegPulseSeconds);
+            _pulseShock = LegPulseSigma * Math.Sqrt(1 - _pulseDecay * _pulseDecay);
             _flow = new OrderFlow(config, schedule);
             MarketDayDrift = MarketDayDriftSpread * _marketRng.NextGaussian();
         }
@@ -238,7 +243,14 @@ namespace OpeningBell.Market
             double price = sec.FairLog + sec.DeviationLog;
             // The day's direction arrives as legs (impulses, pullbacks, rotations: see OrderFlow.NewLeg), carried into
             // fair value and, like index arbitrage, straight into price.
-            double leg = regular ? flow.LegRate * Math.Sqrt(profile.Volatility) : 0; // legs run faster at the open and close
+            // Legs run faster at the open and close, and arrive in bursts: a mean-one lognormal pulse with a ~90 s
+            // memory, so an impulse prints a few fast, big-bodied bars and then breathes instead of ramping evenly.
+            double leg = 0;
+            if (regular)
+            {
+                flow.LegPulse = flow.LegPulse * _pulseDecay + _pulseShock * rng.NextGaussian();
+                leg = flow.LegRate * Math.Sqrt(profile.Volatility) * Math.Exp(flow.LegPulse - LegPulseSigma * LegPulseSigma / 2);
+            }
             double systematic = spec.MarketBeta * marketReturn + spec.SectorBeta * _sectorReturns[sec.SectorIndex];
             sec.FairLog += systematic + sigma * FairDiffusion * rng.NextGaussian() + newsFair + leg;
 
