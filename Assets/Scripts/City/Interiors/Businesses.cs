@@ -7,7 +7,7 @@ namespace OpeningBell.City
     {
         Laundromat, Pawn, Liquor, Barber, Thrift, Diner, Pharmacy, Hardware, Tattoo, Bakery, AutoParts, SmokeShop,
         Bank, Restaurant, Books, Repair, UsedFurniture, Bar, Discount, Florist, Gym, Vacant, Arcade, Nightclub,
-        FastFood, Pizza, MotelOffice, Supermarket, CarWash, Moto, FishMarket,
+        FastFood, Pizza, MotelOffice, Supermarket, CarWash, Moto, FishMarket, Police,
     }
 
     /// <summary>One storefront: where it stands (front centre on the sidewalk edge, facing out of <see cref="Inward"/>), its size and trade.</summary>
@@ -53,6 +53,7 @@ namespace OpeningBell.City
             Trade.AutoParts => Hours.Of(8, 19),
             Trade.SmokeShop => Hours.Of(9, 22),
             Trade.Bank => Hours.Of(9, 17),
+            Trade.Police => Hours.Of(0, 24),
             Trade.Restaurant => Hours.Of(11, 22),
             Trade.Bar => Hours.Of(16, 2),
             Trade.Nightclub => Hours.Of(21, 3),
@@ -82,6 +83,7 @@ namespace OpeningBell.City
             [Trade.Bakery] = ("Casual2", "Morning! It's all fresh.", new[] { "Sourdough sells out by ten.", "Day-old's half price." }, new[] { ("Loaf of bread", 5m, "Still warm."), ("Donut", 2m, "Enjoy.") }),
             [Trade.AutoParts] = ("Worker", "What are you driving?", new[] { "We can test your battery for free.", "Wiper blades are on sale." }, new[] { ("Motor oil", 12m, "Five quarts should do it."), ("Car battery", 140m, "Bring the old one back for the core.") }),
             [Trade.SmokeShop] = ("Punk", "What can I get you?", new[] { "No sampling in the store.", "Lighters are by the register." }, new[] { ("Lighter", 3m, "There you go.") }),
+            [Trade.Police] = ("Formal", "Kell Valley Police. What's the problem?", new[] { "For an emergency, call 911.", "Lost property is Tuesdays and Thursdays.", "Parking tickets get paid at City Hall." }, new (string, decimal, string)[0]),
             [Trade.Bank] = ("Suit", "Welcome to Kell Valley. How can I help?", new[] { "The ATM outside is open all night.", "Rates are on the board." }, new (string, decimal, string)[0]),
             [Trade.Restaurant] = ("Casual2", "Table for one?", new[] { "The special's on the board.", "Kitchen closes at ten." }, new[] { ("Dinner", 16m, "Enjoy your meal."), ("Soup", 7m, "Careful, it's hot.") }),
             [Trade.Books] = ("Formal", "Browse as long as you like.", new[] { "Used books half the cover price.", "The shop cat's asleep in history." }, new[] { ("Used book", 6m, "Great pick.") }),
@@ -201,6 +203,7 @@ namespace OpeningBell.City
             Trade.Bar or Trade.Nightclub or Trade.Arcade => PlaceCategory.Night,
             Trade.MotelOffice => PlaceCategory.Home,
             Trade.Gym => PlaceCategory.Leisure,
+            Trade.Police => PlaceCategory.Work,
             _ => PlaceCategory.Shop,
         };
 
@@ -212,6 +215,7 @@ namespace OpeningBell.City
             Trade.Pharmacy => "Pharmacist",
             Trade.Tattoo => "Tattoo artist",
             Trade.Bank => "Teller",
+            Trade.Police => "Desk officer",
             Trade.Nightclub => "Bouncer",
             _ => "Clerk",
         };
@@ -356,6 +360,15 @@ namespace OpeningBell.City
                     for (float yy = 1.2f; yy < 2.8f; yy += 0.8f)
                         k.Box(r, "Flash", new Vector3(-hw + 0.03f, yy, z), new Vector3(0.02f, 0.6f, 0.6f), c.P.Lit(Color.HSVToRGB((float)rng.NextDouble(), 0.5f, 0.8f)), collider: false);
                     k.Fit(r, "loungeSofa", new Vector3(0f, 0f, front - 0.3f), new Vector3(1.8f, 0f, 0f));
+                    break;
+                case Trade.Police:
+                    // Front desk behind glass, a bench to wait on, the notice board and the flag.
+                    k.Span(r, "Desk glass", new Vector3(-hw + 1.2f, 1.04f, cz - 0.05f), new Vector3(hw - 1.6f, 2.3f, cz + 0.05f), c.P.Glass(new Color(0.7f, 0.8f, 0.85f, 0.3f)), collider: true);
+                    k.Fit(r, "bench", new Vector3(-hw + 2f, 0f, front), new Vector3(2f, 0f, 0f));
+                    k.Box(r, "Notice board", new Vector3(hw - 0.08f, 1.6f, front + 1.5f), new Vector3(0.05f, 1f, 1.6f), c.P.Lit(new Color(0.55f, 0.42f, 0.28f)), collider: false);
+                    k.Box(r, "Wanted posters", new Vector3(hw - 0.11f, 1.6f, front + 1.5f), new Vector3(0.01f, 0.7f, 1.3f), c.P.Lit(new Color(0.92f, 0.9f, 0.82f)), collider: false);
+                    k.Cylinder(r, "Flag pole", new Vector3(hw - 0.5f, 1.2f, d - 0.6f), 0.04f, 2.4f, c.P.Lit(new Color(0.75f, 0.72f, 0.6f), 0.6f));
+                    k.Box(r, "Flag", new Vector3(hw - 0.9f, 2.1f, d - 0.6f), new Vector3(0.8f, 0.5f, 0.02f), c.P.Lit(new Color(0.15f, 0.3f, 0.55f)), collider: false);
                     break;
                 case Trade.Bank:
                     k.Span(r, "Teller glass", new Vector3(-hw + 1.2f, 1.04f, cz - 0.05f), new Vector3(hw - 1.6f, 2.3f, cz + 0.05f), c.P.Glass(new Color(0.7f, 0.8f, 0.85f, 0.3f)), collider: true);

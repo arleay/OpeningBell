@@ -309,7 +309,6 @@ namespace OpeningBell.City
             new Shell(97f, 50f, 126.5f, 61.5f, 12f, FacadeStyle.Concrete),
             // Town centre (Calder is special)
             new Shell(172f, -5.5f, 206.5f, 24f, 16f, FacadeStyle.Glass, sign: "MERIDIAN"),
-            new Shell(144f, 27f, 168f, 61.5f, 14f, FacadeStyle.Concrete, sign: "PARKING"),
             new Shell(172f, 30f, 206.5f, 61.5f, 12f, FacadeStyle.Brick),
             // Lowell Court: cheap flats across Maple from the apartment
             new Shell(-21.5f, -44.5f, 46.5f, -22.5f, 12f, FacadeStyle.Brick),

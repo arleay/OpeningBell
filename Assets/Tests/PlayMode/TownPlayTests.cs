@@ -161,6 +161,49 @@ namespace OpeningBell.Tests
             Object.Destroy(car.gameObject);
         }
 
+        /// <summary>Places go on the map once you've walked past them, districts once you're in them; the save keeps them.</summary>
+        [UnityTest]
+        public IEnumerator Map_FillsIn_AsYouExplore_AndRemembers()
+        {
+            yield return LoadMain();
+            var city = Find<CityBuilder>();
+            var game = Find<GameBootstrap>();
+            var player = Find<FirstPersonController>();
+            MapDiscovery map = city.Minimap.Discovery;
+            Assert.Greater(map.Places.Count, 45, "storefronts, mechanic, dealers, fuel, casino, parkade");
+            Assert.IsTrue(map.Knows(map.Places.First(p => p.Icon == MapIcon.Home)), "home is on the map from the start");
+            MapPlace police = map.Places.First(p => p.Name == "Kell Valley Police");
+            Assert.AreEqual(MapIcon.Police, police.Icon);
+            Assert.IsFalse(map.Knows(police), "not found yet");
+            Assert.IsFalse(city.Minimap.Places.Any(p => p.Icon == MapIcon.Police));
+
+            player.PlaceAt(police.At + new Vector3(-7f, 0.1f, -6f), 60f, 2f);
+            yield return new WaitForSeconds(0.8f);
+            Assert.IsTrue(map.Knows(police), "found by walking past");
+            Assert.IsTrue(map.KnowsDistrict("Downtown"));
+            Assert.IsTrue(city.Minimap.Places.Any(p => p.Icon == MapIcon.Police), "on the minimap now");
+            yield return CaptureWithHud(player, Find<InteractionHud>(), "map-police.png");
+
+            // A taxi home: paid for, the clock moves on by the ride, and you're set down at the door.
+            MapPlace home = map.Places.First(p => p.Icon == MapIcon.Home);
+            float d = Taxi.Distance(player.transform.position, home);
+            decimal bank = game.Economy.Bank.Balance;
+            System.DateTime before = game.Clock.Now;
+            Assert.IsNull(Taxi.Ride(game, player, city.Driver, home));
+            Assert.AreEqual(bank - Taxi.Fare(d), game.Economy.Bank.Balance, "the fare");
+            Assert.GreaterOrEqual((game.Clock.Now - before).TotalMinutes, Taxi.Minutes(d) - 0.01, "the ride took time");
+            Assert.Less(Taxi.Distance(player.transform.position, home), 1f, "at home");
+            Assert.IsNotNull(Taxi.Ride(game, player, city.Driver, home), "no taxi for a walk across the street");
+
+            game.Save();
+            yield return UnityEngine.SceneManagement.SceneManager.LoadSceneAsync("Main");
+            yield return null;
+            yield return null;
+            MapDiscovery again = Find<CityBuilder>().Minimap.Discovery;
+            Assert.IsTrue(again.Knows(again.Places.First(p => p.Name == "Kell Valley Police")), "remembered after loading");
+            Assert.IsTrue(again.KnowsDistrict("Downtown"));
+        }
+
         /// <summary>A rainy day: wet roads cost grip, fewer people are out, traffic eases off; clearing up restores it.</summary>
         [UnityTest]
         public IEnumerator Rain_WetsTheRoads_AndEmptiesTheStreets()

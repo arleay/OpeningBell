@@ -37,6 +37,8 @@ namespace OpeningBell.City
         private Texture2D _texture;
         private VisualElement _frame, _map, _north, _icons;
         private readonly List<Place> _places = new List<Place>();
+        private MapDiscovery _discovery;
+        private int _shownVersion = -1;
         private readonly List<VisualElement> _cars = new List<VisualElement>();
         private readonly List<Vector2> _carPositions = new List<Vector2>();
 
@@ -57,11 +59,18 @@ namespace OpeningBell.City
             (MapIcon.Fuel, "fuel_driveway", "Tidewater Fuel"),
         };
 
-        /// <summary>Where each marked place is (for tests and a future full map).</summary>
+        /// <summary>The places on the map so far (found, or known from the start).</summary>
         public IEnumerable<(MapIcon Icon, Vector3 At)> Places
         {
-            get { foreach (Place p in _places) yield return (p.Icon, p.At); }
+            get
+            {
+                if (_discovery == null) yield break;
+                foreach (MapPlace p in _discovery.Places)
+                    if (_discovery.Knows(p)) yield return (p.Icon, p.At);
+            }
         }
+
+        public MapDiscovery Discovery => _discovery;
 
         public void Configure(CityContext c, FirstPersonController player, InteractionHud hud, FleetView fleet)
         {
@@ -70,6 +79,8 @@ namespace OpeningBell.City
             _hud = hud;
             _fleet = fleet;
             _texture = MapTexture.Paint(c);
+            _discovery = gameObject.AddComponent<MapDiscovery>();
+            _discovery.Configure(c.Game, player.transform, hud, MapPlaces.Gather(c));
         }
 
         private float Scale => Size / 2f / Range; // UI pixels per metre
@@ -134,12 +145,17 @@ namespace OpeningBell.City
             _north.style.backgroundColor = new Color(0.1f, 0.1f, 0.12f, 0.8f);
             SetRadius(_north, 9f);
             _frame.Add(_north);
+        }
 
-            void Mark(MapIcon icon, string anchor)
-            {
-                if (_c.Anchors.TryGetValue(anchor, out Vector3 at)) _places.Add(new Place(icon, at, Icon(icon)));
-            }
-            foreach (var (icon, anchor, _) in Landmarks) Mark(icon, anchor);
+        /// <summary>Markers for every known place, remade only when something new is found.</summary>
+        private void SyncPlaces()
+        {
+            if (_discovery.Version == _shownVersion) return;
+            _shownVersion = _discovery.Version;
+            foreach (Place p in _places) p.Element.RemoveFromHierarchy();
+            _places.Clear();
+            foreach (MapPlace p in _discovery.Places)
+                if (_discovery.Knows(p)) _places.Add(new Place(p.Icon, p.At, Icon(p.Icon)));
         }
 
         private VisualElement Icon(MapIcon icon)
@@ -177,7 +193,11 @@ namespace OpeningBell.City
             _map.style.rotate = new Rotate(-yaw);
 
             PlaceOnMap(_north, me + new Vector3(0f, 0f, 10000f), me, yaw, 18f);
-            foreach (Place p in _places) PlaceOnMap(p.Element, p.At, me, yaw, IconSize);
+            SyncPlaces();
+            // Home and work always show (pinned to the rim when they're far); everything else only when it's on the disc.
+            foreach (Place p in _places)
+                p.Element.style.display = PlaceOnMap(p.Element, p.At, me, yaw, IconSize) || p.Icon == MapIcon.Home || p.Icon == MapIcon.Office
+                    ? DisplayStyle.Flex : DisplayStyle.None;
 
             // Parked cars you own.
             _carPositions.Clear();
@@ -191,17 +211,19 @@ namespace OpeningBell.City
             }
         }
 
-        /// <summary>Positions a marker by its bearing from the player, clamped to the rim when out of range.</summary>
-        private void PlaceOnMap(VisualElement e, Vector3 at, Vector3 me, float yaw, float size)
+        /// <summary>Positions a marker by its bearing from the player, clamped to the rim when out of range (then false).</summary>
+        private bool PlaceOnMap(VisualElement e, Vector3 at, Vector3 me, float yaw, float size)
         {
             Vector2 d = new Vector2(at.x - me.x, at.z - me.z);
             float r = yaw * Mathf.Deg2Rad;
             // Into the view's frame: x to the right of the heading, y along it.
             var local = new Vector2(d.x * Mathf.Cos(r) - d.y * Mathf.Sin(r), d.x * Mathf.Sin(r) + d.y * Mathf.Cos(r)) * Scale;
             float rim = Size / 2f - size / 2f - 4f;
-            if (local.magnitude > rim) local = local.normalized * rim;
+            bool inside = local.magnitude <= rim;
+            if (!inside) local = local.normalized * rim;
             e.style.left = Size / 2f - 3f + local.x - size / 2f;
             e.style.top = Size / 2f - 3f - local.y - size / 2f;
+            return inside;
         }
 
         private static void SetRadius(VisualElement e, float r)

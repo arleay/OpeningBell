@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using OpeningBell.Core;
@@ -61,6 +62,8 @@ namespace OpeningBell
         public Inbox Inbox { get; private set; }
         /// <summary>What the player has drawn on charts, per symbol (saved with the game).</summary>
         public ChartDrawings Drawings { get; } = new ChartDrawings();
+        /// <summary>What the player has found on the map (the city's discovery fills it; saved with the game).</summary>
+        public HashSet<string> Discovered { get; } = new HashSet<string>(StringComparer.Ordinal);
         /// <summary>The player's bikes and boards (spec §16: persistent identity).</summary>
         public global::OpeningBell.Vehicles.Fleet Vehicles { get; private set; }
         /// <summary>Vehicle content (models, 3D meshes, traffic mix).</summary>
@@ -150,6 +153,7 @@ namespace OpeningBell
                 Continued = true;
                 if (save.HasLook) Look = save.Look;
                 if (save.HasDrawings) Drawings.RestoreState(save.Drawings);
+                if (save.Discovered != null) Discovered.UnionWith(save.Discovered);
                 if (save.HasPlayer) PlacePlayer(save.Player);
                 Debug.Log($"Loaded save '{saveSlot}' (day {Days.DayNumber}, {Clock.Now:ddd MMM d HH:mm}).");
             }
@@ -176,6 +180,7 @@ namespace OpeningBell
                 Look = Look ?? new PlayerLook(),
                 HasDrawings = true,
                 Drawings = Drawings.CaptureState(),
+                Discovered = new List<string>(Discovered),
             };
             if (player != null)
             {

@@ -487,6 +487,7 @@ namespace OpeningBell.City
 
         private readonly VisualElement _view, _map, _you;
         private readonly Label _selected;
+        private readonly VisualElement _taxi;
         private readonly ScrollView _places;
         private readonly List<(MapIcon Icon, string Name, Vector3 At, VisualElement Marker)> _marks =
             new List<(MapIcon, string, Vector3, VisualElement)>();
@@ -495,6 +496,8 @@ namespace OpeningBell.City
         private bool _follow = true, _dragging;
         private Vector2 _dragFrom;
         private int _selectedIndex = -1;
+        private int _marksVersion = -1;
+        private readonly List<(Rect Area, Label Label, string Name)> _districts = new List<(Rect, Label, string)>();
 
         private const float ViewHeight = Phone.ScreenHeight * 0.62f;
 
@@ -513,15 +516,16 @@ namespace OpeningBell.City
             PhoneKit.Absolute(_map, 0f, 0f);
             if (phone.Map.Texture != null) _map.style.backgroundImage = new StyleBackground(phone.Map.Texture);
 
-            foreach (var (icon, anchor, name) in Minimap.Landmarks)
+            // District names, shown once you've been there (under the markers).
+            foreach (var (name, area) in CityPlan.Districts)
             {
-                if (!phone.City.Anchors.TryGetValue(anchor, out Vector3 at)) continue;
-                var marker = PhoneKit.Box(_map, "place-" + icon);
-                marker.style.width = marker.style.height = 26f;
-                marker.style.backgroundImage = new StyleBackground(MapIcons.Get(icon));
-                int index = _marks.Count;
-                PhoneKit.Tap(marker, () => Select(index, false));
-                _marks.Add((icon, name, at, marker));
+                var label = PhoneKit.Label(_map, name.ToUpperInvariant(), 13f, new Color(1f, 1f, 1f, 0.85f), true);
+                label.pickingMode = PickingMode.Ignore;
+                label.style.position = UnityEngine.UIElements.Position.Absolute;
+                label.style.unityTextAlign = TextAnchor.MiddleCenter;
+                label.style.width = 180f;
+                label.style.letterSpacing = 2f;
+                _districts.Add((area, label, name));
             }
 
             _you = PhoneKit.Box(_map, "you");
@@ -599,6 +603,12 @@ namespace OpeningBell.City
             _selected.name = "map-selected";
             _selected.style.marginLeft = _selected.style.marginRight = 16f;
             _selected.style.marginTop = 8f;
+            // Fast travel to the selected place.
+            _taxi = PhoneKit.Pill(sheet, "", new Color(0.95f, 0.78f, 0.15f), new Color(0.1f, 0.1f, 0.1f), () => TakeTaxi());
+            _taxi.name = "map-taxi";
+            _taxi.style.alignSelf = Align.FlexStart;
+            _taxi.style.marginLeft = 16f;
+            _taxi.style.marginTop = 6f;
             _places = List(sheet);
             _places.style.marginTop = 6f;
         }
@@ -634,18 +644,68 @@ namespace OpeningBell.City
 
         private Vector3 Me => Phone.Player.transform.position;
 
+        private MapDiscovery Discovery => Phone.Map.Discovery;
+
+        /// <summary>Rides to the selected place and puts the phone away (or says why not).</summary>
+        public string TakeTaxi()
+        {
+            if (_selectedIndex < 0 || Discovery == null) return "Pick a place first.";
+            string name = _marks[_selectedIndex].Name;
+            MapPlace place = null;
+            foreach (MapPlace p in Discovery.Places) if (p.Name == name) place = p;
+            string error = place == null ? "Unknown place." : Taxi.Ride(Phone.Game, Phone.Player, Phone.City.Driver, place);
+            if (error != null)
+            {
+                _selected.text = error;
+                return error;
+            }
+            Phone.Close();
+            return null;
+        }
+
+        /// <summary>Markers for the places found so far, remade only when discovery moves on.</summary>
+        private void SyncMarks()
+        {
+            MapDiscovery d = Discovery;
+            if (d == null || d.Version == _marksVersion) return;
+            _marksVersion = d.Version;
+            foreach (var m in _marks) m.Marker.RemoveFromHierarchy();
+            _marks.Clear();
+            _selectedIndex = -1;
+            foreach (MapPlace p in d.Places)
+            {
+                if (!d.Knows(p)) continue;
+                var marker = PhoneKit.Box(_map, "place-" + p.Icon);
+                marker.style.width = marker.style.height = 26f;
+                marker.style.backgroundImage = new StyleBackground(MapIcons.Get(p.Icon));
+                int index = _marks.Count;
+                PhoneKit.Tap(marker, () => Select(index, false));
+                _marks.Add((p.Icon, p.Name, p.At, marker));
+            }
+            _you.BringToFront();
+            foreach (var (_, label, name) in _districts) label.style.display = d.KnowsDistrict(name) ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
         public override void Refresh()
         {
+            SyncMarks();
             Layout();
             Vector3 me = Me;
+            _taxi.style.display = DisplayStyle.None;
             if (_selectedIndex >= 0)
             {
                 var m = _marks[_selectedIndex];
                 _selected.text = $"{m.Name}  ·  {Distance(m.At, me)} {Compass(m.At - me)}";
+                float d = Vector2.Distance(new Vector2(m.At.x, m.At.z), new Vector2(me.x, me.z));
+                if (d >= Taxi.Shortest)
+                {
+                    _taxi.style.display = DisplayStyle.Flex;
+                    _taxi.Q<Label>().text = $"Taxi  ·  ${Taxi.Fare(d):0.00}  ·  {Taxi.Minutes(d)} min";
+                }
             }
             else
             {
-                _selected.text = "Places";
+                _selected.text = Discovery != null ? $"Places  ·  {_marks.Count} of {Discovery.Places.Count} found" : "Places";
             }
 
             var order = new List<int>();
@@ -692,6 +752,11 @@ namespace OpeningBell.City
             {
                 Vector2 p = MapTexture.ToPixel(m.At) * k;
                 PhoneKit.Absolute(m.Marker, p.x - 13f, p.y - 13f);
+            }
+            foreach (var (area, label, _) in _districts)
+            {
+                Vector2 p = MapTexture.ToPixel(new Vector3(area.center.x, 0f, area.center.y)) * k;
+                PhoneKit.Absolute(label, p.x - 90f, p.y - 9f);
             }
             Vector2 you = MapTexture.ToPixel(me) * k;
             PhoneKit.Absolute(_you, you.x - 10f, you.y - 10f);

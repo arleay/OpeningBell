@@ -25,7 +25,8 @@ namespace OpeningBell.Tests
             Minimap map = city.Minimap;
             Assert.IsTrue(map.Visible, "minimap on screen while walking");
             MapIcon[] marked = map.Places.Select(p => p.Icon).ToArray();
-            CollectionAssert.IsSubsetOf(new[] { MapIcon.Home, MapIcon.Office, MapIcon.Coffee, MapIcon.Mart, MapIcon.Fuel }, marked);
+            CollectionAssert.IsSubsetOf(new[] { MapIcon.Home, MapIcon.Office }, marked);
+            CollectionAssert.DoesNotContain(marked, MapIcon.Fuel, "the fuel station goes on the map once you've been past it");
 
             // From home, the home icon is near the middle and the office is pinned to the rim, off towards it.
             VisualElement frame = hud.Root.Q("minimap");

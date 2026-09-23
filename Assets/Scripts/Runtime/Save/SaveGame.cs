@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using OpeningBell.Economy;
 using OpeningBell.Market;
 using OpeningBell.Trading;
@@ -35,6 +36,8 @@ namespace OpeningBell
         public PlayerLook Look = new PlayerLook();
         public bool HasDrawings;
         public ChartDrawingsSaveData Drawings = new ChartDrawingsSaveData();
+        /// <summary>Places and districts found on the map (names; districts prefixed "district:"). Additive: older saves start blank.</summary>
+        public List<string> Discovered = new List<string>();
     }
 
     /// <summary>
