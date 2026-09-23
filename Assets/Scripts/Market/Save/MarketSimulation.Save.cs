@@ -17,6 +17,7 @@ namespace OpeningBell.Market
                 TradingDate = TradingDate.Ticks,
                 TickCount = TickCount,
                 MarketActivityBits = SaveCodec.Bits(_engine.MarketActivityLog),
+                MarketDayDriftBits = SaveCodec.Bits(_engine.MarketDayDrift),
                 MarketRng = _engine.MarketRng.CaptureState(),
             };
             foreach (SecurityRuntimeState s in _securities) data.Securities.Add(Capture(s, maxMinuteCandles));
@@ -40,6 +41,7 @@ namespace OpeningBell.Market
             TradingDate = new DateTime(data.TradingDate);
             TickCount = data.TickCount;
             _engine.MarketActivityLog = SaveCodec.Double(data.MarketActivityBits);
+            _engine.MarketDayDrift = SaveCodec.Double(data.MarketDayDriftBits);
             _engine.MarketRng.RestoreState(data.MarketRng);
 
             foreach (SecuritySaveData saved in data.Securities)
@@ -80,6 +82,7 @@ namespace OpeningBell.Market
                 DayVolume = s.DayVolume,
                 DayNotional = SaveCodec.Fixed(s.DayNotional),
                 Candles = Capture(s.Candles, maxMinuteCandles),
+                Flow = FlowCodec.Capture(s.Flow),
             };
         }
 
@@ -103,6 +106,7 @@ namespace OpeningBell.Market
             s.DayVolume = d.DayVolume;
             s.DayNotional = SaveCodec.Decimal(d.DayNotional);
             Restore(s.Candles, d.Candles);
+            FlowCodec.Restore(s.Flow, d.Flow);
         }
 
         private static IndexSaveData Capture(MarketIndex index, int maxMinuteCandles) => new IndexSaveData

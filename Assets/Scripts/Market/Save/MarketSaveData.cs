@@ -15,6 +15,7 @@ namespace OpeningBell.Market
         public long TradingDate;
         public long TickCount;
         public long MarketActivityBits;
+        public long MarketDayDriftBits;
         public RandomState MarketRng;
         public List<SecuritySaveData> Securities = new List<SecuritySaveData>();
         public IndexSaveData Index = new IndexSaveData();
@@ -33,6 +34,8 @@ namespace OpeningBell.Market
         public int LastDirection;
         public long PreviousClose, RegularClose, DayHigh, DayLow, DayVolume, DayNotional;
         public CandleSetSaveData Candles = new CandleSetSaveData();
+        /// <summary>Order-flow state (see FlowCodec); empty in saves from before the order-flow market.</summary>
+        public List<long> Flow = new List<long>();
     }
 
     [Serializable]

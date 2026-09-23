@@ -5,12 +5,12 @@ using OpeningBell.Core;
 namespace OpeningBell.Market
 {
     /// <summary>
-    /// Per-tick multi-factor model. Each security's log price is fair + deviation:
-    ///   fair      += βm·market + βs·sector + σ·z                   permanent; systematic moves persist
-    ///   deviation  = deviation·e^(−κ·Δ) + φ·momentum·Δt + σ·k·z'    transient overreaction that mean-reverts
-    /// σ scales with the intraday profile and a stochastic "activity" level (log-OU) that also drives volume
-    /// and spread. That gives volatility clustering and fat tails without a heavy model.
-    /// The engine never sees orders: it cannot react to what the player does.
+    /// Two layers per security (see MARKET_SPEC.md):
+    ///   information  fair += βm·market + βs·sector + σ·z + day drift + news     what informed traders think it's worth
+    ///   price        moved only by order flow (<see cref="OrderFlow"/>): participants trade, the book absorbs
+    /// Price = fair + deviation, where the deviation is whatever the flow has left between price and fair value.
+    /// σ scales with the intraday profile and a stochastic "activity" level (log-OU) that also drives volume and
+    /// spread (volatility clustering). The market has a hidden day too (its drift gives the index trend days).
     /// </summary>
     internal sealed class PriceEngine
     {
@@ -33,6 +33,21 @@ namespace OpeningBell.Market
         private readonly double _newsDelivery;
         private readonly double _newsActivityDecay;
         private double _marketActivityLog;
+        private readonly OrderFlow _flow;
+        private readonly double _stepsPerSession;
+
+        /// <summary>
+        /// Share of each layer's variance left to random diffusion once day drifts and gaps take their part, so
+        /// close-to-close volatility still matches the specs on average.
+        /// </summary>
+        private const double FairDiffusion = 0.5, MarketDiffusion = 0.78;
+        /// <summary>Spread of the market's daily drift, in market-volatility units.</summary>
+        private const double MarketDayDriftSpread = 0.65;
+
+        /// <summary>The market's hidden day: drift of the index factor over the regular session, in market-vol units.</summary>
+        internal double MarketDayDrift { get; set; }
+
+        internal OrderFlow Flow => _flow;
 
         internal double MarketActivityLog
         {
@@ -63,7 +78,12 @@ namespace OpeningBell.Market
             _volNormalizer = 1 / Math.Sqrt(DailyVarianceMultiplier(config, schedule));
             _newsDelivery = 1 - Math.Exp(-_dt / (config.NewsDeliveryMinutes * 60));
             _newsActivityDecay = Math.Exp(-_dt * Math.Log(2) / (config.NewsActivityHalfLifeMinutes * 60));
+            _stepsPerSession = schedule.RegularSessionSeconds / _dt;
+            _flow = new OrderFlow(config, schedule);
+            MarketDayDrift = MarketDayDriftSpread * _marketRng.NextGaussian();
         }
+
+        private static bool SmallCap(SecuritySpec spec) => spec.DailyVolatility >= 0.05 || spec.FloatShares < 30_000_000;
 
         /// <summary>Queues a news catalyst for the next tick (see NewsEngine for how the moves are drawn).</summary>
         public void ApplyNews(SecurityRuntimeState sec, double fairShift, double overreaction, double severity, double attentionScale)
@@ -103,6 +123,7 @@ namespace OpeningBell.Market
             var profile = IntradayProfile.Evaluate(_config, _schedule, session, time);
             SetQuoteWithoutTrade(sec, profile, session == MarketSession.Regular, time);
             sec.Quote = new Quote(sec.Quote.Bid, sec.Quote.Ask, sec.Quote.BidSize, sec.Quote.AskSize, last, 0, 0, time);
+            _flow.StartDay(sec, sec.FairLog, DayProfile.Draw(sec.Rng, MarketDayDrift, SmallCap(sec.Spec)));
         }
 
         public void Initialize(MarketIndex index)
@@ -122,13 +143,14 @@ namespace OpeningBell.Market
             double marketActivity = Math.Exp(_marketActivityLog - _activityVariance);
             double factorScale = _volNormalizer * profile.Volatility * marketActivity * _sqrtDtDays;
 
-            double marketReturn = _config.MarketDailyDrift * _dtDays +
-                                  _config.MarketDailyVolatility * factorScale * _marketRng.NextGaussian();
+            double marketDrift = regular ? MarketDayDrift * _config.MarketDailyVolatility / _stepsPerSession : 0;
+            double marketReturn = _config.MarketDailyDrift * _dtDays + marketDrift +
+                                  _config.MarketDailyVolatility * MarketDiffusion * factorScale * _marketRng.NextGaussian();
             for (int i = 0; i < _sectorReturns.Length; i++)
                 _sectorReturns[i] = _config.SectorDailyVolatility * factorScale * _marketRng.NextGaussian();
 
             for (int i = 0; i < securities.Count; i++)
-                TickSecurity(securities[i], time, profile, regular, marketReturn, marketActivity);
+                TickSecurity(securities[i], time, session, profile, regular, marketReturn, marketActivity);
 
             double indexNews = index.NewsImpulse + index.PendingNewsLog * _newsDelivery;
             index.PendingNewsLog -= index.PendingNewsLog * _newsDelivery;
@@ -138,17 +160,19 @@ namespace OpeningBell.Market
             index.Candles.Record(time, index.Level, 0, regular);
         }
 
-        private void TickSecurity(SecurityRuntimeState sec, DateTime time, ActivityProfile profile, bool regular,
+        private void TickSecurity(SecurityRuntimeState sec, DateTime time, MarketSession session, ActivityProfile profile, bool regular,
             double marketReturn, double marketActivity)
         {
             SecuritySpec spec = sec.Spec;
             SeededRandom rng = sec.Rng;
+            FlowState flow = sec.Flow;
 
             // News: consume impulses, deliver part of the pending move, decay attention. All exactly zero/one without news.
             double delivered = sec.PendingNewsLog * _newsDelivery;
             sec.PendingNewsLog -= delivered;
             double newsFair = sec.NewsImpulseFair + delivered;
-            double newsDeviation = sec.NewsImpulseDeviation;
+            // What news traders act on right away: the headline's immediate value plus the crowd's over/under-reaction.
+            double newsNow = sec.NewsImpulseFair + sec.NewsImpulseDeviation;
             sec.NewsImpulseFair = 0;
             sec.NewsImpulseDeviation = 0;
             sec.NewsActivityLog *= _newsActivityDecay;
@@ -156,38 +180,41 @@ namespace OpeningBell.Market
 
             sec.ActivityLog = sec.ActivityLog * _activityDecay + _activityShock * rng.NextGaussian();
             double activity = Math.Exp(sec.ActivityLog - _activityVariance) * Math.Sqrt(attention);
-            double volMultiplier = profile.Volatility * activity;
-            double sigma = spec.DailyVolatility * _volNormalizer * volMultiplier * _sqrtDtDays;
+            double sigma = spec.DailyVolatility * _volNormalizer * profile.Volatility * activity * _sqrtDtDays;
+            double minutesSinceOpen = (time.TimeOfDay - _schedule.RegularOpen).TotalMinutes;
 
-            double zFair = rng.NextGaussian();
-            double zNoise = rng.NextGaussian();
-            double oldLog = sec.FairLog + sec.DeviationLog;
+            // ---- information: fair value moves with the market, the sector, the company's own news and the day's drift.
+            double price = sec.FairLog + sec.DeviationLog;
+            double drift = regular ? flow.Day.DriftAt(minutesSinceOpen) * spec.DailyVolatility / _stepsPerSession : 0;
+            double systematic = spec.MarketBeta * marketReturn + spec.SectorBeta * _sectorReturns[sec.SectorIndex];
+            sec.FairLog += systematic + sigma * FairDiffusion * rng.NextGaussian() + newsFair + drift;
 
-            sec.FairLog += spec.MarketBeta * marketReturn + spec.SectorBeta * _sectorReturns[sec.SectorIndex] + sigma * zFair + newsFair;
-            sec.DeviationLog = sec.DeviationLog * Math.Exp(-spec.MeanReversionPerDay * _dtDays)
-                               + spec.MomentumCoefficient * sec.Momentum * _dt
-                               + sigma * _config.TransientNoiseRatio * zNoise
-                               + newsDeviation;
+            // ---- price: only order flow moves it.
+            if (newsNow != 0) _flow.OnNews(sec, newsNow, price);
+            bool openingCross = regular && !flow.OpenAuctionDone;
+            if (openingCross) _flow.OnOpen(sec, price);
+            var step = new FlowStep(regular, minutesSinceOpen, profile.Volume, sigma, systematic);
+            double newLog = Math.Max(MinLogPrice, _flow.Step(sec, price, step, out double gross));
+            sec.DeviationLog = newLog - sec.FairLog;
+            if ((time.TimeOfDay.TotalSeconds + _dt) % 60 < 1e-6) _flow.Minute(sec, newLog, step);
 
-            double newLog = sec.FairLog + sec.DeviationLog;
-            if (newLog < MinLogPrice)
-            {
-                sec.DeviationLog = MinLogPrice - sec.FairLog;
-                newLog = MinLogPrice;
-            }
-
-            double logReturn = newLog - oldLog;
+            double logReturn = newLog - price;
             sec.Momentum += _momentumAlpha * (logReturn / _dt - sec.Momentum);
 
-            // Volume follows the time-of-day profile, both activity levels, and how surprising this move was.
-            double k = _config.TransientNoiseRatio;
-            double surprise = Math.Abs(zFair + k * zNoise) / Math.Sqrt(1 + k * k) / MeanAbsNormal;
-            // activity already carries √attention; the second √attention gives volume the full news boost.
+            // Volume: the time-of-day profile and activity, the day's relative volume, and how much actually traded
+            // this step (absorption and stop runs print heavy volume even when price barely moves).
+            double flowRatio = flow.GrossEma > 0 ? Math.Min(4, gross / flow.GrossEma) : 1;
             double expectedShares = spec.AverageDailyVolume * _dtDays * profile.Volume * activity * Math.Sqrt(attention)
-                                    * marketActivity * _volumeNormalizer * (0.5 + 0.5 * surprise) * LogNormal(rng, _config.VolumeNoise);
+                                    * marketActivity * _volumeNormalizer * flow.Day.RelativeVolume / RelativeVolumeMean
+                                    * (0.6 + 0.4 * flowRatio) * LogNormal(rng, _config.VolumeNoise);
+            // Opening and closing crosses: queued orders meet in one big print.
+            if (openingCross) expectedShares += spec.AverageDailyVolume * 0.006 * flow.Day.RelativeVolume * LogNormal(rng, 0.4);
+            bool closingCross = session == MarketSession.Regular && (time + TimeSpan.FromSeconds(_dt)).TimeOfDay >= _schedule.RegularClose;
+            if (closingCross) expectedShares += spec.AverageDailyVolume * 0.035 * flow.Day.RelativeVolume * LogNormal(rng, 0.4);
             long shares = (long)Math.Round(expectedShares);
 
-            ComputeQuote(sec, Math.Exp(newLog), SpreadScale(regular, profile, activity), profile,
+            double depth = flow.Day.Liquidity / (1 + flow.Withdraw);
+            ComputeQuote(sec, Math.Exp(newLog), SpreadScale(regular, profile, activity) / Math.Sqrt(depth), profile,
                 out decimal bid, out decimal ask, out long bidSize, out long askSize);
 
             decimal last = sec.Last;
@@ -198,20 +225,17 @@ namespace OpeningBell.Market
                 direction = logReturn > 0 ? 1 : logReturn < 0 ? -1 : (rng.NextDouble() < 0.5 ? 1 : -1);
                 last = direction > 0 ? ask : bid;
 
-                if (sec.DayVolume == 0)
+                // A step that ran through stops and came back leaves a print at its extreme (the wick of a sweep).
+                decimal tick = PriceTick.For(last);
+                double extreme = direction >= 0 ? flow.PathLow : flow.PathHigh;
+                decimal extremePrice = PriceTick.RoundNearest((decimal)Math.Exp(Math.Max(MinLogPrice, extreme)));
+                long wickShares = 0;
+                if (Math.Abs(extremePrice - last) >= 2 * tick && extremePrice > 0m)
                 {
-                    sec.DayHigh = last;
-                    sec.DayLow = last;
+                    wickShares = Math.Max(1, shares / 4);
+                    RecordPrint(sec, time, extremePrice, wickShares, regular);
                 }
-                else
-                {
-                    if (last > sec.DayHigh) sec.DayHigh = last;
-                    if (last < sec.DayLow) sec.DayLow = last;
-                }
-
-                sec.DayVolume += shares;
-                sec.DayNotional += last * shares;
-                sec.Candles.Record(time, last, shares, regular);
+                RecordPrint(sec, time, last, shares - wickShares, regular);
             }
             else
             {
@@ -221,11 +245,33 @@ namespace OpeningBell.Market
             sec.Quote = new Quote(bid, ask, bidSize, askSize, last, shares, direction, time);
         }
 
+        /// <summary>Mean volume multiplier from the day mix, busy flow and the opening/closing crosses; dividing keeps ADV calibrated.</summary>
+        private const double RelativeVolumeMean = 1.55;
+
+        private static void RecordPrint(SecurityRuntimeState sec, DateTime time, decimal price, long shares, bool regular)
+        {
+            if (shares <= 0) return;
+            if (sec.DayVolume == 0)
+            {
+                sec.DayHigh = price;
+                sec.DayLow = price;
+            }
+            else
+            {
+                if (price > sec.DayHigh) sec.DayHigh = price;
+                if (price < sec.DayLow) sec.DayLow = price;
+            }
+            sec.DayVolume += shares;
+            sec.DayNotional += price * shares;
+            sec.Candles.Record(time, price, shares, regular);
+        }
+
         /// <summary>Close-to-open jump applied when a new trading day's premarket begins.</summary>
         public void ApplyOvernightGap(IReadOnlyList<SecurityRuntimeState> securities, MarketIndex index, DateTime time)
         {
             double scale = _volNormalizer * _config.OvernightVolatilityRatio;
             double marketGap = _config.MarketDailyVolatility * scale * _marketRng.NextGaussian();
+            MarketDayDrift = MarketDayDriftSpread * _marketRng.NextGaussian();
             for (int i = 0; i < _sectorReturns.Length; i++)
                 _sectorReturns[i] = _config.SectorDailyVolatility * scale * _marketRng.NextGaussian();
 
@@ -243,7 +289,12 @@ namespace OpeningBell.Market
                                + spec.DailyVolatility * scale * sec.Rng.NextGaussian();
                 sec.DeviationLog *= _config.OvernightDeviationCarry;
                 sec.Momentum = 0;
+
+                // Today's hidden character; gap days open away from yesterday's close.
+                DayProfile day = DayProfile.Draw(sec.Rng, MarketDayDrift, SmallCap(spec));
+                sec.FairLog += day.Gap * spec.DailyVolatility * _config.OvernightVolatilityRatio;
                 SetQuoteWithoutTrade(sec, profile, false, time);
+                _flow.StartDay(sec, sec.FairLog + sec.DeviationLog, day);
             }
 
             index.LogLevel += marketGap + index.NewsImpulse + index.PendingNewsLog;

@@ -42,6 +42,14 @@ namespace OpeningBell.Market
         internal double PendingNewsLog;        // permanent part still being delivered
         internal double NewsActivityLog;       // decaying attention boost (log multiplier)
         internal readonly SeededRandom Rng;
+        /// <summary>Order-flow model state (participants, book interest, memory, day and regime).</summary>
+        internal readonly FlowState Flow = new FlowState();
+
+        /// <summary>The stock's remembered levels (for the chart's liquidity overlays and the debug view).</summary>
+        public LevelBook Levels => Flow.Levels;
+        /// <summary>Hidden: today's character and the current regime (debug overlay only).</summary>
+        public DayType DayType => Flow.Day.Type;
+        public Regime Regime => Flow.Regime;
 
         internal SecurityRuntimeState(SecuritySpec spec, SeededRandom rng, int maxCandles)
         {

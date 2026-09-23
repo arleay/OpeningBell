@@ -38,7 +38,7 @@ namespace OpeningBell.Market
         public double RegularVolumeFloor = 0.45;
         public double RegularVolumeEdge = 2.1;
         public double OpenBurstVol = 0.8;
-        public double OpenBurstVolume = 1.5;
+        public double OpenBurstVolume = 1.0;
         public double OpenBurstMinutes = 8;
 
         public double PremarketVol = 0.35;
