@@ -21,7 +21,7 @@ namespace OpeningBell.EditorTools
         private static readonly string[] AlsoLooped = { "Interact", "PickUp_Table", "Fixing_Kneeling" };
 
         /// <summary>Bump when a rule changes: Unity re-imports what this postprocessor touched.</summary>
-        public override uint GetVersion() => 9;
+        public override uint GetVersion() => 12;
 
         private void OnPreprocessModel()
         {
@@ -62,6 +62,35 @@ namespace OpeningBell.EditorTools
             var importer = (TextureImporter)assetImporter;
             importer.mipmapEnabled = false;
             importer.wrapMode = UnityEngine.TextureWrapMode.Clamp;
+        }
+
+        public const string CarGlass = "Assets/Art/Materials/CarGlass.mat";
+        /// <summary>Detailed third-party cars, one folder each, converted by Tools/Blender/convert_car.py.</summary>
+        public const string Cars = "Assets/Art/ThirdParty/Cars/";
+
+        /// <summary>
+        /// Third-party car glass comes in opaque (the FBX carries no usable transparency, and settings made on the
+        /// importer's own materials don't stick), so windscreens rendered as white panels. Every material named
+        /// "glass" on a car model is swapped for the shared tinted, see-through <see cref="CarGlass"/>.
+        /// </summary>
+        private void OnPostprocessModel(UnityEngine.GameObject root)
+        {
+            // Cars only: Kenney furniture names its mirror, oven doors and shower screen "glass" too.
+            if (!assetPath.StartsWith(Cars) && !assetPath.StartsWith("Assets/Art/ThirdParty/Quaternius/Cars/")) return;
+            var glass = AssetDatabase.LoadAssetAtPath<UnityEngine.Material>(CarGlass);
+            if (glass == null) return;
+            foreach (UnityEngine.Renderer r in root.GetComponentsInChildren<UnityEngine.Renderer>())
+            {
+                UnityEngine.Material[] mats = r.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < mats.Length; i++)
+                    if (mats[i] != null && mats[i].name.IndexOf("glass", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        mats[i] = glass;
+                        changed = true;
+                    }
+                if (changed) r.sharedMaterials = mats;
+            }
         }
 
         private void OnPreprocessAnimation()

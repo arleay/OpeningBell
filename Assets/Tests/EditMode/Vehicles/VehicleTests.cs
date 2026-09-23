@@ -35,7 +35,7 @@ namespace OpeningBell.Tests
         private static readonly RideInput Pedal = new RideInput { Throttle = 1 };
 
         /// <summary>
-        /// Every car mesh traffic draws on has CarFactory's layout: a "body" and four named wheels, standing on the
+        /// Every car mesh (traffic's and the showroom's) has CarFactory's layout: a "body" and four named wheels, standing on the
         /// ground, front towards +z (front wheels ahead of the back ones), sized like a car once scaled.
         /// </summary>
         [Test]
@@ -43,7 +43,8 @@ namespace OpeningBell.Tests
         {
             var library = AssetDatabase.LoadAssetAtPath<VehicleLibrary>("Assets/ScriptableObjects/Vehicles/VehicleLibrary.asset");
             var problems = new System.Collections.Generic.List<string>();
-            foreach (string name in library.TrafficMix.Distinct())
+            // Traffic's models and every buyable car's.
+            foreach (string name in library.TrafficMix.Concat(library.Models.Where(m => !string.IsNullOrEmpty(m.Mesh)).Select(m => m.Mesh)).Distinct())
             {
                 GameObject car = library.CarMesh(name);
                 if (car == null) { problems.Add(name + ": missing"); continue; }

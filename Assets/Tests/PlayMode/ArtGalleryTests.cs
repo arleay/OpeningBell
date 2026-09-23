@@ -75,6 +75,34 @@ namespace OpeningBell.Tests
             yield return Shot(new Vector3(6f, 0f, -7.25f), 90f, 0f, "art-night.png");
         }
 
+        /// <summary>The showroom supercar parked on Main Street: a three-quarter view and the driver's view.</summary>
+        [UnityTest]
+        public IEnumerator Supercar_IsPhotographed()
+        {
+            yield return LoadMain();
+            _player = Find<FirstPersonController>();
+            GameBootstrap game = Find<GameBootstrap>();
+            game.SkipTo(game.Clock.Now.Date.AddHours(12.4));
+            for (int i = 0; i < 10; i++) yield return null;
+            Assert.IsTrue(game.VehicleLibrary.CreateCatalog().TryGetModel("car_super", out OpeningBell.Vehicles.VehicleModel m));
+            CarController car = CarFactory.BuildDrivable(null, game.VehicleLibrary.CarMesh(m.Mesh), m.Car.Clone(), "Showroom super");
+            var at = new Vector3(40f, 0f, -11.5f);
+            car.transform.SetPositionAndRotation(at, Quaternion.Euler(0f, 90f, 0f));
+            for (int i = 0; i < 4; i++) yield return null;
+
+            Vector3 eye = at + new Vector3(4.2f, 0f, -3.6f);
+            float look = Mathf.Atan2(at.x - eye.x, at.z - eye.z) * Mathf.Rad2Deg;
+            yield return Shot(eye, look, 10f, "art-supercar.png");
+
+            Transform seat = car.transform.Find("Seat");
+            Camera cam = _player.GetComponentInChildren<Camera>();
+            _player.PlaceAt(new Vector3(0f, -200f, 0f), 0f, 0f); // out of the way; the camera is placed by hand
+            for (int i = 0; i < 2; i++) yield return null;
+            cam.transform.SetPositionAndRotation(seat.position, car.transform.rotation * Quaternion.Euler(8f, 0f, 0f));
+            yield return CaptureCamera(cam, "art-supercar-seat.png");
+            Object.Destroy(car.gameObject);
+        }
+
         [UnityTest]
         public IEnumerator Apartment_IsFurnished_AndPhotographed()
         {
