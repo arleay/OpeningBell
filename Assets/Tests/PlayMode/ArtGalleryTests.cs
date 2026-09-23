@@ -103,6 +103,32 @@ namespace OpeningBell.Tests
             Object.Destroy(car.gameObject);
         }
 
+        /// <summary>Every buyable car parked in a row on Main Street, photographed three at a time (art-lineup-N.png).</summary>
+        [UnityTest]
+        public IEnumerator CarLineup_IsPhotographed()
+        {
+            yield return LoadMain();
+            _player = Find<FirstPersonController>();
+            GameBootstrap game = Find<GameBootstrap>();
+            game.SkipTo(game.Clock.Now.Date.AddHours(12.4));
+            for (int i = 0; i < 10; i++) yield return null;
+            var models = game.VehicleLibrary.Models.Where(m => m.Kind == OpeningBell.Vehicles.VehicleKind.Car).ToList();
+            var built = new System.Collections.Generic.List<GameObject>();
+            for (int i = 0; i < models.Count; i++)
+            {
+                GameObject mesh = game.VehicleLibrary.CarMesh(models[i].Mesh);
+                Assert.IsNotNull(mesh, models[i].Id);
+                CarController car = CarFactory.BuildDrivable(null, mesh, models[i].Car.Clone(), models[i].Id);
+                car.transform.SetPositionAndRotation(new Vector3(20f + i * 6.5f, 0f, -11.5f), Quaternion.Euler(0f, 150f, 0f));
+                built.Add(car.gameObject);
+            }
+            for (int i = 0; i < 4; i++) yield return null;
+            // Three cars a frame, from across the street.
+            for (int first = 0, n = 0; first < models.Count; first += 3, n++)
+                yield return Shot(new Vector3(20f + (first + 1) * 6.5f, 0f, -21f), 0f, 3f, $"art-lineup-{n}.png");
+            foreach (GameObject go in built) Object.Destroy(go);
+        }
+
         [UnityTest]
         public IEnumerator Apartment_IsFurnished_AndPhotographed()
         {

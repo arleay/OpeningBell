@@ -21,6 +21,13 @@
 | Engine recordings (EJ25, GTI, S54, 2JZ, V8, V10: engine and exhaust loops by rpm, startups), from the [Multiversal Vehicle Controller: Community](https://assetstore.unity.com/packages/tools/physics/multiversal-vehicle-controller-community-car-physics-controller-304216) Getting Started Demo | BxB Studio | Unity Asset Store EULA (used in the game, not redistributed as files) | Car engine sound (`Assets/Audio/Engines`) |
 | BMW M4 GT3 Evo model (`Assets/Art/ThirdParty/Cars/BmwM4Gt3`) | unknown: **source and licence to confirm before any release** | ? | The Aurel Vector supercar |
 
+| Lamborghini Urus 2019 (as the Brava Toro, `Cars/urus`) | unknown author (free3d-style licence file) | **CC BY-NC: non-commercial. Must be replaced before the game is sold.** | Cars in the Classifieds |
+| LaFerrari 2013 concept restyled (as the Cavallo Ibrido, `Cars/laferrari`) | zenox3d | CC BY-SA 3.0 (credit required; shared alike) | Cars in the Classifieds |
+| Porsche GT3 RSR (as the Kessel RSR, `Cars/rsr`) | Neubi, via BlendSwap | CC BY-SA 3.0 | Cars in the Classifieds |
+| Aventador SVJ Black Ghost, Audi R8 V10, Dodge Charger SRT Hellcat, Ford F-150 Raptor, Ford Mustang GT3, McLaren 650S GT3 (`Cars/aventador`, `r8`, `charger`, `raptor`, `mustang`, `mclaren`) | unknown | **source and licence to confirm before any release** | Cars in the Classifieds |
+
+All imported cars are real brands and carry their makers' logos; they are renamed in game but still need de-badging (or replacing) before a release.
+
 The Kenney building kits (City Commercial, City Suburban, Modular Buildings) have bevelled edges added by
 `Tools/Blender/bevel_kenney.py`.
 

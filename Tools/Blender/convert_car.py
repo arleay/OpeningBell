@@ -1,14 +1,17 @@
-"""Turns a detailed car model (GLB/glTF/FBX from Sketchfab and the like) into the car-kit layout CarFactory
-drives: a root with children "body" and "wheel-front-left/-right", "wheel-back-left/-right", front towards
-Unity's +z, wheels on the ground, sized to a real length.
+"""Turns a detailed car model (GLB/glTF/FBX/.blend from Sketchfab, BlendSwap and the like) into the car-kit layout
+CarFactory drives: a root with children "body" and "wheel-front-left/-right", "wheel-back-left/-right", front
+towards Unity's +z, wheels on the ground, sized to a real length.
 
-    blender -b -P Tools/Blender/convert_car.py -- <in.glb> <out.fbx> [--length 4.7] [--max-tris 60000]
-        [--wheels REGEX] [--front +y|-y] [--scale 1.35]
+    blender -b -P Tools/Blender/convert_car.py -- <in> <out.fbx> [--length 4.7] [--max-tris 60000]
+        [--wheels REGEX|auto] [--front +y|-y|+x|-x] [--drop REGEX] [--only REGEX] [--scale 1.35]
 
-Wheel parts are found by object name (--wheels, default tyres/rims/hubs/discs; brake calipers stay on the body
-since they steer but don't spin) and grouped into four wheels by which corner they sit in. The front is
-guessed from part names containing "front"/"rear" (override with --front). Everything else is joined into
-the body, which is decimated if the whole car exceeds --max-tris. Textures go to Textures/ beside the FBX.
+Only visible, rendered meshes count; --drop removes more by name (backdrops, lights, signs) and --only keeps just
+the matching ones (one car out of a pack). Wheels are found by name (--wheels REGEX; default tyres/rims/hubs/discs,
+brake calipers stay on the body since they steer but don't spin) or, when parts are unnamed (--wheels auto, also
+the fallback when names find nothing), by shape: round in the side view, in the bottom of the car, near a corner.
+A part holding both wheels of an axle is split into its loose pieces first. Wheel parts are grouped into four
+wheels by corner. The front is guessed from part names containing "front"/"rear" (else --front). Everything else
+is joined into the body; body and wheels are decimated to --max-tris overall. Textures go to Textures/ beside the FBX.
 """
 import bpy, sys, os, re, mathutils
 
@@ -20,35 +23,101 @@ opt = dict(zip(args[2::2], args[3::2]))
 FACTORY_SCALE = float(opt.get("--scale", 1.35))
 length = float(opt.get("--length", 4.7))
 max_tris = int(opt.get("--max-tris", 60000))
-wheel_re = re.compile(opt.get("--wheels", r"tire|tyre|wheel|rim|hub|disk|disc"), re.I)
-not_wheel = re.compile(r"brake|caliper|steering", re.I)
+wheel_opt = opt.get("--wheels", r"tire|tyre|wheel|rim|hub|disk|disc|opona|reifen|felge")
+not_wheel = re.compile(r"brake|caliper|calliper|steering|arch|radlauf|well|fender|trim|badge|logo", re.I)
+drop = re.compile(opt["--drop"], re.I) if "--drop" in opt else None
+only = re.compile(opt["--only"], re.I) if "--only" in opt else None
+Vec = mathutils.Vector
 
-bpy.ops.wm.read_factory_settings(use_empty=True)
 ext = src.lower().rsplit(".", 1)[1]
-if ext in ("glb", "gltf"):
-    bpy.ops.import_scene.gltf(filepath=src)
+if ext == "blend":
+    bpy.ops.wm.open_mainfile(filepath=src)
 else:
-    bpy.ops.import_scene.fbx(filepath=src)
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    if ext in ("glb", "gltf"):
+        bpy.ops.import_scene.gltf(filepath=src)
+    else:
+        bpy.ops.import_scene.fbx(filepath=src)
+scene = bpy.context.scene
 
-meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
-# Bake every transform into its mesh (shared meshes are copied first so each bake is independent).
-for o in meshes:
-    if o.data.users > 1:
-        o.data = o.data.copy()
-    mw = o.matrix_world.copy()
-    o.parent = None
-    o.data.transform(mw)
-    o.matrix_world = mathutils.Matrix.Identity(4)
-for o in list(bpy.context.scene.objects):
+# Modifiers (mirror, subdivision, bevels) baked in; hidden, non-rendered, dropped or other-pack parts removed.
+dg = bpy.context.evaluated_depsgraph_get()
+meshes = []
+for o in list(scene.objects):
     if o.type != "MESH":
+        continue
+    keep = o.visible_get() and not o.hide_render and not (drop and drop.search(o.name)) and not (only and not only.search(o.name))
+    if not keep:
+        continue
+    ev = o.evaluated_get(dg)
+    me = bpy.data.meshes.new_from_object(ev)
+    me.transform(o.matrix_world)
+    n = bpy.data.objects.new(o.name, me)
+    scene.collection.objects.link(n)
+    meshes.append(n)
+for o in list(scene.objects):
+    if o not in meshes:
         bpy.data.objects.remove(o)
+meshes = [o for o in meshes if len(o.data.polygons) > 0]
+
+
+def flatten_materials(objs):
+    """FBX carries a base colour and one colour texture per material, nothing in between. Exports that tint paint
+    through Mix nodes and vertex colours (common on Sketchfab) would arrive white, so each such material gets the
+    image plugged straight into Base Color, or, with no image, a flat colour: the average vertex colour of the faces
+    that use it (times any constant colour in the mix)."""
+    def image_in(sock, depth=0):
+        for link in sock.links:
+            n = link.from_node
+            if n.type == "TEX_IMAGE":
+                return n
+            if depth < 4:
+                for inp in n.inputs:
+                    found = image_in(inp, depth + 1)
+                    if found:
+                        return found
+        return None
+
+    avg = {}
+    for o in objs:
+        me = o.data
+        attr = me.color_attributes.active_color if me.color_attributes else None
+        if attr is None:
+            continue
+        for poly in me.polygons:
+            if poly.material_index >= len(o.material_slots) or o.material_slots[poly.material_index].material is None:
+                continue
+            m = o.material_slots[poly.material_index].material
+            acc = avg.setdefault(m.name, [0.0, 0.0, 0.0, 0])
+            for li in poly.loop_indices:
+                c = attr.data[li if attr.domain == "CORNER" else me.loops[li].vertex_index].color
+                acc[0] += c[0]; acc[1] += c[1]; acc[2] += c[2]; acc[3] += 1
+    for m in bpy.data.materials:
+        if not m.node_tree:
+            continue
+        p = next((n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        if p is None or not p.inputs["Base Color"].links:
+            continue
+        base = p.inputs["Base Color"]
+        direct = base.links[0].from_node
+        if direct.type == "TEX_IMAGE":
+            continue
+        img = image_in(base)
+        tree = m.node_tree
+        for link in list(base.links):
+            tree.links.remove(link)
+        if img is not None:
+            tree.links.new(img.outputs["Color"], base)
+        elif m.name in avg and avg[m.name][3] > 0:
+            a = avg[m.name]
+            base.default_value = (a[0] / a[3], a[1] / a[3], a[2] / a[3], 1.0)
 
 
 def bounds(objs):
-    lo = mathutils.Vector((1e18,) * 3); hi = -lo
+    lo = Vec((1e18,) * 3); hi = -lo
     for o in objs:
         for v in o.data.vertices:
-            lo = mathutils.Vector(map(min, lo, v.co)); hi = mathutils.Vector(map(max, hi, v.co))
+            lo = Vec(map(min, lo, v.co)); hi = Vec(map(max, hi, v.co))
     return lo, hi
 
 
@@ -57,38 +126,107 @@ def centre(objs):
     return (lo + hi) / 2
 
 
-wheel_parts = [o for o in meshes if wheel_re.search(o.name) and not not_wheel.search(o.name)]
-body_parts = [o for o in meshes if o not in wheel_parts]
-if len(wheel_parts) < 4:
-    sys.exit(f"only {len(wheel_parts)} wheel parts matched {wheel_re.pattern}: pass --wheels")
+def size(objs):
+    lo, hi = bounds(objs)
+    return hi - lo
 
-# Length runs along whichever horizontal axis the car is longer on; turn it onto Y.
+
+def transform(objs, m):
+    for o in objs:
+        o.data.transform(m)
+        o.data.update()
+
+
+# Length onto Y (whichever horizontal axis the car is longer on), ground at z 0, centred.
 lo, hi = bounds(meshes)
 if hi.x - lo.x > hi.y - lo.y:
-    turn = mathutils.Matrix.Rotation(1.5707963, 4, "Z")
-    for o in meshes:
-        o.data.transform(turn)
+    transform(meshes, mathutils.Matrix.Rotation(1.5707963, 4, "Z"))
+lo, hi = bounds(meshes)
+transform(meshes, mathutils.Matrix.Translation(-Vec(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))))
+car = size(meshes)
+flatten_materials(meshes)
 
-wc = [centre([o]) for o in wheel_parts]
-mid_x = sum(c.x for c in wc) / len(wc)
-mid_y = sum(c.y for c in wc) / len(wc)
 
-# Which end is the front: named parts first, else --front.
+def split_loose(o):
+    bpy.ops.object.select_all(action="DESELECT")
+    bpy.context.view_layer.objects.active = o
+    o.select_set(True)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.separate(type="LOOSE")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    return list(bpy.context.selected_objects)
+
+
+def roundish(d):
+    """Side view (y, z) about square, narrower across (x), sized like a wheel, sitting low."""
+    return (abs(d.y - d.z) < 0.15 * max(d.y, d.z) and d.x < 0.9 * max(d.y, d.z)
+            and 0.08 * car.y < max(d.y, d.z) < 0.3 * car.y)
+
+
+def by_shape(parts):
+    found = []
+    for o in list(parts):
+        d, c = size([o]), centre([o])
+        if c.z > 0.45 * car.z:
+            continue
+        # One part carrying an axle or all four wheels (low, wide): split into pieces and look again.
+        low_and_wide = c.z + d.z / 2 < 0.55 * car.z and d.x > 0.6 * car.x and d.y > 0.08 * car.y
+        if low_and_wide and not roundish(d):
+            parts.remove(o)
+            pieces = split_loose(o)
+            parts.extend(pieces)
+            found.extend(p for p in pieces if roundish(size([p])) and abs(centre([p]).x) > 0.2 * car.x)
+            continue
+        if roundish(d) and abs(c.x) > 0.2 * car.x and abs(c.y) > 0.15 * car.y:
+            found.append(o)
+    # Pieces inside a found wheel's box (spokes, nuts, discs) go with it.
+    boxes = [bounds([w]) for w in found]
+    for o in parts:
+        if o in found or not_wheel.search(o.name):
+            continue
+        lo, hi = bounds([o])
+        for blo, bhi in boxes:
+            pad = 0.02 * car.y
+            if all(lo[k] >= blo[k] - pad and hi[k] <= bhi[k] + pad for k in range(3)):
+                found.append(o)
+                break
+    return found
+
+
+wheel_parts = []
+if wheel_opt != "auto":
+    rx = re.compile(wheel_opt, re.I)
+    wheel_parts = [o for o in meshes if rx.search(o.name) and not not_wheel.search(o.name)
+                   and centre([o]).z < 0.45 * car.z and max(size([o])) < 0.35 * car.y]
+if len(wheel_parts) < 4:
+    wheel_parts = by_shape(meshes)
+if "--debug" in opt:
+    for o in wheel_parts:
+        lo, hi = bounds([o])
+        print("DBG wheel part", o.name, [round(v, 2) for v in lo], [round(v, 2) for v in hi])
+body_parts = [o for o in meshes if o not in wheel_parts]
+if len(wheel_parts) < 4:
+    sys.exit(f"only {len(wheel_parts)} wheel parts found: pass --wheels REGEX")
+
+# Which end is the front: named parts first, else --front, else the end whose wheels are further from the centre
+# of the body (a long rear overhang is rarer than a long front one on the cars we get: guess, then check a render).
 front_sign = None
 if "--front" in opt:
     front_sign = -1 if opt["--front"].startswith("-") else 1
 else:
-    fronts = [o for o in body_parts if re.search(r"front|hood|bonnet|headl", o.name, re.I)]
-    rears = [o for o in body_parts if re.search(r"rear|back|trunk|tail", o.name, re.I)]
+    fronts = [o for o in body_parts if re.search(r"front|hood|bonnet|headl|grill|\.ft\b|_ft\b|vorn|motorhaube", o.name, re.I)]
+    rears = [o for o in body_parts if re.search(r"rear|back|trunk|tail|\.bk\b|_bk\b|heck", o.name, re.I)]
     if fronts and rears:
         front_sign = 1 if centre(fronts).y > centre(rears).y else -1
 if front_sign is None:
-    sys.exit("can't tell the front from part names: pass --front +y or -y")
+    front_sign = 1
+    print("WARN front not detected from names; assumed +y: check the render and pass --front if it's backwards")
 
 groups = {}
-for o, c in zip(wheel_parts, wc):
-    key = ("front" if (c.y - mid_y) * front_sign > 0 else "back", c.x - mid_x)
-    groups.setdefault((key[0], key[1] > 0), []).append(o)
+for o in wheel_parts:
+    c = centre([o])
+    groups.setdefault(("front" if c.y * front_sign > 0 else "back", c.x > 0), []).append(o)
 if len(groups) != 4:
     sys.exit(f"wheel parts fell into {len(groups)} corners, expected 4")
 
@@ -110,65 +248,83 @@ wheels = []
 for (end, pos_x), parts in groups.items():
     # Blender +x ends up as Unity -x with this export, so a wheel at +x (front towards -y) is on the left.
     wheels.append(join(parts, f"wheel-{end}-" + ("left" if pos_x == (front_sign < 0) else "right")))
-    # (checked against CarFactory's convention by VehicleTests only for facing; sides only label the pivots)
 
 everything = [body] + wheels
 # Front towards -Y (Blender's FBX export maps -Y to Unity's +z), ground at z 0, centred on the wheelbase.
 if front_sign > 0:
-    rot = mathutils.Matrix.Rotation(3.14159265, 4, "Z")
-    for o in everything:
-        o.data.transform(rot)
+    transform(everything, mathutils.Matrix.Rotation(3.14159265, 4, "Z"))
 blo, bhi = bounds([body])
 wlo, whi = bounds(wheels)
 fy = centre([w for w in wheels if "front" in w.name]).y
 by = centre([w for w in wheels if "back" in w.name]).y
-shift = mathutils.Matrix.Translation(-mathutils.Vector(((blo.x + bhi.x) / 2, (fy + by) / 2, wlo.z)))
-scale = mathutils.Matrix.Scale(length / FACTORY_SCALE / (bhi.y - blo.y), 4)
-for o in everything:
-    o.data.transform(scale @ shift)
-    o.data.update()
+shift = mathutils.Matrix.Translation(-Vec(((blo.x + bhi.x) / 2, (fy + by) / 2, wlo.z)))
+transform(everything, mathutils.Matrix.Scale(length / FACTORY_SCALE / (bhi.y - blo.y), 4) @ shift)
 
 
 def tris(objs):
     return sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objs)
 
 
+def decimate(o, target):
+    """Collapse-decimate toward target triangles. Collapsing hundreds of tiny loose pieces (lug nuts, badges) can
+    fling vertices far off and crumple thin shells, so the result is kept only if the part's bounds didn't grow;
+    otherwise the ratio is relaxed and retried, and finally the original is kept."""
+    t = tris([o])
+    if t <= target:
+        return
+    original = o.data.copy()
+    lo, hi = bounds([o])
+    tolerance = 0.02 * (hi - lo).length
+    for ratio in (max(0.02, target / t), max(0.1, target / t), 0.3):
+        mod = o.modifiers.new("decimate", "DECIMATE")
+        mod.ratio = ratio
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+        nlo, nhi = bounds([o])
+        if (nlo - lo).length < tolerance and (nhi - hi).length < tolerance:
+            return
+        print(f"WARN decimating {o.name} to {ratio:.2f} moved its bounds; retrying gentler")
+        o.data = original.copy()
+    print(f"WARN {o.name} kept at full detail ({t} tris)")
+
+
 before = tris(everything)
-if before > max_tris:
-    # Only the body is simplified: wheels are small on screen but round silhouettes show faceting first.
-    keep = max(0.1, (max_tris - tris(wheels)) / tris([body]))
-    mod = body.modifiers.new("decimate", "DECIMATE")
-    mod.ratio = keep
-    mod.use_collapse_triangulate = False
-    bpy.context.view_layer.objects.active = body
-    bpy.ops.object.modifier_apply(modifier=mod.name)
+# Wheels get a fixed budget each (round silhouettes show faceting first, but 100k-triangle tyres are absurd);
+# the body gets the rest.
+for w in wheels:
+    decimate(w, int(opt.get("--wheel-tris", min(6000, max_tris // 10))))
+decimate(body, max_tris - tris(wheels))
 
 tex = os.path.join(os.path.dirname(out), "Textures")
 os.makedirs(tex, exist_ok=True)
 for img in bpy.data.images:
-    if img.size[0] == 0:
+    if img.size[0] == 0 or img.source not in ("FILE", "GENERATED"):
         continue
     name = re.sub(r"[^A-Za-z0-9_.-]", "_", img.name)
     if not name.lower().endswith(".png"):
         name += ".png"
-    img.filepath_raw = os.path.join(tex, name)
-    img.file_format = "PNG"
-    img.save()
-    img.filepath = img.filepath_raw
+    try:
+        img.filepath_raw = os.path.join(tex, name)
+        img.file_format = "PNG"
+        img.save()
+        img.filepath = img.filepath_raw
+    except Exception as e:
+        print("WARN texture", img.name, e)
 
-# Each wheel's pivot at its own centre: wheel-collider controllers tell front from rear (and left from right) by the
-# wheel transforms' positions, not their meshes.
+# Each wheel's pivot at its own centre: wheel-collider controllers tell front from rear (and left from right) by
+# the wheel transforms' positions, not their meshes.
 for w in wheels:
-    lo, hi = bounds([w])
-    c = (lo + hi) / 2
+    c = centre([w])
     w.data.transform(mathutils.Matrix.Translation(-c))
     w.location = c
 
 root = bpy.data.objects.new(os.path.splitext(os.path.basename(out))[0], None)
-bpy.context.scene.collection.objects.link(root)
+scene.collection.objects.link(root)
 for o in everything:
     o.parent = root
-bpy.ops.object.select_all(action="SELECT")
+bpy.ops.object.select_all(action="DESELECT")
+for o in [root] + everything:
+    o.select_set(True)
 bpy.ops.export_scene.fbx(filepath=out, use_selection=True, object_types={"EMPTY", "MESH"},
                          apply_scale_options="FBX_SCALE_UNITS", bake_space_transform=True,
                          path_mode="RELATIVE", embed_textures=False, mesh_smooth_type="OFF", add_leaf_bones=False)

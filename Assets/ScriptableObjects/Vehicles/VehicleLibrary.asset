@@ -1418,6 +1418,771 @@ MonoBehaviour:
       IdleFuelPerHour: 0.8
     Mesh: gt3
     EngineSound: V10
+  - Id: car_fulmine
+    Name: Fulmine SVJ
+    Kind: 3
+    Price: 420000
+    Description: 'Wedge-shaped mid-engine V12 monster, all-wheel drive, active aero. Loud enough to set off car alarms.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 1525
+      CenterOfMassHeight: 0.42
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.42
+      Drive: 2
+      AwdFrontShare: 0.4
+      IdleRpm: 1000
+      RedlineRpm: 8700
+      CurveRpm:
+      - 1000
+      - 3000
+      - 5000
+      - 6500
+      - 8000
+      - 8700
+      CurveTorque:
+      - 330
+      - 572
+      - 638
+      - 660
+      - 616
+      - 550
+      GearRatios:
+      - 3.2
+      - 2.3
+      - 1.75
+      - 1.4
+      - 1.15
+      - 0.95
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 3.6
+      DrivetrainEfficiency: 0.88
+      StallRpm: 3000
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 1.3
+      PeakSlipAngle: 0.1
+      BrakeTorque: 9100
+      BrakeFront: 0.6
+      HandbrakeTorque: 1600
+      SpringRate: 60000
+      Damping: 5000
+      RestLength: 0.3
+      Travel: 0.12
+      AntiRoll: 22000
+      DragCoefficient: 0.34
+      FrontalArea: 1.9
+      DownforceCoefficient: 1.0
+      MaxSteerDeg: 32
+      FuelCapacity: 80
+      FuelPerKwh: 0.32
+      IdleFuelPerHour: 0.8
+    Mesh: aventador
+    EngineSound: V10
+  - Id: car_cavallo
+    Name: Cavallo Ibrido
+    Kind: 3
+    Price: 1400000
+    Description: 'Hybrid hypercar: V12 plus electric boost, rear drive, 950 hp. The one on bedroom posters.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 1255
+      CenterOfMassHeight: 0.42
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.42
+      Drive: 1
+      AwdFrontShare: 0.4
+      IdleRpm: 1000
+      RedlineRpm: 8700
+      CurveRpm:
+      - 1000
+      - 3000
+      - 5000
+      - 6500
+      - 8000
+      - 8700
+      CurveTorque:
+      - 390
+      - 676
+      - 754
+      - 780
+      - 728
+      - 650
+      GearRatios:
+      - 3.2
+      - 2.3
+      - 1.75
+      - 1.4
+      - 1.15
+      - 0.95
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 3.6
+      DrivetrainEfficiency: 0.88
+      StallRpm: 3000
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 1.3
+      PeakSlipAngle: 0.1
+      BrakeTorque: 9100
+      BrakeFront: 0.6
+      HandbrakeTorque: 1600
+      SpringRate: 60000
+      Damping: 5000
+      RestLength: 0.3
+      Travel: 0.12
+      AntiRoll: 22000
+      DragCoefficient: 0.34
+      FrontalArea: 1.9
+      DownforceCoefficient: 1.1
+      MaxSteerDeg: 32
+      FuelCapacity: 80
+      FuelPerKwh: 0.32
+      IdleFuelPerHour: 0.8
+    Mesh: laferrari
+    EngineSound: V10
+  - Id: car_ringmark
+    Name: Ringmark V10
+    Kind: 3
+    Price: 165000
+    Description: 'Mid-engine V10 everyday supercar with all-wheel drive. Sensible, as supercars go.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 1620
+      CenterOfMassHeight: 0.42
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.42
+      Drive: 2
+      AwdFrontShare: 0.4
+      IdleRpm: 1000
+      RedlineRpm: 8700
+      CurveRpm:
+      - 1000
+      - 3000
+      - 5000
+      - 6500
+      - 8000
+      - 8700
+      CurveTorque:
+      - 240
+      - 416
+      - 464
+      - 480
+      - 448
+      - 400
+      GearRatios:
+      - 3.2
+      - 2.3
+      - 1.75
+      - 1.4
+      - 1.15
+      - 0.95
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 3.6
+      DrivetrainEfficiency: 0.88
+      StallRpm: 3000
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 1.3
+      PeakSlipAngle: 0.1
+      BrakeTorque: 9100
+      BrakeFront: 0.6
+      HandbrakeTorque: 1600
+      SpringRate: 60000
+      Damping: 5000
+      RestLength: 0.3
+      Travel: 0.12
+      AntiRoll: 22000
+      DragCoefficient: 0.34
+      FrontalArea: 1.9
+      DownforceCoefficient: 0.6
+      MaxSteerDeg: 32
+      FuelCapacity: 80
+      FuelPerKwh: 0.32
+      IdleFuelPerHour: 0.8
+    Mesh: r8
+    EngineSound: V10
+  - Id: car_havoc
+    Name: Havoc 707
+    Kind: 3
+    Price: 72000
+    Description: 'Supercharged V8 muscle sedan with 707 hp and rear-wheel drive. Tyres not included for long.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 2000
+      CenterOfMassHeight: 0.48
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.52
+      Drive: 1
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 7000
+      CurveRpm:
+      - 1000
+      - 2000
+      - 3000
+      - 5000
+      - 6500
+      - 7000
+      CurveTorque:
+      - 416
+      - 768
+      - 800
+      - 800
+      - 688
+      - 608
+      GearRatios:
+      - 4.7
+      - 3.1
+      - 2.1
+      - 1.67
+      - 1.29
+      - 1
+      - 0.84
+      - 0.67
+      ReverseRatio: 3.2
+      FinalDrive: 3.15
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 1.15
+      PeakSlipAngle: 0.11
+      BrakeTorque: 7280
+      BrakeFront: 0.62
+      HandbrakeTorque: 1600
+      SpringRate: 45000
+      Damping: 4200
+      RestLength: 0.34
+      Travel: 0.16
+      AntiRoll: 18000
+      DragCoefficient: 0.3
+      FrontalArea: 2.05
+      DownforceCoefficient: 0.0
+      MaxSteerDeg: 34
+      FuelCapacity: 64
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: charger
+    EngineSound: V8
+  - Id: car_predator
+    Name: Haulmark Predator
+    Kind: 3
+    Price: 78000
+    Description: 'Twin-turbo off-road pickup on long-travel suspension. Jumps things other trucks go around.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 2600
+      CenterOfMassHeight: 0.8
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.56
+      Drive: 2
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 6000
+      CurveRpm:
+      - 1000
+      - 2500
+      - 3500
+      - 4500
+      - 5500
+      - 6000
+      CurveTorque:
+      - 432
+      - 564
+      - 624
+      - 606
+      - 528
+      - 480
+      GearRatios:
+      - 4
+      - 2.3
+      - 1.5
+      - 1.15
+      - 0.85
+      - 0.67
+      ReverseRatio: 3.2
+      FinalDrive: 3.55
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 0.95
+      PeakSlipAngle: 0.15
+      BrakeTorque: 6760
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 42000
+      Damping: 4200
+      RestLength: 0.42
+      Travel: 0.25
+      AntiRoll: 10000
+      DragCoefficient: 0.42
+      FrontalArea: 3
+      DownforceCoefficient: 0.0
+      MaxSteerDeg: 34
+      FuelCapacity: 90
+      FuelPerKwh: 0.33
+      IdleFuelPerHour: 1.3
+    Mesh: raptor
+    EngineSound: 2JZ
+  - Id: car_kessel
+    Name: Kessel RSR
+    Kind: 3
+    Price: 380000
+    Description: 'Rear-engine flat-six endurance racer on slicks, barely street-legal. Downforce for days.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 1245
+      CenterOfMassHeight: 0.42
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.42
+      Drive: 1
+      AwdFrontShare: 0.4
+      IdleRpm: 1000
+      RedlineRpm: 8700
+      CurveRpm:
+      - 1000
+      - 3000
+      - 5000
+      - 6500
+      - 8000
+      - 8700
+      CurveTorque:
+      - 225
+      - 390
+      - 435
+      - 450
+      - 420
+      - 375
+      GearRatios:
+      - 3.2
+      - 2.3
+      - 1.75
+      - 1.4
+      - 1.15
+      - 0.95
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 3.6
+      DrivetrainEfficiency: 0.88
+      StallRpm: 3000
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 1.3
+      PeakSlipAngle: 0.1
+      BrakeTorque: 9100
+      BrakeFront: 0.6
+      HandbrakeTorque: 1600
+      SpringRate: 60000
+      Damping: 5000
+      RestLength: 0.3
+      Travel: 0.12
+      AntiRoll: 22000
+      DragCoefficient: 0.34
+      FrontalArea: 1.9
+      DownforceCoefficient: 1.6
+      MaxSteerDeg: 32
+      FuelCapacity: 80
+      FuelPerKwh: 0.32
+      IdleFuelPerHour: 0.8
+    Mesh: rsr
+    EngineSound: S54
+  - Id: car_brava
+    Name: Brava Toro
+    Kind: 3
+    Price: 230000
+    Description: 'Twin-turbo V8 super-SUV with all-wheel drive. Seats five, embarrasses most sports cars.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 2200
+      CenterOfMassHeight: 0.75
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.53
+      Drive: 2
+      AwdFrontShare: 0.45
+      IdleRpm: 850
+      RedlineRpm: 6500
+      CurveRpm:
+      - 1000
+      - 2000
+      - 4500
+      - 6000
+      - 6500
+      CurveTorque:
+      - 513
+      - 810
+      - 837
+      - 702
+      - 634
+      GearRatios:
+      - 4.7
+      - 3.1
+      - 2.1
+      - 1.67
+      - 1.29
+      - 1
+      - 0.84
+      - 0.67
+      ReverseRatio: 3.2
+      FinalDrive: 3.3
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 1.05
+      PeakSlipAngle: 0.13
+      BrakeTorque: 8060
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 42000
+      Damping: 4600
+      RestLength: 0.42
+      Travel: 0.24
+      AntiRoll: 16000
+      DragCoefficient: 0.35
+      FrontalArea: 2.8
+      DownforceCoefficient: 0.0
+      MaxSteerDeg: 34
+      FuelCapacity: 80
+      FuelPerKwh: 0.31
+      IdleFuelPerHour: 1.1
+    Mesh: urus
+    EngineSound: V8
+  - Id: car_stallion
+    Name: Stallion GT3
+    Kind: 3
+    Price: 320000
+    Description: 'Front-engine V8 GT3 racer: big wing, stripped cabin, rear drive.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 1300
+      CenterOfMassHeight: 0.48
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.52
+      Drive: 1
+      AwdFrontShare: 0.4
+      IdleRpm: 850
+      RedlineRpm: 7000
+      CurveRpm:
+      - 1000
+      - 2000
+      - 3000
+      - 5000
+      - 6500
+      - 7000
+      CurveTorque:
+      - 286
+      - 528
+      - 550
+      - 550
+      - 473
+      - 418
+      GearRatios:
+      - 4.7
+      - 3.1
+      - 2.1
+      - 1.67
+      - 1.29
+      - 1
+      - 0.84
+      - 0.67
+      ReverseRatio: 3.2
+      FinalDrive: 3.15
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 1.15
+      PeakSlipAngle: 0.11
+      BrakeTorque: 7280
+      BrakeFront: 0.62
+      HandbrakeTorque: 1600
+      SpringRate: 45000
+      Damping: 4200
+      RestLength: 0.34
+      Travel: 0.16
+      AntiRoll: 18000
+      DragCoefficient: 0.3
+      FrontalArea: 2.05
+      DownforceCoefficient: 1.4
+      MaxSteerDeg: 34
+      FuelCapacity: 64
+      FuelPerKwh: 0.3
+      IdleFuelPerHour: 0.8
+    Mesh: mustang
+    EngineSound: V8
+  - Id: car_vireo
+    Name: Vireo 650 GT3
+    Kind: 3
+    Price: 340000
+    Description: 'Carbon-tub twin-turbo V8 GT3 racer with rear drive and serious aero.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 1300
+      CenterOfMassHeight: 0.42
+      Wheelbase: 2.6
+      TrackWidth: 1.55
+      FrontWeight: 0.42
+      Drive: 1
+      AwdFrontShare: 0.4
+      IdleRpm: 1000
+      RedlineRpm: 8700
+      CurveRpm:
+      - 1000
+      - 3000
+      - 5000
+      - 6500
+      - 8000
+      - 8700
+      CurveTorque:
+      - 270
+      - 468
+      - 522
+      - 540
+      - 504
+      - 450
+      GearRatios:
+      - 3.2
+      - 2.3
+      - 1.75
+      - 1.4
+      - 1.15
+      - 0.95
+      - 0.8
+      ReverseRatio: 3.2
+      FinalDrive: 3.6
+      DrivetrainEfficiency: 0.88
+      StallRpm: 3000
+      StallMultiplier: 1.8
+      WheelRadius: 0.33
+      TireGrip: 1.3
+      PeakSlipAngle: 0.1
+      BrakeTorque: 9100
+      BrakeFront: 0.6
+      HandbrakeTorque: 1600
+      SpringRate: 60000
+      Damping: 5000
+      RestLength: 0.3
+      Travel: 0.12
+      AntiRoll: 22000
+      DragCoefficient: 0.34
+      FrontalArea: 1.9
+      DownforceCoefficient: 1.5
+      MaxSteerDeg: 32
+      FuelCapacity: 80
+      FuelPerKwh: 0.32
+      IdleFuelPerHour: 0.8
+    Mesh: mclaren
+    EngineSound: V8
   parts:
   - Id: wheels_soft60
     Name: Soft 60mm wheels (80A)
@@ -1537,7 +2302,97 @@ MonoBehaviour:
     FuelFraction: 0.7
     Seller: Vance Motorsport
     Description: Aurel Vector GT3, ex-team car. Full carbon aero, rear wing, roll cage. Road-registered, barely. Serious offers only.
+  - Id: used_fulmine_1
+    ModelId: car_fulmine
+    Price: 345000
+    OdometerKm: 6100
+    Condition: 0.97
+    TireCondition: 0.85
+    FuelFraction: 0.6
+    Seller: Rocco
+    Description: 'Fulmine SVJ. Black Ghost spec. Garage kept, never tracked. Neighbours hate me.'
+  - Id: used_cavallo_1
+    ModelId: car_cavallo
+    Price: 1150000
+    OdometerKm: 2200
+    Condition: 0.99
+    TireCondition: 0.85
+    FuelFraction: 0.6
+    Seller: Private collector
+    Description: 'Cavallo Ibrido. Red, of course. Two owners, full history, delivery miles only.'
+  - Id: used_ringmark_1
+    ModelId: car_ringmark
+    Price: 98000
+    OdometerKm: 41000
+    Condition: 0.86
+    TireCondition: 0.85
+    FuelFraction: 0.6
+    Seller: Dev
+    Description: 'Ringmark V10. 2010 V10, manual-feel paddles, new clutch pack. Carbon sideblades.'
+  - Id: used_havoc_1
+    ModelId: car_havoc
+    Price: 54000
+    OdometerKm: 38000
+    Condition: 0.84
+    TireCondition: 0.85
+    FuelFraction: 0.6
+    Seller: Tyrell
+    Description: 'Havoc 707. White on black. Burnouts: some. Speeding tickets: several. Engine: perfect.'
+  - Id: used_predator_1
+    ModelId: car_predator
+    Price: 61000
+    OdometerKm: 29000
+    Condition: 0.88
+    TireCondition: 0.85
+    FuelFraction: 0.6
+    Seller: Brandon
+    Description: 'Haulmark Predator. Lifted, lit, never actually off-road. Mud tires still have nubs.'
+  - Id: used_kessel_1
+    ModelId: car_kessel
+    Price: 295000
+    OdometerKm: 3400
+    Condition: 0.95
+    TireCondition: 0.85
+    FuelFraction: 0.6
+    Seller: Vance Motorsport
+    Description: 'Kessel RSR. Ex-endurance chassis, rebuilt engine. Road-registered on a technicality.'
+  - Id: used_brava_1
+    ModelId: car_brava
+    Price: 188000
+    OdometerKm: 17000
+    Condition: 0.93
+    TireCondition: 0.85
+    FuelFraction: 0.6
+    Seller: Marisol
+    Description: 'Brava Toro. Giallo yellow, full options. Selling to buy a boat.'
+  - Id: used_stallion_1
+    ModelId: car_stallion
+    Price: 255000
+    OdometerKm: 5200
+    Condition: 0.94
+    TireCondition: 0.85
+    FuelFraction: 0.6
+    Seller: Vance Motorsport
+    Description: 'Stallion GT3. Customer racing car, spare wheels included. Loud. Very loud.'
+  - Id: used_vireo_1
+    ModelId: car_vireo
+    Price: 270000
+    OdometerKm: 4800
+    Condition: 0.95
+    TireCondition: 0.85
+    FuelFraction: 0.6
+    Seller: Harbor Racing
+    Description: 'Vireo 650 GT3. Series-winning car, fresh engine rebuild, set of wets included.'
   carMeshes:
+  - {fileID: 919132149155446097, guid: 27f204fe4164a684380039d068d695d7, type: 3}
+  - {fileID: 919132149155446097, guid: 0b41390059ce5ff4281a06235c3a4919, type: 3}
+  - {fileID: 919132149155446097, guid: 6791cd78bbdf9c64ead41fb56932bef5, type: 3}
+  - {fileID: 919132149155446097, guid: 9e462e427bd02de4da6ad9408e97bee5, type: 3}
+  - {fileID: 919132149155446097, guid: ed42e5a4943b2ce42a10d75cd2e13ab3, type: 3}
+  - {fileID: 919132149155446097, guid: d52b8881e1b00d44797756f064cd5a59, type: 3}
+  - {fileID: 919132149155446097, guid: 60bc11c66f977e54dbe38bada7f13985, type: 3}
+  - {fileID: 919132149155446097, guid: c7e4c501750601e4bae1e1389c093ed8, type: 3}
+  - {fileID: 919132149155446097, guid: d4300ed1f9447d74eaeff0f7c96223a4, type: 3}
   - {fileID: 919132149155446097, guid: 5a1c006f089f240439fb497e74be8f7c, type: 3}
   - {fileID: 919132149155446097, guid: b456159d3a58a144ab1b34adb277d040, type: 3}
   - {fileID: 919132149155446097, guid: cb61e7f639a3397438ed2066a91045b5, type: 3}

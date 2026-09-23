@@ -21,7 +21,7 @@ namespace OpeningBell.EditorTools
         private static readonly string[] AlsoLooped = { "Interact", "PickUp_Table", "Fixing_Kneeling" };
 
         /// <summary>Bump when a rule changes: Unity re-imports what this postprocessor touched.</summary>
-        public override uint GetVersion() => 12;
+        public override uint GetVersion() => 14;
 
         private void OnPreprocessModel()
         {
@@ -84,12 +84,44 @@ namespace OpeningBell.EditorTools
                 UnityEngine.Material[] mats = r.sharedMaterials;
                 bool changed = false;
                 for (int i = 0; i < mats.Length; i++)
-                    if (mats[i] != null && mats[i].name.IndexOf("glass", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    if (mats[i] == null) continue;
+                    if (mats[i].name.IndexOf("glass", System.StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         mats[i] = glass;
                         changed = true;
                     }
+                    else if (assetPath.StartsWith(Cars))
+                    {
+                        // Sketchfab exports often mark whole bodies alpha-blended; the FBX importer then makes paint
+                        // and trim see-through. Everything that isn't glass is solid.
+                        if (mats[i].renderQueue >= (int)UnityEngine.Rendering.RenderQueue.Transparent || mats[i].IsKeywordEnabled("_SURFACE_TYPE_TRANSPARENT"))
+                            MakeOpaque(mats[i]);
+                        // glTF bodies are often single shells marked double-sided, and FBX drops that flag: culling
+                        // their back faces left holes you could see the cage through. Detailed cars draw both sides.
+                        mats[i].SetFloat("_Cull", 0f);
+                        mats[i].doubleSidedGI = true;
+                    }
+                }
                 if (changed) r.sharedMaterials = mats;
+            }
+        }
+
+        private static void MakeOpaque(UnityEngine.Material m)
+        {
+            m.SetFloat("_Surface", 0f);
+            m.SetFloat("_Blend", 0f);
+            m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.Zero);
+            m.SetFloat("_ZWrite", 1f);
+            m.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.SetOverrideTag("RenderType", "Opaque");
+            m.renderQueue = -1;
+            if (m.HasProperty("_BaseColor"))
+            {
+                UnityEngine.Color c = m.GetColor("_BaseColor");
+                c.a = 1f;
+                m.SetColor("_BaseColor", c);
             }
         }
 
