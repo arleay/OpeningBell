@@ -85,6 +85,9 @@
     flex-direction: row;
     align-items: center;
     padding: 6px 10px;
+    /* UI Toolkit shrinks children by default: when the panels below want more height than the screen has
+       (a long news feed), the bar was squashed and its captions clipped. It keeps its own height. */
+    flex-shrink: 0;
 }
 
 .bar-group {

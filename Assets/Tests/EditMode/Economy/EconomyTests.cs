@@ -97,6 +97,22 @@ namespace OpeningBell.Tests
         }
 
         [Test]
+        public void DevDeposit_IsALedgerDeposit_ThatCoversAnOverdraft()
+        {
+            World w = Build(Config(bank: 300));
+            w.Economy.AdvanceTo(Monday.AddDays(3)); // overdrawn by rent, as above
+            decimal before = w.Economy.Bank.Balance;
+            w.Economy.DevDeposit(100_000m, Monday.AddDays(3).AddHours(9));
+            Assert.AreEqual(before + 100_000m, w.Economy.Bank.Balance);
+            BankTransaction t = w.Economy.Bank.Transactions.Last();
+            Assert.AreEqual(TransactionKind.Deposit, t.Kind);
+            Assert.AreEqual(w.Economy.Bank.Balance, t.BalanceAfter);
+            Assert.AreEqual(10_000m, w.Brokerage.Cash, "the brokerage isn't touched");
+            w.Economy.DevDeposit(-5m, Monday.AddDays(3).AddHours(9));
+            Assert.AreEqual(before + 100_000m, w.Economy.Bank.Balance, "nothing taken out");
+        }
+
+        [Test]
         public void BouncedBill_OverdrawsAndChargesAFee()
         {
             World w = Build(Config(bank: 300));

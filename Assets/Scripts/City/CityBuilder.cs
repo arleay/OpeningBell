@@ -119,6 +119,7 @@ namespace OpeningBell.City
             Minimap.Configure(_c, player, hud, Fleet);
             Phone = gameObject.AddComponent<Phone>();
             Phone.Configure(game, player, hud, Minimap, _c);
+            if (Debug.isDebugBuild) gameObject.AddComponent<DevCheats>().Configure(game, Phone);
             if (art != null && art.HasPeople)
             {
                 Title = gameObject.AddComponent<TitleScreen>();

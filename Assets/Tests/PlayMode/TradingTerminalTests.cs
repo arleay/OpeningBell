@@ -30,6 +30,11 @@ namespace OpeningBell.Tests
             var submit = root.Q<Button>("submit-order");
             var status = root.Q<Label>("order-status");
 
+            // The account bar keeps its height (it was squashed, captions clipped, when the panels wanted more room).
+            VisualElement bar = root.Q(className: "account-bar");
+            VisualElement stat = bar.Q(className: "stat");
+            Assert.GreaterOrEqual(bar.layout.height, stat.layout.height + 10f, "account bar at full height");
+
             // Pre-market: a market order is refused with a clear reason.
             Assert.AreEqual(MarketSession.Premarket, game.Market.Session);
             Press(submit);

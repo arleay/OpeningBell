@@ -164,6 +164,17 @@ namespace OpeningBell.Economy
             return null;
         }
 
+        /// <summary>
+        /// Developer money for playtesting (development builds only, see DevCheats): a plain deposit on the bank's
+        /// ledger, so the history shows where it came from and the balance stays the sum of its transactions.
+        /// </summary>
+        public void DevDeposit(decimal amount, DateTime now)
+        {
+            amount = Money.RoundCents(amount);
+            if (amount <= 0m) return;
+            Post(now, TransactionKind.Deposit, amount, "Developer deposit");
+        }
+
         /// <summary>Returns an error message, or null on success. Cash reserved for open orders can't be moved.</summary>
         public string TransferFromBrokerage(decimal amount, DateTime now)
         {
