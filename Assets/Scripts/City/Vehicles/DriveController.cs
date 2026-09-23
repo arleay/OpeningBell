@@ -28,6 +28,8 @@ namespace OpeningBell.City
         private bool _chase = true;
         private bool _entering;
         private Vector3 _chasePosition;
+        /// <summary>Free look (right mouse held): degrees around the car / head yaw, and pitch.</summary>
+        private float _lookYaw, _lookPitch;
         private float _lastImpactToast = -10f;
         private float _odometerCarry;
         private System.Func<float> _night;
@@ -116,7 +118,7 @@ namespace OpeningBell.City
             }
             _chasePosition = _car.transform.position - _car.transform.forward * 6f + Vector3.up * 2.5f;
             _entering = false;
-            _hud.ShowToast("W gas · S brake/reverse · A/D steer · Space handbrake · C camera · E get out", 7f);
+            _hud.ShowToast("W gas · S brake/reverse · A/D steer · Space handbrake · C camera · hold right mouse to look around · E get out", 7f);
             if (_vehicle.FuelLiters <= 0) _hud.ShowToast("The tank is empty. Push it to a pump... or call someone.");
         }
 
@@ -144,6 +146,7 @@ namespace OpeningBell.City
             _fpc.PlaceAt(spot, car.eulerAngles.y);
             _camera.localPosition = _cameraHome;
             _camera.localRotation = Quaternion.identity;
+            _lookYaw = _lookPitch = 0f;
             _interactor.enabled = true;
             _hud.SetStatus(null);
             _game.PlayerSavePosition = null;
@@ -190,6 +193,7 @@ namespace OpeningBell.City
                 return;
             }
             if (_input.CameraToggle.WasPressedThisFrame()) _chase = !_chase;
+            FreeLook();
 
             Vector2 move = _input.Move.ReadValue<Vector2>();
             _car.Throttle = Mathf.Max(0f, move.y);
@@ -238,7 +242,7 @@ namespace OpeningBell.City
             if (!_chase)
             {
                 _camera.localPosition = _cameraHome;
-                _camera.localRotation = Quaternion.identity;
+                _camera.localRotation = Quaternion.Euler(_lookPitch, _lookYaw, 0f);
                 return;
             }
             // Chase: spring toward a spot behind and above, looking just over the roof; pull in for walls.
@@ -246,11 +250,37 @@ namespace OpeningBell.City
             _chasePosition = Vector3.Lerp(_chasePosition, behind, 1f - Mathf.Exp(-6f * Time.deltaTime));
             Vector3 focus = t.position + Vector3.up * 1.3f + t.forward * 1.5f;
             Vector3 toCam = _chasePosition - focus;
+            if (_lookYaw != 0f || _lookPitch != 0f)
+            {
+                // Orbit: the usual spot behind the car swung round the car's vertical and tipped up/down.
+                Vector3 back = -t.forward * 6.2f + Vector3.up * 1.3f;
+                Vector3 axis = Vector3.Cross(back, Vector3.up).normalized; // positive pitch lifts the camera
+                toCam = Quaternion.AngleAxis(_lookYaw, Vector3.up) * Quaternion.AngleAxis(_lookPitch, axis) * back;
+                _chasePosition = focus + toCam;
+            }
             if (Physics.SphereCast(focus, 0.25f, toCam.normalized, out RaycastHit wall, toCam.magnitude, ~0, QueryTriggerInteraction.Ignore) &&
                 !wall.collider.transform.IsChildOf(t))
                 _camera.position = focus + toCam.normalized * Mathf.Max(1f, wall.distance - 0.2f);
             else _camera.position = _chasePosition;
             _camera.rotation = Quaternion.LookRotation(focus - _camera.position);
+        }
+
+        /// <summary>
+        /// Right mouse held: the mouse looks around freely, all the way round the car (chase view orbits, first
+        /// person turns the head). Let go and the view eases back to straight ahead.
+        /// </summary>
+        private void FreeLook()
+        {
+            if (_input.FreeLook.IsPressed())
+            {
+                Vector2 look = _input.Look.ReadValue<Vector2>() * _fpc.LookSensitivity;
+                _lookYaw = Mathf.Repeat(_lookYaw + look.x + 180f, 360f) - 180f;
+                _lookPitch = Mathf.Clamp(_lookPitch + (_chase ? look.y : -look.y), _chase ? -25f : -60f, _chase ? 60f : 70f);
+                return;
+            }
+            float k = 1f - Mathf.Exp(-Time.deltaTime / 0.18f);
+            _lookYaw = Mathf.Abs(_lookYaw) < 0.1f ? 0f : Mathf.Lerp(_lookYaw, 0f, k);
+            _lookPitch = Mathf.Abs(_lookPitch) < 0.1f ? 0f : Mathf.Lerp(_lookPitch, 0f, k);
         }
 
         /// <summary>A synthesized engine loop, for cars without a recorded engine.</summary>

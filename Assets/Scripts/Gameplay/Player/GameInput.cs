@@ -25,6 +25,8 @@ namespace OpeningBell.Gameplay
         public InputAction Ride { get; private set; }
         /// <summary>First-person / chase camera while riding.</summary>
         public InputAction CameraToggle { get; private set; }
+        /// <summary>Held while driving: look freely around the car (orbit in chase view, turn the head in first person).</summary>
+        public InputAction FreeLook { get; private set; }
         /// <summary>Cycle e-bike assist level.</summary>
         public InputAction Assist { get; private set; }
         /// <summary>Car handbrake.</summary>
@@ -54,6 +56,7 @@ namespace OpeningBell.Gameplay
             OpenMenu = _player.AddAction("Menu", InputActionType.Button, "<Keyboard>/escape");
             Ride = _player.AddAction("Ride", InputActionType.Button, "<Keyboard>/r");
             CameraToggle = _player.AddAction("Camera", InputActionType.Button, "<Keyboard>/c");
+            FreeLook = _player.AddAction("FreeLook", InputActionType.Button, "<Mouse>/rightButton");
             Assist = _player.AddAction("Assist", InputActionType.Button, "<Keyboard>/q");
             Handbrake = _player.AddAction("Handbrake", InputActionType.Button, "<Keyboard>/space");
 
