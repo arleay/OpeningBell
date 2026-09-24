@@ -24,7 +24,7 @@ namespace OpeningBell.Home
                     if (under == Under.Item) return item.Seat ? "Seats go on the floor." : $"The {item.Name.ToLowerInvariant()} goes on the floor.";
                     return "Stand it on the floor.";
                 case Support.Surface:
-                    if (under == Under.Item && onto != null && onto.Surface > 0f) return null;
+                    if (under == Under.Item && onto != null && (onto.Surface > 0f || (item.IsMonitor && onto.IsArm))) return null;
                     return "Needs a desk or a table.";
                 case Support.Wall:
                     return under == Under.Wall ? null : "Hang it on a wall.";
@@ -45,6 +45,8 @@ namespace OpeningBell.Home
         public double ConditionAtStart = 1;
         public int Reminded;
         public decimal Deposit;
+        /// <summary>Where the loaner truck was last parked (the trailer follows it).</summary>
+        public double X, Y, Z, Yaw;
     }
 
     /// <summary>
@@ -67,6 +69,12 @@ namespace OpeningBell.Home
         public bool Active => _s.Active;
         public DateTime Due => new DateTime(_s.Due);
         public decimal Deposit => _s.Deposit;
+        public (double X, double Y, double Z, double Yaw) Pose => (_s.X, _s.Y, _s.Z, _s.Yaw);
+
+        public void SetPose(double x, double y, double z, double yaw)
+        {
+            _s.X = x; _s.Y = y; _s.Z = z; _s.Yaw = yaw;
+        }
 
         public void Start(DateTime now, double condition)
         {
@@ -118,6 +126,7 @@ namespace OpeningBell.Home
         public RentalSaveData CaptureState() => new RentalSaveData
         {
             Active = _s.Active, Start = _s.Start, Due = _s.Due, ConditionAtStart = _s.ConditionAtStart, Reminded = _s.Reminded, Deposit = _s.Deposit,
+            X = _s.X, Y = _s.Y, Z = _s.Z, Yaw = _s.Yaw,
         };
 
         public void RestoreState(RentalSaveData data) => _s = data ?? new RentalSaveData();

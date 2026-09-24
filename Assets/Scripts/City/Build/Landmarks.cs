@@ -294,7 +294,7 @@ namespace OpeningBell.City
             // Podium with the lobby, then the tower: 18 floors, a crown that's lit at night.
             k.Facade(t, "Podium", V(234f, 0f, 96f), V(270f, 7f, 128f), c.P.Facade(FacadeStyle.Concrete, true), roof);
             k.Facade(t, "Tower", V(238f, 7f, 100f), V(266f, 62f, 124f), c.P.Facade(FacadeStyle.Glass, false), roof);
-            k.Span(t, "Crown", V(237.5f, 62f, 99.5f), V(266.5f, 65f, 124.5f), c.P.Lamp(new Color(0.7f, 0.72f, 0.74f), new Color(0.6f, 0.85f, 1f), 1.5f), collider: false);
+            k.Span(t, "Crown", V(237.5f, 61.2f, 99.5f), V(266.5f, 61.9f, 124.5f), c.P.Lamp(new Color(0.7f, 0.72f, 0.74f), new Color(0.6f, 0.85f, 1f), 1.5f), collider: false);
             k.Text(t, "HARBORVIEW", V(252f, 4.8f, 95.9f), 0f, 0.8f, new Color(0.95f, 0.95f, 0.92f));
             c.Place(V(252f, y, 94.5f), PlaceKind.Door, "Harborview Tower");
         }

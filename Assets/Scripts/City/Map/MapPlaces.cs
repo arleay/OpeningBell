@@ -46,6 +46,8 @@ namespace OpeningBell.City
             Add(MapIcon.Fuel, "Northstar", new Vector3(-440f, 0f, 18f));
             Add(MapIcon.Casino, "Silver Tide Casino", new Vector3(Landmarks.CasinoLot.center.x, 0f, Landmarks.CasinoLot.yMin));
             Add(MapIcon.Parking, "Lantern Parkade", new Vector3(Rooftops.Parkade.center.x, 0f, Rooftops.Parkade.yMin));
+            if (c.Anchors.TryGetValue("timberline_door", out Vector3 furniture)) Add(MapIcon.Shop, HomeStores.FurnitureName, furniture);
+            if (c.Anchors.TryGetValue("circuit_door", out Vector3 tech)) Add(MapIcon.Shop, HomeStores.TechName, tech);
             return all;
         }
     }

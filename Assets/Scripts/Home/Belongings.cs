@@ -17,6 +17,8 @@ namespace OpeningBell.Home
         Placed,
         /// <summary>Booked for home delivery (arrives at <see cref="OwnedItem.DeliverAt"/>).</summary>
         Delivering,
+        /// <summary>Put away in a home's storage (<see cref="OwnedItem.Property"/>).</summary>
+        Stored,
     }
 
     /// <summary>What a monitor shows.</summary>
@@ -73,6 +75,8 @@ namespace OpeningBell.Home
         public int Version { get; private set; }
 
         public OwnedItem Get(int uid) => _items.Find(i => i.Uid == uid);
+        public List<OwnedItem> In(ItemState state) => _items.FindAll(i => i.State == state);
+        public int Count(ItemState state) => _items.FindAll(i => i.State == state).Count;
 
         public OwnedItem Add(string itemId, int variant, ItemState state)
         {

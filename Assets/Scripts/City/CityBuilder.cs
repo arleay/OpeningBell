@@ -43,6 +43,8 @@ namespace OpeningBell.City
         /// <summary>First Street Motors (new) and Harbor Auto Sales (used).</summary>
         public List<DealerLot> Dealers { get; private set; }
         public MechanicShop Mechanic { get; private set; }
+        /// <summary>Furniture, tech and homes (TOWN_SPEC B).</summary>
+        public HomeWorld Home { get; private set; }
         public Forest Woods { get; private set; }
         public ParkedCars Parked { get; private set; }
         public WeatherSystem Weather { get; private set; }
@@ -82,6 +84,7 @@ namespace OpeningBell.City
             Waterfront.AddPads(_c);
             Outskirts.AddPads(_c);
             Rooftops.AddPads(_c);
+            HomeStores.AddPads(_c);
             ShellBuilder.Build(_c);
             TownBuilder.Build(_c, player.transform);
             ApartmentBuilding.Build(_c);
@@ -100,6 +103,16 @@ namespace OpeningBell.City
             Outskirts.Build(_c);
             StreetProps.BusStops(_c);
             Rooftops.Build(_c);
+            // Homes: the apartment you rent (the scene's room at the origin), the houses on the market, the stores.
+            _c.Homes.Insert(0, new HomeSpec
+            {
+                Id = HomeSpec.ApartmentId, Name = "118 Maple", Kind = HomeKind.Apartment,
+                Root = Kit.Group(transform, "Apartment home"), Size = new Vector2(6.2f, 5.2f), DoorLocal = new Vector3(-1.8f, 0f, -2.6f),
+            });
+            Home = gameObject.AddComponent<HomeWorld>();
+            Home.Configure(_c, player, player.GetComponentInChildren<PlayerInteractor>() ?? FindAnyObjectByType<PlayerInteractor>());
+            HomeStores.Build(_c, Home);
+            HomeSales.Build(_c, Home);
             RegisterPlaces();
 
             // Places (doors, benches) are registered by the builders above; the street pass adds benches too,
@@ -155,6 +168,8 @@ namespace OpeningBell.City
             Driver.Configure(game, player, interactor, hud, Fleet, () => _c.Night);
             Fleet.Configure(game, _c.Kit, Rider, Driver);
             foreach (DealerLot dealer in Dealers) dealer.Wire(Fleet, Driver);
+            Home.Loaner = gameObject.AddComponent<Loaner>();
+            Home.Loaner.Configure(Home, Fleet, Driver);
             _c.FleetView = Fleet;
             _c.Driver = Driver;
             player.gameObject.AddComponent<Footsteps>().Configure(player);

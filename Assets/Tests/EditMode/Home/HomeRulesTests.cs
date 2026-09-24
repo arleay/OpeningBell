@@ -66,6 +66,8 @@ namespace OpeningBell.Tests
             StringAssert.Contains("floor", PlacementRules.Check(I("chair_office"), Under.Item, I("bed_double"), true), "chair on a bed");
             StringAssert.Contains("floor", PlacementRules.Check(I("desk_standard"), Under.Item, I("nightstand"), true), "desk on a nightstand");
             Assert.IsNull(PlacementRules.Check(I("mon_24"), Under.Item, I("desk_compact"), true), "monitor on a desk");
+            Assert.IsNull(PlacementRules.Check(I("mon_24"), Under.Item, I("arm_3"), true), "monitor on an arm");
+            Assert.IsNotNull(PlacementRules.Check(I("desk_lamp"), Under.Item, I("arm_3"), true), "only screens hang on arms");
             Assert.IsNull(PlacementRules.Check(I("desk_lamp"), Under.Item, I("nightstand"), true), "lamp on a nightstand");
             Assert.IsNotNull(PlacementRules.Check(I("mon_24"), Under.Floor, null, true), "monitor on the floor");
             Assert.IsNotNull(PlacementRules.Check(I("mon_24"), Under.Item, I("sofa_mid"), true), "monitor on a sofa");
