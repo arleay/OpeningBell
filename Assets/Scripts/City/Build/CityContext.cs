@@ -36,6 +36,7 @@ namespace OpeningBell.City
         public readonly List<(Vector3 P, float Yaw, ParkingKind Kind)> ParkingSpots = new List<(Vector3, float, ParkingKind)>();
         /// <summary>The player's vehicles in the world and their driving (set once the city is built; shops use them at runtime).</summary>
         public FleetView FleetView;
+        public ParkedCars Parked;
         public DriveController Driver;
 
         /// <summary>Ground height at (x, z): the terrain where there is one, else the plan's land.</summary>

@@ -142,12 +142,14 @@ namespace OpeningBell.City
             if (cam != null) GeometryUtility.CalculateFrustumPlanes(cam, _planes);
             Vector3 player = _c.Player.position;
             System.DateTime now = _c.Game.Clock.Now;
+            _owned.Clear();
+            _c.FleetView?.ParkedCarPositions(_owned);
             int shown = 0;
             foreach (Spot s in _spots)
             {
                 float d2 = (s.P - player).sqrMagnitude;
                 bool near = d2 < ActiveRadius * ActiveRadius;
-                bool want = near && Occupied(s, now);
+                bool want = near && Occupied(s, now) && !Mine(s.P);
                 if (want == (s.Car != null))
                 {
                     if (s.Car != null) shown++;
@@ -160,6 +162,52 @@ namespace OpeningBell.City
                 else Hide(s);
             }
             ShownCount = shown;
+        }
+
+        private readonly List<Vector2> _owned = new List<Vector2>();
+
+        /// <summary>One of the player's cars is standing in this spot: no stranger parks on top of it.</summary>
+        private bool Mine(Vector3 p)
+        {
+            foreach (Vector2 o in _owned)
+                if ((o - new Vector2(p.x, p.z)).sqrMagnitude < 4f * 4f) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// The empty kerb or lot spot nearest <paramref name="near"/> (outside a shop, that's the street in front of
+        /// it), within <paramref name="within"/> metres and clear of cars, poles and people. False if there's none.
+        /// </summary>
+        public bool NearestFree(Vector3 near, float within, out Vector3 at, out float yaw)
+        {
+            at = default;
+            yaw = 0f;
+            Physics.SyncTransforms();
+            var order = new List<Spot>();
+            foreach (Spot s in _spots)
+                if (s.Car == null && (s.P - near).sqrMagnitude < within * within) order.Add(s);
+            // A storey up or down counts as farther than the same distance on the level.
+            order.Sort((a, b) => Cost(a.P, near).CompareTo(Cost(b.P, near)));
+            var hits = new Collider[8];
+            foreach (Spot s in order)
+            {
+                var rot = Quaternion.Euler(0f, s.Yaw, 0f);
+                int n = Physics.OverlapBoxNonAlloc(s.P + Vector3.up * 0.9f, new Vector3(1f, 0.6f, 2.5f), hits, rot, ~0, QueryTriggerInteraction.Ignore);
+                bool blocked = false;
+                for (int i = 0; i < n; i++)
+                    if (!(hits[i] is TerrainCollider) && !(hits[i] is MeshCollider)) blocked = true;
+                if (blocked) continue;
+                at = s.P;
+                yaw = s.Yaw;
+                return true;
+            }
+            return false;
+        }
+
+        private static float Cost(Vector3 p, Vector3 near)
+        {
+            Vector3 d = p - near;
+            return d.x * d.x + d.z * d.z + d.y * d.y * 9f;
         }
 
         private void Show(Spot s, System.DateTime now)

@@ -212,6 +212,50 @@ namespace OpeningBell.Tests
             Assert.IsTrue(again.KnowsDistrict("Downtown"));
         }
 
+        /// <summary>My Cars on the phone: bring a car parked across town to the street outside a shop, then drive it.</summary>
+        [UnityTest]
+        public IEnumerator MyCars_BringsYourCar_ToTheNearestFreeSpot()
+        {
+            yield return LoadMain();
+            var city = Find<CityBuilder>();
+            var game = Find<GameBootstrap>();
+            var player = Find<FirstPersonController>();
+            game.SkipTo(game.Clock.Now.Date.AddDays(1).AddHours(12)); // midday: the shopping streets are full
+            Vector3 bay = city.Anchors["mechanic_bay1"];
+            OpeningBell.Vehicles.OwnedVehicle car = game.Vehicles.Add("car_sedan", 24000m, game.Clock.Now, bay.x, 0.05, bay.z, 270);
+            MapPlace shop = city.Minimap.Discovery.Places.Where(p => p.Icon == MapIcon.Shop)
+                .OrderByDescending(p => Taxi.Distance(bay, p)).First();
+            Taxi.SetDown(player, shop);
+            yield return new WaitForSeconds(2f); // parked cars settle round the new spot
+
+            var phone = city.Phone;
+            phone.Open(PhoneAppId.Garage);
+            yield return null;
+            var app = (GarageApp)phone.App(PhoneAppId.Garage);
+            Assert.IsNull(app.Bring(car), app.StatusText);
+            Assert.IsFalse(phone.IsOpen, "the phone goes away");
+            yield return null;
+            GameObject shown = city.Fleet.Shown(car);
+            Assert.IsNotNull(shown);
+            Vector3 me = player.transform.position;
+            Assert.Less(Vector2.Distance(new Vector2(shown.transform.position.x, shown.transform.position.z), new Vector2(me.x, me.z)), 40f, "parked near the shop");
+            Assert.Less(shown.transform.position.y, 1.5f, "on the street");
+            Physics.SyncTransforms();
+            // The car's footprint, above the kerb stone.
+            foreach (Collider other in Physics.OverlapBox(shown.transform.position + Vector3.up * 0.8f, new Vector3(0.85f, 0.5f, 2.2f), shown.transform.rotation, ~0, QueryTriggerInteraction.Ignore))
+                Assert.IsTrue(other.transform.IsChildOf(shown.transform) || other is TerrainCollider || other is MeshCollider, "clear of " + other.name + " at " + (other.transform.position - shown.transform.position).ToString("F1"));
+            Assert.IsNotNull(Valet.Bring(phone.City, car, shown.transform.position), "already here");
+            yield return new WaitForSeconds(2f);
+            Assert.AreEqual(1, Physics.OverlapBox(shown.transform.position + Vector3.up * 0.9f, new Vector3(0.9f, 0.5f, 2.2f), shown.transform.rotation, ~0, QueryTriggerInteraction.Ignore)
+                .Count(c => c.GetComponentInParent<CarController>() != null || c.name.StartsWith("Parked")), "no stranger parks on it");
+
+            city.Driver.Enter(car);
+            yield return null;
+            Assert.IsTrue(city.Driver.IsDriving, "drive it away");
+            Assert.AreEqual("You're driving it.", Valet.Bring(phone.City, car, me));
+            yield return CaptureWithHud(player, Find<InteractionHud>(), "my-cars.png");
+        }
+
         /// <summary>A rainy day: wet roads cost grip, fewer people are out, traffic eases off; clearing up restores it.</summary>
         [UnityTest]
         public IEnumerator Rain_WetsTheRoads_AndEmptiesTheStreets()

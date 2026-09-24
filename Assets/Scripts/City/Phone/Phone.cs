@@ -12,7 +12,7 @@ namespace OpeningBell.City
     /// <summary>
     /// The player's phone, drawn in the HUD's bottom-right corner: Tab takes it out (the mouse is freed, the world
     /// keeps running), Tab or Esc puts it away. A home screen with a clock and market widget opens Messages, Phone,
-    /// Maps, PennyBridge (the broker, on mobile) and News. Headlines and order fills pop up as notifications even with
+    /// Maps, PennyBridge (the broker, on mobile), News and My Cars. Headlines and order fills pop up as notifications even with
     /// the phone away; Tab while one is showing opens it.
     /// </summary>
     public sealed class Phone : MonoBehaviour
@@ -215,6 +215,7 @@ namespace OpeningBell.City
             Add(new MapsApp(this));
             Add(new PennyBridgeApp(this));
             Add(new NewsApp(this));
+            Add(new GarageApp(this));
 
             BuildStatusBar();
 
@@ -591,7 +592,8 @@ namespace OpeningBell.City
             var grid = PhoneKit.Row(Root, Justify.FlexStart);
             grid.style.width = Phone.ScreenWidth - 24f;
             grid.style.marginTop = 22f;
-            foreach (PhoneAppId app in new[] { PhoneAppId.PennyBridge, PhoneAppId.News, PhoneAppId.Maps })
+            grid.style.flexWrap = Wrap.Wrap;
+            foreach (PhoneAppId app in new[] { PhoneAppId.PennyBridge, PhoneAppId.News, PhoneAppId.Maps, PhoneAppId.Garage })
                 AppButton(grid, app, true);
 
             // The dock: a frosted shelf at the bottom.

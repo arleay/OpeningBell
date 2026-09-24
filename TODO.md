@@ -26,6 +26,7 @@
 - [x] Phase 10 (cars): raycast-suspension car physics (tyre curves, friction circle, torque curves, automatic with converter, FWD/RWD/AWD, drag and downforce), 8 cars from sedan to supercar, Kenney car kit models for driven cars and traffic, enter/exit with a camera glide, chase and hood cameras, fuel by game time, crash damage, used-car classifieds in STORE (delivered to the kerb), Tidewater Fuel station, cars saved where parked
 
 - [x] Art pass 1 (free CC0 packs, see CREDITS.md): animated Quaternius people (pedestrians, staff, riders) on a shared humanoid animator; Kenney buildings for every background lot plus the skyline; Kenney modular upper floors on the apartment, shops and Calder; nature-kit street trees and a dressed park; bins and dumpsters; lit kit windows at night; head bob, sway, strafe lean, landing dip, sprint FOV, jump; surface footsteps. Gallery test writes `TestResults/art-*.png`
+- [x] Phone extras: map teleport ($250); My Cars app lists your cars and brings one to the nearest free kerb or lot spot (outside a shop, the street in front); ambient parked cars keep off spots your cars are in
 
 ## Next
 - [ ] **Play the build yourself:** buy the $3,900 used sedan (transfer from brokerage first), drive to work, fill up at Tidewater Fuel

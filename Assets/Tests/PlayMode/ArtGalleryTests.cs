@@ -48,7 +48,7 @@ namespace OpeningBell.Tests
 
             // A traffic sedan side-on from the kerb, 4.5 m off.
             Transform car = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
-                .Where(t => t.name == "Traffic sedan" && t.position.y > -50f)
+                .Where(t => (t.name == "Traffic sedan" || t.name == "Traffic rgs-sedan") && t.position.y > -50f)
                 .OrderBy(t => Vector3.Distance(t.position, new Vector3(20f, 0f, -7f))).FirstOrDefault();
             Assert.IsNotNull(car, "a sedan in traffic");
             Vector3 side = car.position + car.right * 4.5f - car.forward * 1.5f;

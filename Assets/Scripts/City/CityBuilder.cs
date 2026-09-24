@@ -127,6 +127,7 @@ namespace OpeningBell.City
             // The woods last: they fill whatever ground is left.
             Woods = Forest.Build(_c, viewCamera);
             Parked = ParkedCars.Build(_c, viewCamera);
+            _c.Parked = Parked;
 
             // Shelf goods, yard and street clutter: a mesh per material instead of thousands of little renderers.
             var merge = new List<Transform>();

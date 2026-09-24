@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 namespace OpeningBell.City
 {
     /// <summary>The phone's apps (home screen order).</summary>
-    public enum PhoneAppId { Home, Messages, Calls, Maps, PennyBridge, News }
+    public enum PhoneAppId { Home, Messages, Calls, Maps, PennyBridge, News, Garage }
 
     /// <summary>
     /// Look and building blocks for the phone: dark-mode system colours, rounded glass panels, text, and the app
@@ -137,6 +137,7 @@ namespace OpeningBell.City
             PhoneAppId.Maps => "Maps",
             PhoneAppId.PennyBridge => "PennyBridge",
             PhoneAppId.News => "News",
+            PhoneAppId.Garage => "My Cars",
             _ => "",
         };
 
@@ -155,6 +156,7 @@ namespace OpeningBell.City
                 PhoneAppId.Maps => (new Color(0.93f, 0.92f, 0.86f), new Color(0.84f, 0.9f, 0.78f)),
                 PhoneAppId.PennyBridge => (new Color(0.1f, 0.22f, 0.4f), BrokerNavy),
                 PhoneAppId.News => (new Color(1f, 0.33f, 0.38f), new Color(0.93f, 0.16f, 0.25f)),
+                PhoneAppId.Garage => (new Color(0.35f, 0.62f, 1f), new Color(0.12f, 0.38f, 0.9f)),
                 _ => (Color.gray, Color.gray),
             };
             tile.generateVisualContent += ctx => Paint(ctx.painter2D, app, size, top, bottom);
@@ -278,6 +280,41 @@ namespace OpeningBell.City
                     p.LineTo(new Vector2(41f * u, 46f * u));
                     p.LineTo(new Vector2(41f * u, 14f * u));
                     p.Stroke();
+                    break;
+
+                case PhoneAppId.Garage:
+                    // A car side-on: body, cabin, two wheels.
+                    p.fillColor = Color.white;
+                    p.BeginPath();
+                    p.MoveTo(new Vector2(9f * u, 40f * u));
+                    p.LineTo(new Vector2(9f * u, 31f * u));
+                    p.LineTo(new Vector2(18f * u, 29f * u));
+                    p.LineTo(new Vector2(24f * u, 20f * u));
+                    p.LineTo(new Vector2(40f * u, 20f * u));
+                    p.LineTo(new Vector2(46f * u, 29f * u));
+                    p.LineTo(new Vector2(52f * u, 31f * u));
+                    p.LineTo(new Vector2(52f * u, 40f * u));
+                    p.ClosePath();
+                    p.Fill();
+                    p.fillColor = new Color(0.12f, 0.38f, 0.9f);
+                    p.BeginPath(); // windows
+                    p.MoveTo(new Vector2(22f * u, 28f * u));
+                    p.LineTo(new Vector2(26f * u, 23f * u));
+                    p.LineTo(new Vector2(38f * u, 23f * u));
+                    p.LineTo(new Vector2(42f * u, 28f * u));
+                    p.ClosePath();
+                    p.Fill();
+                    foreach (float x in new[] { 19f, 42f })
+                    {
+                        p.fillColor = new Color(0.1f, 0.1f, 0.12f);
+                        p.BeginPath();
+                        p.Arc(new Vector2(x * u, 41f * u), 6f * u, Angle.Degrees(0f), Angle.Degrees(360f));
+                        p.Fill();
+                        p.fillColor = Color.white;
+                        p.BeginPath();
+                        p.Arc(new Vector2(x * u, 41f * u), 2.4f * u, Angle.Degrees(0f), Angle.Degrees(360f));
+                        p.Fill();
+                    }
                     break;
             }
         }
