@@ -9,7 +9,7 @@ namespace OpeningBell.City
     /// <summary>
     /// Driving a car (spec §77–78): [E] at a parked car to get in (the camera glides to the seat), W/S/A/D,
     /// Space handbrake, C for chase or hood camera, E to get out (only when nearly stopped) into a clear spot
-    /// beside the door. Burns fuel by game time, takes damage from hard hits. Lives on the player.
+    /// beside the door. Burns fuel for the work the engine does, takes damage from hard hits. Lives on the player.
     /// </summary>
     public sealed class DriveController : MonoBehaviour
     {
@@ -201,9 +201,9 @@ namespace OpeningBell.City
             _car.Steer = move.x;
             _car.Handbrake = _input.Handbrake.IsPressed();
 
-            // Fuel and wear follow what the car actually did.
-            double gameSeconds = Time.deltaTime * _game.Clock.TimeScale;
-            _game.Vehicles.SetFuel(_vehicle, _vehicle.FuelLiters - CarPhysics.Fuel(_car.Spec, _car.EnginePower, gameSeconds));
+            // Fuel and wear follow what the car actually did. The car moves in real time, so it burns in real time:
+            // charging it the (30–120× faster) game clock made every real kilometre cost thirty or more.
+            _game.Vehicles.SetFuel(_vehicle, _vehicle.FuelLiters - CarPhysics.Fuel(_car.Spec, _car.EnginePower, Time.deltaTime));
             if (_vehicle.FuelLiters <= 0 && _car.EngineOn)
             {
                 _car.EngineOn = false;

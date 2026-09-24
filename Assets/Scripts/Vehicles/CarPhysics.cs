@@ -171,8 +171,11 @@ namespace OpeningBell.Vehicles
 
         public static double Drag(CarSpec s, double speed) => 0.5 * AirDensity * s.DragCoefficient * s.FrontalArea * speed * speed;
 
-        /// <summary>Fuel used (litres) delivering <paramref name="enginePowerW"/> for <paramref name="gameSeconds"/>, plus idle.</summary>
-        public static double Fuel(CarSpec s, double enginePowerW, double gameSeconds) =>
-            (Math.Max(0, enginePowerW) / 1000 * s.FuelPerKwh + s.IdleFuelPerHour) * gameSeconds / 3600;
+        /// <summary>
+        /// Fuel used (litres) delivering <paramref name="enginePowerW"/> for <paramref name="seconds"/> of driving, plus
+        /// idle. Seconds of the car's own (real-time) physics, not the game clock, so litres follow the distance driven.
+        /// </summary>
+        public static double Fuel(CarSpec s, double enginePowerW, double seconds) =>
+            (Math.Max(0, enginePowerW) / 1000 * s.FuelPerKwh + s.IdleFuelPerHour) * seconds / 3600;
     }
 }

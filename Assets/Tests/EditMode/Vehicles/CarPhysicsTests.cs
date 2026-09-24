@@ -83,12 +83,19 @@ namespace OpeningBell.Tests
         }
 
         [Test]
-        public void Fuel_FollowsWorkAndGameTime()
+        public void Fuel_FollowsWorkAndDrivingTime()
         {
             CarSpec s = Spec("car_sedan");
             Assert.AreEqual(0.3 * 30 + 0.8, CarPhysics.Fuel(s, 30_000, 3600), 1e-9, "30 kW for an hour plus idle");
             Assert.AreEqual(0.8 / 60, CarPhysics.Fuel(s, 0, 60), 1e-9, "idling a minute");
             Assert.Greater(CarPhysics.Fuel(Spec("car_pickup"), 30_000, 3600), CarPhysics.Fuel(Spec("car_van"), 30_000, 3600), "V8 thirstier than the diesel");
+
+            // Cruising at 80 km/h: air drag plus rolling resistance, through a ~90% efficient drivetrain.
+            // Per 100 km that should be ordinary-car numbers, so a 50 L tank lasts several hundred km.
+            double v = 80 / 3.6, road = CarPhysics.Drag(s, v) + CarPhysics.RollingResistance * s.Mass * CarPhysics.G;
+            double seconds = 100_000 / v;
+            double per100 = CarPhysics.Fuel(s, road * v / 0.9, seconds);
+            Assert.That(per100, Is.InRange(4.0, 12.0), $"sedan at 80 km/h: {per100:F1} L/100 km");
         }
 
         [Test]

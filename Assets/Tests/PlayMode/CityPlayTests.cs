@@ -441,6 +441,7 @@ namespace OpeningBell.Tests
             yield return DriveTo(P(-18f, -11.6f), "west on Maple");
             Assert.Greater(car.Odometer - odometer, 20, "odometer");
             Assert.Less(car.FuelLiters, 50 * listing.FuelFraction, "burned some fuel");
+            Assert.Less(50 * listing.FuelFraction - car.FuelLiters, 0.05, "a few litres per hundred km, not per street: fuel follows distance, not the game clock");
             yield return TapKey(Key.E);
             Assert.IsFalse(_city.Driver.IsDriving, "E gets out once stopped");
             Assert.AreEqual(VehicleState.Parked, car.State);
