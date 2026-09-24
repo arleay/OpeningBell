@@ -36,6 +36,8 @@ else:
     bpy.ops.wm.read_factory_settings(use_empty=True)
     if ext in ("glb", "gltf"):
         bpy.ops.import_scene.gltf(filepath=src)
+    elif ext == "obj":
+        bpy.ops.wm.obj_import(filepath=src)
     else:
         bpy.ops.import_scene.fbx(filepath=src)
 scene = bpy.context.scene

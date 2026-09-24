@@ -11,7 +11,7 @@ using UnityEngine.TestTools;
 
 namespace OpeningBell.Tests
 {
-    /// <summary>TOWN_SPEC Part B in the real town: the stores, the loaner and trailer, carrying and placing, desks and screens, homes.</summary>
+    /// <summary>TOWN_SPEC Part B in the real town: the stores, the loaner truck, carrying and placing, desks and screens, homes.</summary>
     public class HomePlayTests : SceneTestBase
     {
         private CityBuilder _city;
@@ -110,7 +110,7 @@ namespace OpeningBell.Tests
         }
 
         [UnityTest]
-        public IEnumerator Sofa_Bought_Collected_Trailered_Home_AndSaved()
+        public IEnumerator Sofa_Bought_Collected_Trucked_Home_AndSaved()
         {
             yield return Setup();
             ShowroomItem sofa = Object.FindObjectsByType<ShowroomItem>(FindObjectsSortMode.None).First(s => s.Item.Id == "sofa_budget");
@@ -138,30 +138,34 @@ namespace OpeningBell.Tests
             rental.Interact();
             Assert.IsTrue(W.Loaner.Out, "loaner lent");
             Assert.IsTrue(_game.Rental.Active);
-            for (int i = 0; i < 30; i++) yield return new WaitForFixedUpdate(); // let the trailer settle on its wheels
-            CargoBed trailer = W.Bed(Loaner.TrailerBed);
-            Assert.IsNotNull(trailer);
+            for (int i = 0; i < 30; i++) yield return new WaitForFixedUpdate(); // let the truck settle on its springs
+            CargoBed box = W.Bed(Loaner.TruckBed);
+            Assert.IsNotNull(box);
+            Transform truck = W.Loaner.Truck.transform;
 
-            // Onto the trailer: the gate's up, so first it refuses.
+            // Into the truck's box: the back door's down, so first it refuses.
             W.Hands.PickUp(W.View(bought.Uid));
-            StringAssert.Contains("gate", Why(Aim(trailer.transform.position + Vector3.up * 0.1f)));
-            W.Loaner.Trailer.GetComponentInChildren<TrailerGate>().Set(true);
-            Carrier.Target onTrailer = Aim(trailer.transform.position + Vector3.up * 0.1f);
-            Assert.IsTrue(onTrailer.Valid, onTrailer.Why);
-            W.Hands.Place(onTrailer);
+            StringAssert.Contains("door", Why(Aim(box.transform.position + Vector3.up * 0.3f)));
+            W.Loaner.Door.Set(true);
+            Carrier.Target inBox = Aim(box.transform.position + Vector3.up * 0.3f);
+            Assert.IsTrue(inBox.Valid, inBox.Why);
+            W.Hands.Place(inBox);
             Assert.AreEqual(ItemState.Loaded, bought.State);
-            Assert.AreEqual(Loaner.TrailerBed, bought.Vehicle);
-            _player.PlaceAt(trailer.transform.position + new Vector3(-4f, 0.5f, -5f), 40f, 12f);
+            Assert.AreEqual(Loaner.TruckBed, bought.Vehicle);
+            _player.PlaceAt(truck.TransformPoint(new Vector3(-2.2f, 0.1f, -7f)), truck.eulerAngles.y + 15f, 8f);
             yield return null;
-            yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "home-trailer.png");
+            yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "home-truck.png");
+            _player.PlaceAt(truck.TransformPoint(new Vector3(-7f, 0.1f, 1f)), truck.eulerAngles.y + 90f, 4f);
+            yield return null;
+            yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "home-truck-side.png");
 
-            // Save with the sofa on the trailer: it's all there after loading.
+            // Save with the sofa in the truck: it's all there after loading.
             yield return Reload();
             OwnedItem again = _game.Belongings.Items.Single(i => !i.IsBox);
-            Assert.AreEqual(ItemState.Loaded, again.State, "still on the trailer");
+            Assert.AreEqual(ItemState.Loaded, again.State, "still in the truck");
             Assert.IsTrue(W.Loaner.Out, "the loaner came back with the save");
             yield return null;
-            Assert.AreEqual(W.Loaner.Trailer.transform, W.View(again.Uid).transform.parent, "riding on the trailer");
+            Assert.AreEqual(W.Loaner.Truck.transform, W.View(again.Uid).transform.parent, "riding in the truck");
 
             // Home: a starter house, the sofa into the living room.
             _game.Economy.DevDeposit(300000m, _game.Clock.Now);

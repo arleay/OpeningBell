@@ -369,7 +369,7 @@ namespace OpeningBell.City
             }
             if (t.Bed != null)
             {
-                if (!t.Bed.Open) { t.Why = "Open the gate first."; return t; }
+                if (!t.Bed.Open) { t.Why = "Roll the back door up first."; return t; }
                 if (_w.Loaded(t.Bed) + spec.Volume > t.Bed.Capacity) { t.Why = "No room left in there."; return t; }
             }
             t.Valid = true;

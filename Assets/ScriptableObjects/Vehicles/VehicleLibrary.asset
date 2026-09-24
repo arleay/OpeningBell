@@ -920,6 +920,90 @@ MonoBehaviour:
       IdleFuelPerHour: 0.9
     Mesh: van
     EngineSound: EJ25
+  - Id: car_moving_truck
+    Name: Timberline Moving Truck
+    Kind: 3
+    Price: 0
+    Description: 'Timberline Home''s loaner: a box truck on a light chassis-cab, 2.2 L turbo-diesel, dual rear wheels. Lent, never sold.'
+    ColorR: 0.6
+    ColorG: 0.6
+    ColorB: 0.6
+    Spec:
+      Mass: 12
+      WheelDiameter: 0.7
+      Wheelbase: 1.05
+      RollingResistance: 0.005
+      RoughnessPenalty: 2
+      DragArea: 0.5
+      BrakeDecel: 6
+      MaxLeanDeg: 35
+      MaxSteerDeg: 40
+      LowestGear: 1.2
+      HighestGear: 4
+      Gears: 1
+      MotorPower: 0
+      AssistCutoff: 0
+      BatteryWh: 0
+      DeckLength: 0.8
+      WheelDurometer: 99
+      BearingFactor: 1
+      TruckLooseness: 0.5
+    Car:
+      Mass: 2900
+      CenterOfMassHeight: 0.9
+      Wheelbase: 3.09
+      TrackWidth: 1.43
+      FrontWeight: 0.55
+      Drive: 1
+      AwdFrontShare: 0.4
+      IdleRpm: 800
+      RedlineRpm: 4600
+      CurveRpm:
+      - 1000
+      - 1700
+      - 2500
+      - 3500
+      - 4200
+      - 4600
+      CurveTorque:
+      - 240
+      - 360
+      - 370
+      - 330
+      - 280
+      - 240
+      GearRatios:
+      - 4.2
+      - 2.5
+      - 1.6
+      - 1.2
+      - 0.95
+      - 0.78
+      ReverseRatio: 3.2
+      FinalDrive: 3.7
+      DrivetrainEfficiency: 0.88
+      StallRpm: 2200
+      StallMultiplier: 1.8
+      WheelRadius: 0.3
+      TireGrip: 0.95
+      PeakSlipAngle: 0.16
+      BrakeTorque: 6240
+      BrakeFront: 0.65
+      HandbrakeTorque: 1600
+      SpringRate: 40000
+      Damping: 4000
+      RestLength: 0.42
+      Travel: 0.2
+      AntiRoll: 11000
+      DragCoefficient: 0.6
+      FrontalArea: 4.2
+      DownforceCoefficient: 0
+      MaxSteerDeg: 34
+      FuelCapacity: 75
+      FuelPerKwh: 0.26
+      IdleFuelPerHour: 0.9
+    Mesh: moving_truck
+    EngineSound: EJ25
   - Id: car_gt
     Name: Vantage GT
     Kind: 3
@@ -2121,6 +2205,7 @@ MonoBehaviour:
   - {fileID: 919132149155446097, guid: 4eadddff47796d84ba26695cf7f53858, type: 3}
   - {fileID: 919132149155446097, guid: ee0a2f7a1428a4f42b7e61f20c06434d, type: 3}
   - {fileID: 919132149155446097, guid: df13c699d7eca4342b179f76c060c982, type: 3}
+  - {fileID: 919132149155446097, guid: cd65f83401870ba448e10e4e0541c0c0, type: 3}
   trafficMix:
   - rgs-sedan
   - rgs-sedan
