@@ -14,7 +14,7 @@ namespace OpeningBell.City
     /// are unpacked when they're set down at home. Aiming at an item: [X] sells it (twice to confirm).
     /// Moving boxes: holding something, [LMB] on an open box packs it (any amount; last in, first out). Empty-handed
     /// on an open box, [LMB] folds the flaps shut, or, once it's been opened again somewhere else, takes the top thing
-    /// out into your hands; [F] throws an empty box away. [E] carries a box, or opens a closed one set down in another home.
+    /// out into your hands; [LMB] on a closed box opens it again; [F] throws an empty box away. [E] carries a box, or opens a closed one set down in another home.
     /// </summary>
     public sealed class Carrier : MonoBehaviour
     {
@@ -177,7 +177,7 @@ namespace OpeningBell.City
             if (!Holding)
             {
                 ItemView aimedBox = _interactor != null && _interactor.Current is ItemView av && av.Item != null && av.Item.IsBox ? av : null;
-                _player.ClickClaimed = aimedBox != null && !aimedBox.Item.Closed;
+                _player.ClickClaimed = aimedBox != null;
                 if (_player.ControlEnabled && !_player.Suspended)
                 {
                     AimedItemKeys(k);
@@ -476,6 +476,18 @@ namespace OpeningBell.City
             _w.Show(box);
         }
 
+        /// <summary>
+        /// Opens a closed box's flaps. Still where it was shut, you carry on packing; anywhere else, you're unpacking
+        /// (the next click takes the top thing out).
+        /// </summary>
+        public void OpenBox(OwnedItem box)
+        {
+            string here = box.State == ItemState.Placed ? box.Property : "";
+            _w.Belongings.SetClosed(box, false, null);
+            box.Opened = here != box.ClosedAt;
+            _w.Show(box);
+        }
+
         /// <summary>Throws an empty box away (one with things in it stays).</summary>
         public bool Discard(OwnedItem box)
         {
@@ -494,8 +506,9 @@ namespace OpeningBell.City
                 Discard(box);
                 return;
             }
-            if (box.Closed || !_player.Input.Attack.WasPressedThisFrame()) return;
-            if (box.Opened && n > 0) TakeOut(box);
+            if (!_player.Input.Attack.WasPressedThisFrame()) return;
+            if (box.Closed) OpenBox(box);
+            else if (box.Opened && n > 0) TakeOut(box);
             else CloseBox(box);
         }
 

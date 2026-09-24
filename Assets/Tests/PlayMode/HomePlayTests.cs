@@ -217,6 +217,11 @@ namespace OpeningBell.Tests
             W.Hands.CloseBox(box);
             Assert.IsTrue(box.Closed);
             Assert.AreEqual("yard", box.ClosedAt);
+            // Shut by mistake: a click opens it again, still packing (it hasn't moved).
+            W.Hands.OpenBox(box);
+            Assert.IsFalse(box.Closed);
+            Assert.IsFalse(box.Opened, "same place: carry on packing");
+            W.Hands.CloseBox(box);
             yield return null;
             Assert.AreEqual("Carry the box", W.View(box.Uid).Prompt);
 
