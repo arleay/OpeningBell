@@ -150,11 +150,33 @@ namespace OpeningBell.City
             string error = game.Economy.Spend(Fare(d), "Taxi to " + to.Name, game.Clock.Now);
             if (error != null) return error;
             game.SkipTo(game.Clock.Now.AddMinutes(Minutes(d)));
+            SetDown(player, to);
+            return null;
+        }
+
+        /// <summary>Stands the player on the kerb in front of a place.</summary>
+        public static void SetDown(FirstPersonController player, MapPlace to)
+        {
             // Down from head height over the kerb: canopies and awnings overhead don't count.
             float grade = StreetMap.Plan.StreetGrade(new Vector2(to.At.x, to.At.z));
             float y = Physics.Raycast(new Vector3(to.At.x, grade + 2.5f, to.At.z), Vector3.down, out RaycastHit hit, 10f, ~0, QueryTriggerInteraction.Ignore)
                 ? hit.point.y : grade;
             player.PlaceAt(new Vector3(to.At.x, y + 0.05f, to.At.z), player.transform.eulerAngles.y);
+        }
+    }
+
+    /// <summary>Instant travel to a place you've found, from the phone's map: $250, no time passes.</summary>
+    public static class Teleport
+    {
+        public const decimal Price = 250m;
+
+        /// <summary>Pays and puts the player in front of the place. An error, or null.</summary>
+        public static string Go(GameBootstrap game, FirstPersonController player, DriveController driver, MapPlace to)
+        {
+            if (driver != null && driver.IsDriving) return "Get out of the car first.";
+            string error = game.Economy.Spend(Price, "Teleport to " + to.Name, game.Clock.Now);
+            if (error != null) return error;
+            Taxi.SetDown(player, to);
             return null;
         }
     }

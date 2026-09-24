@@ -195,6 +195,14 @@ namespace OpeningBell.Tests
             Assert.Less(Taxi.Distance(player.transform.position, home), 1f, "at home");
             Assert.IsNotNull(Taxi.Ride(game, player, city.Driver, home), "no taxi for a walk across the street");
 
+            // Teleport back to the police station: $250, instantly, no time passes.
+            bank = game.Economy.Bank.Balance;
+            before = game.Clock.Now;
+            Assert.IsNull(Teleport.Go(game, player, city.Driver, police));
+            Assert.AreEqual(bank - Teleport.Price, game.Economy.Bank.Balance, "$250");
+            Assert.Less(Taxi.Distance(player.transform.position, police), 1f, "in front of it");
+            Assert.Less((game.Clock.Now - before).TotalMinutes, 1.0, "instant");
+
             game.Save();
             yield return UnityEngine.SceneManagement.SceneManager.LoadSceneAsync("Main");
             yield return null;

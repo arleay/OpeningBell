@@ -487,7 +487,7 @@ namespace OpeningBell.City
 
         private readonly VisualElement _view, _map, _you;
         private readonly Label _selected;
-        private readonly VisualElement _taxi;
+        private readonly VisualElement _taxi, _teleport;
         private readonly ScrollView _places;
         private readonly List<(MapIcon Icon, string Name, Vector3 At, VisualElement Marker)> _marks =
             new List<(MapIcon, string, Vector3, VisualElement)>();
@@ -609,6 +609,11 @@ namespace OpeningBell.City
             _taxi.style.alignSelf = Align.FlexStart;
             _taxi.style.marginLeft = 16f;
             _taxi.style.marginTop = 6f;
+            _teleport = PhoneKit.Pill(sheet, $"Teleport  ·  ${Teleport.Price:0}", new Color(0.55f, 0.35f, 0.95f), Color.white, () => TakeTeleport());
+            _teleport.name = "map-teleport";
+            _teleport.style.alignSelf = Align.FlexStart;
+            _teleport.style.marginLeft = 16f;
+            _teleport.style.marginTop = 6f;
             _places = List(sheet);
             _places.style.marginTop = 6f;
         }
@@ -646,14 +651,36 @@ namespace OpeningBell.City
 
         private MapDiscovery Discovery => Phone.Map.Discovery;
 
+        private MapPlace Selected
+        {
+            get
+            {
+                if (_selectedIndex < 0 || Discovery == null) return null;
+                string name = _marks[_selectedIndex].Name;
+                foreach (MapPlace p in Discovery.Places) if (p.Name == name) return p;
+                return null;
+            }
+        }
+
+        /// <summary>Teleports in front of the selected place for $250 and puts the phone away (or says why not).</summary>
+        public string TakeTeleport()
+        {
+            MapPlace place = Selected;
+            string error = place == null ? "Pick a place first." : Teleport.Go(Phone.Game, Phone.Player, Phone.City.Driver, place);
+            if (error != null)
+            {
+                _selected.text = error;
+                return error;
+            }
+            Phone.Close();
+            return null;
+        }
+
         /// <summary>Rides to the selected place and puts the phone away (or says why not).</summary>
         public string TakeTaxi()
         {
-            if (_selectedIndex < 0 || Discovery == null) return "Pick a place first.";
-            string name = _marks[_selectedIndex].Name;
-            MapPlace place = null;
-            foreach (MapPlace p in Discovery.Places) if (p.Name == name) place = p;
-            string error = place == null ? "Unknown place." : Taxi.Ride(Phone.Game, Phone.Player, Phone.City.Driver, place);
+            MapPlace place = Selected;
+            string error = place == null ? "Pick a place first." : Taxi.Ride(Phone.Game, Phone.Player, Phone.City.Driver, place);
             if (error != null)
             {
                 _selected.text = error;
@@ -692,6 +719,7 @@ namespace OpeningBell.City
             Layout();
             Vector3 me = Me;
             _taxi.style.display = DisplayStyle.None;
+            _teleport.style.display = _selectedIndex >= 0 ? DisplayStyle.Flex : DisplayStyle.None;
             if (_selectedIndex >= 0)
             {
                 var m = _marks[_selectedIndex];
