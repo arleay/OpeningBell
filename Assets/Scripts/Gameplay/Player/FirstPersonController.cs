@@ -84,6 +84,8 @@ namespace OpeningBell.Gameplay
 
         /// <summary>Both hands on something you're carrying: no punching, no riding off.</summary>
         public bool HandsFull { get; set; }
+        /// <summary>The left button belongs to what's aimed at (a moving box), not the fists.</summary>
+        public bool ClickClaimed { get; set; }
 
         /// <summary>Off while seated: no movement or look, cursor released for the terminal.</summary>
         public bool ControlEnabled

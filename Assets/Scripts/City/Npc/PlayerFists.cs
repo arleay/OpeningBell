@@ -41,7 +41,7 @@ namespace OpeningBell.City
 
         private void Update()
         {
-            if (_player == null || !_player.ControlEnabled || _player.Suspended || _player.HandsFull) return;
+            if (_player == null || !_player.ControlEnabled || _player.Suspended || _player.HandsFull || _player.ClickClaimed) return;
             if (_player.Input.Attack.WasPressedThisFrame()) Throw();
             if (_landAt > 0f && Time.time >= _landAt)
             {

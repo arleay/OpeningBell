@@ -19,6 +19,8 @@ namespace OpeningBell.Home
         Delivering,
         /// <summary>Put away in a home's storage (<see cref="OwnedItem.Property"/>).</summary>
         Stored,
+        /// <summary>Packed in a moving box (<see cref="OwnedItem.InBox"/>): travels with the box, not shown.</summary>
+        Packed,
     }
 
     /// <summary>What a monitor shows.</summary>
@@ -47,8 +49,18 @@ namespace OpeningBell.Home
         public MonitorView View;
         public string Symbol = "";
         public bool Portrait;
+        // Moving boxes (Variant 0 open, 1 closed) and what's packed in them.
+        /// <summary>The box it's packed in (0 = none), and its place in the pile (higher = packed later, out first).</summary>
+        public int InBox, PackOrder;
+        /// <summary>A box: where its flaps were last closed ("yard", a home id, "" if elsewhere). Set down in a
+        /// different home, [E] opens it rather than picking it up.</summary>
+        public string ClosedAt = "";
+        /// <summary>A box opened after moving (unpacking): a click takes the top thing out instead of closing it.</summary>
+        public bool Opened;
 
         public HomeItem Item => HomeCatalog.Find(ItemId);
+        public bool IsBox => Item?.IsBox == true;
+        public bool Closed => Variant == 1;
     }
 
     [Serializable]
@@ -93,6 +105,8 @@ namespace OpeningBell.Home
 
         public void Remove(OwnedItem item)
         {
+            // A box goes with whatever's in it (callers only throw away empty ones).
+            if (item.IsBox) foreach (OwnedItem inside in Contents(item)) _items.Remove(inside);
             // Whatever hung from it comes loose.
             foreach (OwnedItem other in _items)
                 if (other.MountedOn == item.Uid) other.MountedOn = 0;
@@ -163,6 +177,70 @@ namespace OpeningBell.Home
             if (desk.Item?.IsDesk != true) return "Arms clamp to a desk.";
             foreach (OwnedItem i in MountedOn(desk.Uid)) if (i.Item?.IsArm == true) return "That desk already has an arm.";
             return null;
+        }
+
+        // ---- moving boxes ----
+
+        /// <summary>What's in <paramref name="box"/>, first packed first (the last one comes out first).</summary>
+        public List<OwnedItem> Contents(OwnedItem box)
+        {
+            var list = _items.FindAll(i => i.State == ItemState.Packed && i.InBox == box.Uid);
+            list.Sort((a, b) => a.PackOrder.CompareTo(b.PackOrder));
+            return list;
+        }
+
+        /// <summary>Can <paramref name="item"/> go in <paramref name="box"/>? Null if yes. No limit on how much: it's a
+        /// game box. Not a box in a box, nor a desk with things still on it.</summary>
+        public string CanPack(OwnedItem item, OwnedItem box)
+        {
+            if (!box.IsBox) return "That's not a box.";
+            if (box.Closed) return "Open the box first.";
+            if (item.IsBox) return "Boxes don't go in boxes.";
+            foreach (OwnedItem other in _items) if (other.MountedOn == item.Uid) return "Take everything off it first.";
+            return null;
+        }
+
+        public void Pack(OwnedItem item, OwnedItem box)
+        {
+            int top = 0;
+            foreach (OwnedItem i in Contents(box)) top = Math.Max(top, i.PackOrder);
+            item.State = ItemState.Packed;
+            item.InBox = box.Uid;
+            item.PackOrder = top + 1;
+            item.MountedOn = 0;
+            item.Property = "";
+            item.Vehicle = "";
+            Touch();
+        }
+
+        /// <summary>Takes the last thing packed out of <paramref name="box"/> into the player's hands; null if it's empty.</summary>
+        public OwnedItem Unpack(OwnedItem box)
+        {
+            List<OwnedItem> contents = Contents(box);
+            if (contents.Count == 0) return null;
+            OwnedItem top = contents[contents.Count - 1];
+            top.State = ItemState.Carried;
+            top.InBox = 0;
+            top.PackOrder = 0;
+            Touch();
+            return top;
+        }
+
+        /// <summary>Folds the flaps shut (remembering where) or opens them: opened somewhere else means unpacking.</summary>
+        public void SetClosed(OwnedItem box, bool closed, string where)
+        {
+            if (closed)
+            {
+                box.Variant = 1;
+                box.ClosedAt = where ?? "";
+                box.Opened = false;
+            }
+            else
+            {
+                box.Variant = 0;
+                box.Opened = true;
+            }
+            Touch();
         }
 
         public BelongingsSaveData CaptureState() => new BelongingsSaveData { NextUid = _nextUid, Items = new List<OwnedItem>(_items) };

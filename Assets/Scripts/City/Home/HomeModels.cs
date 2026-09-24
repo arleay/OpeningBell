@@ -43,6 +43,14 @@ namespace OpeningBell.City
                     Mathf.Clamp(size.x * 0.06f, 0.02f, 0.08f), new Color(0.15f, 0.12f, 0.1f));
                 return root;
             }
+            if (item.IsBox)
+            {
+                // Kenney's cardboard box, flaps up (open) or folded shut; a plain carton where the kit is missing.
+                string model = variant == 1 ? "cardboardBoxClosed" : "cardboardBoxOpen";
+                if (k.Fit(r, model, Vector3.zero, new Vector3(item.Width, item.Height, item.Depth), 0f, stretch: true) == null)
+                    k.Box(r, "Carton", new Vector3(0f, item.Height / 2f, 0f), new Vector3(item.Width, item.Height, item.Depth), c.P.Lit(new Color(0.66f, 0.52f, 0.36f), 0.05f), collider: false);
+                return root;
+            }
             if (item.IsMonitor) Monitor(c, r, item, variant);
             else if (item.IsArm) Arm(c, r, item, variant);
             else if (item.Id == "pc_tower")

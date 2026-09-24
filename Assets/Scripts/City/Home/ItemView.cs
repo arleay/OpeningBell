@@ -35,6 +35,11 @@ namespace OpeningBell.City
         {
             get
             {
+                if (Item.IsBox)
+                {
+                    if (Item.Closed && OpensHere) return "Open the box";
+                    return "Carry the box";
+                }
                 if (Spec.IsDesk && _world.HasMounted(Item)) return "Clear the desk to move it";
                 return (Item.Boxed ? "Pick up boxed " : "Pick up ") + Spec.Name;
             }
@@ -44,6 +49,14 @@ namespace OpeningBell.City
         {
             get
             {
+                if (Item.IsBox)
+                {
+                    int n = _world.Belongings.Contents(Item).Count;
+                    string inside = n == 0 ? "Empty" : $"{n} thing{(n == 1 ? "" : "s")} inside, {_world.Belongings.Contents(Item)[n - 1].Item.Name} on top";
+                    if (Item.Closed) return inside + (OpensHere ? "" : "\nOpen it at home with [E]");
+                    string click = Item.Opened && n > 0 ? "[LMB] take it out" : "[LMB] fold the flaps shut";
+                    return inside + "\n" + click + (n == 0 ? "  [F] throw it away" : "") + "\nHolding something: [LMB] on the box packs it";
+                }
                 string condition = Item.Condition >= 0.99 ? "new" : $"{Item.Condition * 100:0}% condition";
                 string colour = Spec.Variants.Length > 1 ? Spec.Variants[Item.Variant] + " · " : "";
                 string line = $"{colour}{Spec.Tier} · {condition}";
@@ -54,8 +67,25 @@ namespace OpeningBell.City
             }
         }
 
+        /// <summary>A closed box standing in one of your homes other than where it was shut: [E] opens it (unpacking).</summary>
+        private bool OpensHere
+        {
+            get
+            {
+                if (Item.State != ItemState.Placed) return false;
+                HomeSpec home = _world.Find(Item.Property);
+                return home != null && _world.Owns(home) && Item.ClosedAt != home.Id;
+            }
+        }
+
         public override void Interact()
         {
+            if (Item.IsBox && Item.Closed && OpensHere)
+            {
+                _world.Belongings.SetClosed(Item, false, null);
+                _world.Show(Item);
+                return;
+            }
             if (Spec.IsDesk && _world.HasMounted(Item))
             {
                 _world.Say("Take the screens and things off it first.");

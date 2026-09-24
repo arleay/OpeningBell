@@ -83,7 +83,7 @@ namespace OpeningBell.City
 
             // The showroom: everything in the catalog on a grid, wall pieces on the back wall.
             var items = new List<HomeItem>();
-            foreach (HomeItem i in HomeCatalog.Items) if (i.Store == which) items.Add(i);
+            foreach (HomeItem i in HomeCatalog.Items) if (i.Store == which && !i.IsBox) items.Add(i);
             int slot = 0, wall = 0;
             float cols = which == HomeStore.Furniture ? 9 : 6, spacing = (width - 6f) / (cols - 1);
             float rowGap = which == HomeStore.Furniture ? 6f : 4f;
@@ -243,7 +243,15 @@ namespace OpeningBell.City
                 _w.Hands.TakeNew(owned);
                 Say("Here you go. Unbox it at home.");
             }
-            else Say(item.Boxed ? "Your hands are full, so it's at the pickup counter round the back." : "Paid. It's at the pickup counter round the back, or we can deliver it.");
+            else
+            {
+                // A free moving box with the order (one waiting at a time): pack everything in it for the trip home.
+                bool boxWaiting = false;
+                foreach (OwnedItem i in _w.Belongings.Items) if (i.IsBox && i.State == ItemState.AtPickup) boxWaiting = true;
+                if (!boxWaiting) _w.Belongings.Add("moving_box", 0, ItemState.AtPickup);
+                Say(item.Boxed ? "Your hands are full, so it's at the pickup counter round the back. There's a moving box with it."
+                    : "Paid. It's at the pickup counter round the back with a moving box, or we can deliver it.");
+            }
             return owned;
         }
     }

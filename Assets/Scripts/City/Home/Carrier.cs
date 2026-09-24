@@ -12,6 +12,9 @@ namespace OpeningBell.City
     /// if not: [LMB] place, [R] turn 15° ([Shift]+[R] 5°), [G] grid snap on/off, [RMB] cancel (back where it was),
     /// [Ctrl]+[Z] undo the last move, [B] put it away in the home's storage. Things go down at home, in a vehicle's bed or at the store's pickup yard; boxes
     /// are unpacked when they're set down at home. Aiming at an item: [X] sells it (twice to confirm).
+    /// Moving boxes: holding something, [LMB] on an open box packs it (any amount; last in, first out). Empty-handed
+    /// on an open box, [LMB] folds the flaps shut, or, once it's been opened again somewhere else, takes the top thing
+    /// out into your hands; [F] throws an empty box away. [E] carries a box, or opens a closed one set down in another home.
     /// </summary>
     public sealed class Carrier : MonoBehaviour
     {
@@ -35,7 +38,7 @@ namespace OpeningBell.City
 
         private struct Record
         {
-            public int Uid, Mounted;
+            public int Uid, Mounted, InBox, PackOrder;
             public ItemState State;
             public string Property, Vehicle;
             public Vector3 At;
@@ -106,7 +109,7 @@ namespace OpeningBell.City
             bool large = spec.Large && !v.Item.Boxed;
             // Small things in front of you; big ones out of the way (the preview shows where they're going).
             v.transform.SetParent(View, false);
-            v.transform.localPosition = large ? new Vector3(0f, -3f, 0f) : new Vector3(0.18f, -0.42f, 0.55f);
+            v.transform.localPosition = large ? new Vector3(0f, -3f, 0f) : spec.IsBox ? new Vector3(0f, -0.62f, 0.8f) : new Vector3(0.18f, -0.42f, 0.55f); // a box in both arms, low
             v.transform.localRotation = Quaternion.identity;
             foreach (Renderer r in v.GetComponentsInChildren<Renderer>()) r.enabled = !large;
             _player.HandsFull = true;
@@ -148,6 +151,7 @@ namespace OpeningBell.City
         private static Record Snapshot(OwnedItem i) => new Record
         {
             Uid = i.Uid, State = i.State, Property = i.Property, Vehicle = i.Vehicle, At = new Vector3(i.X, i.Y, i.Z), Yaw = i.Yaw, Mounted = i.MountedOn, Boxed = i.Boxed,
+            InBox = i.InBox, PackOrder = i.PackOrder,
         };
 
         private void Restore(Record r)
@@ -157,7 +161,9 @@ namespace OpeningBell.City
             bool reboxed = i.Boxed != r.Boxed;
             i.State = r.State; i.Property = r.Property; i.Vehicle = r.Vehicle;
             i.X = r.At.x; i.Y = r.At.y; i.Z = r.At.z; i.Yaw = r.Yaw; i.MountedOn = r.Mounted; i.Boxed = r.Boxed;
+            i.InBox = r.InBox; i.PackOrder = r.PackOrder;
             _w.Belongings.Touch();
+            if (i.State == ItemState.Packed) { _w.Hide(i.Uid); return; } // back in its box
             if (reboxed || _w.View(i.Uid) == null) _w.Show(i);
             else _w.Pose(_w.View(i.Uid));
         }
@@ -170,7 +176,13 @@ namespace OpeningBell.City
             Mouse m = Mouse.current;
             if (!Holding)
             {
-                if (_player.ControlEnabled && !_player.Suspended) AimedItemKeys(k);
+                ItemView aimedBox = _interactor != null && _interactor.Current is ItemView av && av.Item != null && av.Item.IsBox ? av : null;
+                _player.ClickClaimed = aimedBox != null && !aimedBox.Item.Closed;
+                if (_player.ControlEnabled && !_player.Suspended)
+                {
+                    AimedItemKeys(k);
+                    if (aimedBox != null) BoxKeys(aimedBox, k);
+                }
                 if (k != null && k.zKey.wasPressedThisFrame && k.ctrlKey.isPressed) Undo();
                 return;
             }
@@ -192,6 +204,20 @@ namespace OpeningBell.City
                 }
             }
             Aim = Evaluate(new Ray(View.position, View.forward));
+            // Aiming at an open moving box: the click packs what you're holding instead of setting it down.
+            if (Aim.Onto != null && Aim.Onto.Item.IsBox && !_held.Item.IsBox)
+            {
+                if (_ghost != null) _ghost.SetActive(false);
+                string why = _w.Belongings.CanPack(_held.Item, Aim.Onto.Item);
+                _w.City.Hud?.SetStatus($"Carrying {_held.Spec.Name}   " + (why ?? "[LMB] pack it in the box") + "   [RMB] cancel");
+                if (m != null && m.rightButton.wasPressedThisFrame) Cancel();
+                else if (_player.Input.Attack.WasPressedThisFrame())
+                {
+                    if (why != null) _w.Say(why);
+                    else PackInto(Aim.Onto.Item);
+                }
+                return;
+            }
             ShowGhost(Aim);
             _w.City.Hud?.SetStatus($"Carrying {_held.Spec.Name}{(_held.Spec.Large ? " (heavy)" : "")}   " +
                 (Aim.Valid ? "[LMB] place" : Aim.Why) + $"   [R] turn  [G] snap {(Snap ? "on" : "off")}  [RMB] cancel");
@@ -411,6 +437,68 @@ namespace OpeningBell.City
             else _w.Pose(v);
         }
 
+        // ---- moving boxes ----
+
+        /// <summary>Packs the held item into <paramref name="box"/> (on top of whatever's in it).</summary>
+        public void PackInto(OwnedItem box)
+        {
+            if (!Holding) return;
+            OwnedItem i = _held.Item;
+            if (_w.Belongings.CanPack(i, box) is string why) { _w.Say(why); return; }
+            if (_from is Record from) _undo.Push(from);
+            _from = null;
+            Release();
+            _w.Belongings.Pack(i, box);
+            _w.Hide(i.Uid);
+            int n = _w.Belongings.Contents(box).Count;
+            _w.Say($"{i.Item.Name} packed. {n} thing{(n == 1 ? "" : "s")} in the box.");
+        }
+
+        /// <summary>Takes the top thing out of an open box into your hands ([RMB] puts it back).</summary>
+        public void TakeOut(OwnedItem box)
+        {
+            if (Holding) return;
+            List<OwnedItem> contents = _w.Belongings.Contents(box);
+            if (contents.Count == 0) return;
+            OwnedItem top = contents[contents.Count - 1];
+            Record packed = Snapshot(top);
+            _w.Belongings.Unpack(box);
+            _from = packed;
+            ItemView v = _w.View(top.Uid) ?? _w.Show(top);
+            Hold(v);
+        }
+
+        /// <summary>Folds an open box's flaps shut, remembering where (so it opens with [E] in a different home).</summary>
+        public void CloseBox(OwnedItem box)
+        {
+            string where = box.State == ItemState.Placed ? box.Property : "";
+            _w.Belongings.SetClosed(box, true, where);
+            _w.Show(box);
+        }
+
+        /// <summary>Throws an empty box away (one with things in it stays).</summary>
+        public bool Discard(OwnedItem box)
+        {
+            if (_w.Belongings.Contents(box).Count > 0) { _w.Say("Empty it first."); return false; }
+            _w.Belongings.Remove(box);
+            _w.Say("Box thrown away.");
+            return true;
+        }
+
+        private void BoxKeys(ItemView v, Keyboard k)
+        {
+            OwnedItem box = v.Item;
+            int n = _w.Belongings.Contents(box).Count;
+            if (k != null && k.fKey.wasPressedThisFrame)
+            {
+                Discard(box);
+                return;
+            }
+            if (box.Closed || !_player.Input.Attack.WasPressedThisFrame()) return;
+            if (box.Opened && n > 0) TakeOut(box);
+            else CloseBox(box);
+        }
+
         /// <summary>Puts the held item away in a home's storage (the cupboard by the front door gives it back).</summary>
         public void Stow(HomeSpec home)
         {
@@ -475,6 +563,7 @@ namespace OpeningBell.City
         public void Sell(ItemView v)
         {
             if (_w.HasMounted(v.Item)) { _w.Say("Take everything off it first."); return; }
+            if (v.Item.IsBox) { _w.Say(_w.Belongings.Contents(v.Item).Count > 0 ? "Empty it first." : "Nobody buys a used box: [F] throws it away."); return; }
             decimal price = Belongings.ResaleValue(v.Item);
             if (_sellArmed != v.Item.Uid || Time.unscaledTime > _sellUntil)
             {

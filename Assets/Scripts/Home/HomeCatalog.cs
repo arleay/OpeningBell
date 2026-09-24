@@ -45,6 +45,8 @@ namespace OpeningBell.Home
         /// <summary>Something you sit on: never on a bed, a table or another seat.</summary>
         public bool Seat;
         public string[] Variants = { "Default" };
+        /// <summary>The moving box: free with pickup orders, not on sale; holds any amount (Variant 0 open, 1 closed).</summary>
+        public bool IsBox;
 
         public bool IsDesk => MonitorSlots > 0;
         public bool IsMonitor => Inches > 0;
@@ -103,6 +105,11 @@ namespace OpeningBell.Home
                 all.Add(i);
                 return i;
             }
+
+            // The moving box the furniture store hands out with pickup orders (not on sale; Kenney's cardboard box).
+            HomeItem box = F("moving_box", "Moving Box", "Moving", Tier.Budget, 0m, "cardboardBoxOpen", 0.7f, 0.5f, 0.5f, variants: new[] { "Open", "Closed" });
+            box.IsBox = true;
+            box.Outdoor = true;
 
             // Living.
             F("sofa_budget", "Nook 2-Seat Sofa", "Living", Tier.Budget, 349m, "loungeDesignSofa", 1.7f, 0.85f, 0.8f, variants: Fabric).Seat = true;

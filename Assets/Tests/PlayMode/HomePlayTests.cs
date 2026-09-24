@@ -123,7 +123,8 @@ namespace OpeningBell.Tests
             Assert.AreEqual(bank, _game.Economy.Bank.Balance, "the first press asks");
             sofa.Interact();
             Assert.AreEqual(bank - sofa.Item.Price, _game.Economy.Bank.Balance);
-            OwnedItem bought = _game.Belongings.Items.Single();
+            OwnedItem bought = _game.Belongings.Items.Single(i => !i.IsBox);
+            Assert.IsTrue(_game.Belongings.Items.Any(i => i.IsBox && i.State == ItemState.AtPickup), "a free moving box comes with the order");
             Assert.AreEqual(ItemState.AtPickup, bought.State);
             Assert.AreEqual(1, bought.Variant, "the colour on the tag");
 
@@ -156,7 +157,7 @@ namespace OpeningBell.Tests
 
             // Save with the sofa on the trailer: it's all there after loading.
             yield return Reload();
-            OwnedItem again = _game.Belongings.Items.Single();
+            OwnedItem again = _game.Belongings.Items.Single(i => !i.IsBox);
             Assert.AreEqual(ItemState.Loaded, again.State, "still on the trailer");
             Assert.IsTrue(W.Loaner.Out, "the loaner came back with the save");
             yield return null;
@@ -177,12 +178,81 @@ namespace OpeningBell.Tests
             yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "home-sofa.png");
 
             yield return Reload();
-            OwnedItem third = _game.Belongings.Items.Single();
+            OwnedItem third = _game.Belongings.Items.Single(i => !i.IsBox);
             Assert.AreEqual(ItemState.Placed, third.State);
             Assert.AreEqual(house.Id, third.Property);
             yield return null;
             Assert.Less(Vector3.Distance(W.View(third.Uid).transform.position, at), 0.01f, "exactly where it was put");
             Assert.IsTrue(_game.Estate.Owns(house.Id));
+        }
+
+        [UnityTest]
+        public IEnumerator MovingBox_PackAtTheYard_CarryHome_UnpackLastInFirstOut()
+        {
+            yield return Setup();
+            // A box out in the pickup yard, flaps open.
+            OwnedItem box = _game.Belongings.Add("moving_box", 0, ItemState.Placed);
+            Vector3 bay = HomeStores.PickupSlot(0);
+            box.Property = "yard";
+            box.X = bay.x; box.Y = bay.y; box.Z = bay.z;
+            _game.Belongings.Touch();
+            _player.PlaceAt(bay + new Vector3(0f, 0.1f, -2.2f), 0f, 20f);
+            yield return null;
+            Assert.IsNotNull(W.View(box.Uid), "the box stands in the yard");
+
+            // Desk in first, then the sofa (packed by aiming at the box, as the click does).
+            OwnedItem desk = Hold("desk_compact").Item;
+            W.Hands.PackInto(box);
+            Assert.AreEqual(ItemState.Packed, desk.State);
+            Assert.IsFalse(W.Hands.Holding);
+            OwnedItem sofa = Hold("sofa_mid").Item;
+            Carrier.Target atBox = Aim(W.View(box.Uid).transform.position + Vector3.up * 0.3f);
+            Assert.AreSame(W.View(box.Uid), atBox.Onto, "aiming at the box: the click packs");
+            W.Hands.PackInto(atBox.Onto.Item);
+            yield return null;
+            Assert.IsNull(W.View(sofa.Uid), "packed things aren't shown");
+            yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "home-box-packed.png");
+
+            // Flaps shut in the yard; [E] carries it from here.
+            W.Hands.CloseBox(box);
+            Assert.IsTrue(box.Closed);
+            Assert.AreEqual("yard", box.ClosedAt);
+            yield return null;
+            Assert.AreEqual("Carry the box", W.View(box.Uid).Prompt);
+
+            // It all survives a save.
+            yield return Reload();
+            box = _game.Belongings.Items.Single(i => i.IsBox);
+            Assert.AreEqual(2, _game.Belongings.Contents(box).Count);
+            yield return null;
+
+            // To the apartment, set down, [E] opens it there.
+            HomeSpec apartment = W.Find(HomeSpec.ApartmentId);
+            W.Hands.PickUp(W.View(box.Uid));
+            _player.PlaceAt(apartment.Root.TransformPoint(new Vector3(0.5f, 0.1f, -1.5f)), 0f, 10f);
+            yield return null;
+            PlaceSomewhere(apartment);
+            Assert.AreEqual(apartment.Id, box.Property);
+            yield return null;
+            ItemView boxView = W.View(box.Uid);
+            Assert.AreEqual("Open the box", boxView.Prompt);
+            boxView.Interact();
+            Assert.IsFalse(box.Closed);
+            Assert.IsTrue(box.Opened);
+            yield return null;
+
+            // The sofa went in last, so it comes out first; then the desk.
+            W.Hands.TakeOut(box);
+            Assert.AreEqual("sofa_mid", W.Hands.Held.Item.ItemId);
+            PlaceSomewhere(apartment);
+            W.Hands.TakeOut(box);
+            Assert.AreEqual("desk_compact", W.Hands.Held.Item.ItemId);
+            PlaceSomewhere(apartment);
+            Assert.IsTrue(_game.Belongings.Items.Where(i => !i.IsBox).All(i => i.State == ItemState.Placed && i.Property == apartment.Id));
+
+            // Empty: [F] throws it away.
+            Assert.IsTrue(W.Hands.Discard(box));
+            Assert.IsFalse(_game.Belongings.Items.Any(i => i.IsBox));
         }
 
         [UnityTest]

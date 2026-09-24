@@ -16,13 +16,55 @@ namespace OpeningBell.Tests
         {
             var items = HomeCatalog.Items;
             Assert.AreEqual(items.Count, items.Select(i => i.Id).Distinct().Count(), "ids unique");
-            Assert.IsTrue(items.All(i => i.Price > 0m && i.Variants.Length > 0 && i.Width > 0f && i.Height > 0f));
+            Assert.IsTrue(items.All(i => (i.Price > 0m || i.IsBox) && i.Variants.Length > 0 && i.Width > 0f && i.Height > 0f), "the moving box is the only free thing");
             CollectionAssert.AreEquivalent(new[] { 2, 3, 4, 6 }, items.Where(i => i.IsDesk).Select(i => i.MonitorSlots).Distinct());
             CollectionAssert.AreEquivalent(new[] { 1, 2, 3, 4, 5, 6 }, items.Where(i => i.IsArm).Select(i => i.Arms));
             foreach (string dept in new[] { "Living", "Bedroom", "Office", "Dining", "Entry", "Decor" })
                 Assert.IsTrue(items.Any(i => i.Store == HomeStore.Furniture && i.Department == dept), dept);
             Assert.IsTrue(items.Where(i => i.Store == HomeStore.Tech).All(i => i.Boxed), "tech comes boxed");
             Assert.IsTrue(items.Where(i => i.Store == HomeStore.Furniture).Select(i => i.Tier).Distinct().Count() == 3, "three tiers");
+        }
+
+        [Test]
+        public void MovingBox_LastPackedComesOutFirst_AndOnlyWhenOpen()
+        {
+            var b = new Belongings();
+            OwnedItem box = b.Add("moving_box", 0, ItemState.Placed);
+            OwnedItem desk = b.Add("desk_compact", 0, ItemState.Carried);
+            OwnedItem sofa = b.Add("sofa_mid", 0, ItemState.Carried);
+            Assert.IsNull(b.CanPack(desk, box));
+            b.Pack(desk, box);
+            b.Pack(sofa, box);
+            Assert.AreEqual(ItemState.Packed, desk.State);
+            CollectionAssert.AreEqual(new[] { desk, sofa }, b.Contents(box));
+            StringAssert.Contains("in boxes", b.CanPack(b.Add("moving_box", 0, ItemState.Carried), box));
+
+            b.SetClosed(box, true, "yard");
+            Assert.IsTrue(box.Closed);
+            Assert.AreEqual("yard", box.ClosedAt);
+            StringAssert.Contains("Open", b.CanPack(b.Add("armchair", 0, ItemState.Carried), box));
+            b.SetClosed(box, false, null);
+            Assert.IsTrue(box.Opened, "opened after moving: unpacking");
+
+            Assert.AreSame(sofa, b.Unpack(box), "the couch went in last, so it comes out first");
+            Assert.AreEqual(ItemState.Carried, sofa.State);
+            Assert.AreEqual(0, sofa.InBox);
+            Assert.AreSame(desk, b.Unpack(box));
+            Assert.IsNull(b.Unpack(box), "empty");
+
+            b.Pack(desk, box);
+            b.Remove(box);
+            Assert.IsNull(b.Get(desk.Uid), "a box goes with what's in it");
+        }
+
+        [Test]
+        public void MovingBox_DeskWithScreensStaysOut()
+        {
+            var b = new Belongings();
+            OwnedItem box = b.Add("moving_box", 0, ItemState.Placed);
+            OwnedItem desk = b.Add("desk_compact", 0, ItemState.Carried);
+            b.Add("mon_27", 0, ItemState.Placed).MountedOn = desk.Uid;
+            StringAssert.Contains("Take everything off", b.CanPack(desk, box));
         }
 
         [Test]
