@@ -31,8 +31,8 @@ namespace OpeningBell.City
             Kit k = c.Kit;
             Transform root = Kit.Group(c.Static, "Calder Building");
             Transform dyn = Kit.Group(c.Dynamic, "Calder Building");
-            Material stone = c.P.Lit(new Color(0.7f, 0.68f, 0.63f), 0.15f);
-            Material plaster = c.P.Lit(new Color(0.84f, 0.8f, 0.72f), 0.05f);
+            Material stone = c.P.Surface(Finish.Concrete, new Color(0.7f, 0.68f, 0.63f), 0.15f);
+            Material plaster = c.P.Surface(Finish.Plaster, new Color(0.84f, 0.8f, 0.72f), 0.05f);
             Material marble = c.P.Lit(new Color(0.5f, 0.47f, 0.43f), 0.6f);
             Material carpet = c.P.Lit(new Color(0.27f, 0.3f, 0.35f), 0.02f);
             Material ceiling = c.P.Lit(new Color(0.92f, 0.92f, 0.9f));
@@ -339,8 +339,14 @@ namespace OpeningBell.City
             foreach (float dx in new[] { -0.7f, 0.7f })
             foreach (float dz in new[] { -0.3f, 0.3f })
                 k.Box(suite, "Leg", new Vector3(164.9f + dx, Floor2 + 0.36f, -2.6f + dz), new Vector3(0.04f, 0.72f, 0.04f), metal, collider: false);
-            k.Box(suite, "Keyboard", new Vector3(164.9f, Floor2 + 0.76f, -2.43f), new Vector3(0.45f, 0.02f, 0.15f), c.P.Lit(new Color(0.12f, 0.12f, 0.13f)), collider: false);
-            k.Box(suite, "Filing cabinet", new Vector3(167.3f, Floor2 + 0.5f, 3.9f), new Vector3(0.5f, 1f, 0.6f), c.P.Lit(new Color(0.45f, 0.47f, 0.5f), 0.4f));
+            // Office pack art where it's there (keyboard facing the chair, the cabinet's drawers the room, a water
+            // cooler in the corner); plain boxes otherwise.
+            if (k.Fit(suite, "computerKeyboard", new Vector3(164.9f, Floor2 + 0.75f, -2.43f), new Vector3(0.45f, 0.025f, 0.15f), 180f, stretch: true) == null)
+                k.Box(suite, "Keyboard", new Vector3(164.9f, Floor2 + 0.76f, -2.43f), new Vector3(0.45f, 0.02f, 0.15f), c.P.Lit(new Color(0.12f, 0.12f, 0.13f)), collider: false);
+            GameObject cabinet = k.Fit(suite, "office_drawer_cube", new Vector3(167.3f, Floor2, 3.9f), new Vector3(0.7f, 1f, 0f));
+            if (cabinet != null) k.Solid(cabinet);
+            else k.Box(suite, "Filing cabinet", new Vector3(167.3f, Floor2 + 0.5f, 3.9f), new Vector3(0.5f, 1f, 0.6f), c.P.Lit(new Color(0.45f, 0.47f, 0.5f), 0.4f));
+            k.Solid(k.Fit(suite, "office_watercooler_cube_246_cube", new Vector3(162.5f, Floor2, 4.3f), new Vector3(0f, 1.25f, 0f), 90f));
             Plant(c, suite, new Vector3(162.6f, Floor2, -4.6f));
             k.Box(suite, "Whiteboard", new Vector3(162.17f, Floor2 + 1.5f, 0.5f), new Vector3(0.03f, 0.9f, 1.6f), c.P.Lit(new Color(0.95f, 0.95f, 0.95f), 0.6f), collider: false);
             // Poor lighting, as advertised: one dim bulb.

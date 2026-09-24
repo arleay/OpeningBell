@@ -27,7 +27,7 @@ namespace OpeningBell
         [SerializeField] private EconomySettings economySettings;
         [Tooltip("Scripted emails: onboarding, reminders, notices.")]
         [SerializeField] private EmailLibrary emailLibrary;
-        [Tooltip("Bikes, boards, parts and service prices sold in the city's shops.")]
+        [Tooltip("Bikes, parts and service prices sold in the city's shops.")]
         [SerializeField] private VehicleLibrary vehicleLibrary;
         [SerializeField] private BrokerRules brokerRules = new BrokerRules();
         [SerializeField] private long seed = 18492;
@@ -68,7 +68,7 @@ namespace OpeningBell
         public global::OpeningBell.Home.Estate Estate { get; } = new global::OpeningBell.Home.Estate();
         /// <summary>What the player has found on the map (the city's discovery fills it; saved with the game).</summary>
         public HashSet<string> Discovered { get; } = new HashSet<string>(StringComparer.Ordinal);
-        /// <summary>The player's bikes and boards (spec §16: persistent identity).</summary>
+        /// <summary>The player's bikes and cars (spec §16: persistent identity).</summary>
         public global::OpeningBell.Vehicles.Fleet Vehicles { get; private set; }
         /// <summary>Vehicle content (models, 3D meshes, traffic mix).</summary>
         public VehicleLibrary VehicleLibrary => vehicleLibrary;

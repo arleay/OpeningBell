@@ -10,8 +10,8 @@ namespace OpeningBell.City
     /// <summary>
     /// Riding (spec §29–31, §77–78): takes over the player's body from the walking controller, feeds keyboard
     /// input and the ground under the wheels into <see cref="RideDynamics"/>, and moves the same
-    /// CharacterController, so walls, curbs and stairs work as they do on foot (boards can't climb curbs; bikes
-    /// hop them). Crashes cost condition. First-person or chase camera. Lives on the player.
+    /// CharacterController, so walls, curbs and stairs work as they do on foot (bikes hop
+    /// curbs). Crashes cost condition. First-person or chase camera. Lives on the player.
     /// </summary>
     public sealed class RideController : MonoBehaviour
     {
@@ -35,7 +35,7 @@ namespace OpeningBell.City
         private VehicleVisual _visual;
         private NpcBody _rider;
         private bool _chase;
-        private float _headYaw, _pitch, _vertical, _pushPose;
+        private float _headYaw, _pitch, _vertical;
         private Vector3 _cameraHome;
         private readonly HashSet<VehicleKind> _hinted = new HashSet<VehicleKind>();
         private readonly RaycastHit[] _hits = new RaycastHit[6];
@@ -84,33 +84,24 @@ namespace OpeningBell.City
             _vehicle = v;
             _spec = _game.Vehicles.Catalog.EffectiveSpec(v);
             _state = new RideState();
-            if (v.Kind == VehicleKind.Skateboard)
-            {
-                _state.Heading = transform.eulerAngles.y * Mathf.Deg2Rad;
-            }
-            else
-            {
-                // Step onto the bike where it stands; its parked collider goes away with it.
-                GameObject parked = _fleetView.Shown(v);
-                if (parked != null) parked.GetComponent<Collider>().enabled = false;
-                _body.enabled = false;
-                transform.SetPositionAndRotation(new Vector3((float)v.X, (float)v.Y, (float)v.Z), Quaternion.Euler(0f, (float)v.Yaw, 0f));
-                _body.enabled = true;
-                _state.Heading = v.Yaw * Mathf.Deg2Rad;
-            }
+            // Step onto the bike where it stands; its parked collider goes away with it.
+            GameObject parked = _fleetView.Shown(v);
+            if (parked != null) parked.GetComponent<Collider>().enabled = false;
+            _body.enabled = false;
+            transform.SetPositionAndRotation(new Vector3((float)v.X, (float)v.Y, (float)v.Z), Quaternion.Euler(0f, (float)v.Yaw, 0f));
+            _body.enabled = true;
+            _state.Heading = v.Yaw * Mathf.Deg2Rad;
             _game.Vehicles.SetState(v, VehicleState.Riding);
 
             _visual = VehicleVisual.Build(_kit, transform, _model);
             _rider = NpcBody.Create(_kit, transform, "Rider", 7070, new Color(0.25f, 0.3f, 0.38f));
-            _rider.transform.localPosition = v.Kind == VehicleKind.Skateboard
-                ? new Vector3(0f, _visual.SaddleHeight, 0f)
-                : new Vector3(0f, _visual.SaddleHeight - _rider.SeatHeight, -0.14f);
-            _rider.transform.localRotation = Quaternion.Euler(0f, v.Kind == VehicleKind.Skateboard ? -70f : 0f, 0f);
+            _rider.transform.localPosition = new Vector3(0f, _visual.SaddleHeight - _rider.SeatHeight, -0.14f);
+            _rider.transform.localRotation = Quaternion.identity;
             _rider.gameObject.SetActive(_chase);
 
             _fpc.Suspended = true;
             _interactor.enabled = false;
-            _body.stepOffset = v.Kind == VehicleKind.Skateboard ? 0.04f : 0.22f;
+            _body.stepOffset = 0.22f;
             // Rolling slowly at high frame rates moves less than the default 1 mm per frame, which the
             // controller would silently drop.
             _walkingMinMove = _body.minMoveDistance;
@@ -122,25 +113,16 @@ namespace OpeningBell.City
             return true;
         }
 
-        private static string Hint(VehicleKind kind) => kind == VehicleKind.Skateboard
-            ? "W push · S foot brake · A/D carve · R or E step off · C camera"
-            : "W pedal · Shift sprint · S brake · A/D steer · E get off · C camera" + (kind == VehicleKind.EBike ? " · Q assist" : "");
+        private static string Hint(VehicleKind kind) =>
+            "W pedal · Shift sprint · S brake · A/D steer · E get off · C camera" + (kind == VehicleKind.EBike ? " · Q assist" : "");
 
         public void Dismount(string reason = null)
         {
             if (!IsRiding) return;
             float heading = (float)(_state.Heading * Mathf.Rad2Deg);
             Vector3 p = transform.position;
-            Vector3 stand = p;
-            if (_vehicle.Kind == VehicleKind.Skateboard)
-            {
-                _game.Vehicles.SetState(_vehicle, VehicleState.Carried);
-            }
-            else
-            {
-                _game.Vehicles.Park(_vehicle, p.x, p.y, p.z, heading);
-                stand = FreeSpotBeside(p, heading);
-            }
+            _game.Vehicles.Park(_vehicle, p.x, p.y, p.z, heading);
+            Vector3 stand = FreeSpotBeside(p, heading);
             if (_visual != null) Destroy(_visual.gameObject);
             if (_rider != null) Destroy(_rider.gameObject);
             _visual = null;
@@ -183,21 +165,12 @@ namespace OpeningBell.City
 
         private void Update()
         {
-            if (!IsRiding)
-            {
-                if (_fpc.ControlEnabled && !_game.IsPaused && _input.Ride.WasPressedThisFrame())
-                {
-                    OwnedVehicle board = _game.Vehicles.Carried;
-                    if (board != null) Mount(board);
-                    else _hud.ShowToast("You're not carrying a skateboard.");
-                }
-                return;
-            }
+            if (!IsRiding) return;
             // Pause menu (control handed to UI) or paused clock: the world holds still.
             if (_game.IsPaused || !_fpc.ControlEnabled) return;
             _interactor.enabled = false;
 
-            if (_input.Interact.WasPressedThisFrame() || (_vehicle.Kind == VehicleKind.Skateboard && _input.Ride.WasPressedThisFrame()))
+            if (_input.Interact.WasPressedThisFrame())
             {
                 Dismount();
                 return;
@@ -218,12 +191,6 @@ namespace OpeningBell.City
             double battery = _vehicle.BatteryWh;
             RideDynamics.Step(_vehicle.Kind, _spec, _state, input, Ground, dt, _game.Clock.TimeScale, _vehicle.Condition, _vehicle.TireCondition, ref battery);
             if (_vehicle.BatteryCapacityWh > 0) _game.Vehicles.SetBattery(_vehicle, battery);
-            if (_state.Bailed)
-            {
-                _game.Vehicles.Impact(_vehicle, 5);
-                Dismount("Speed wobbles. You bailed. Too fast for this board.");
-                return;
-            }
 
             // Move the body; walls and curbs push back.
             var forward = new Vector3(Mathf.Sin((float)_state.Heading), 0f, Mathf.Cos((float)_state.Heading));
@@ -246,11 +213,9 @@ namespace OpeningBell.City
             {
                 double speed = _state.Speed;
                 double loss = _game.Vehicles.Impact(_vehicle, speed);
-                if (speed > 5.5 || (_vehicle.Kind == VehicleKind.Skateboard && speed > 3))
+                if (speed > 5.5)
                 {
-                    Dismount(_vehicle.Kind == VehicleKind.Skateboard && speed <= 5.5
-                        ? "Caught the curb and stepped off. Use the curb ramps at crosswalks."
-                        : $"Crash! {(loss > 0 ? $"Condition -{loss:P0}." : "")}");
+                    Dismount($"Crash! {(loss > 0 ? $"Condition -{loss:P0}." : "")}");
                     return;
                 }
                 _state.Speed = Math.Max(0, along / dt);
@@ -266,7 +231,7 @@ namespace OpeningBell.City
             _vehicle.Z = aside.z;
             _vehicle.Yaw = headingDeg;
 
-            Animate(moved.magnitude, dt);
+            Animate(moved.magnitude);
             Look(dt);
             _hud.SetStatus(Status());
         }
@@ -303,15 +268,10 @@ namespace OpeningBell.City
             return true;
         }
 
-        private void Animate(float distance, float dt)
+        private void Animate(float distance)
         {
             _visual.Animate(distance, _state.CrankAngle, _state.Lean);
-            if (_state.Pushing) _pushPose = 0.45f;
-            _pushPose -= dt;
-            if (_vehicle.Kind == VehicleKind.Skateboard)
-                _rider.Animate(_pushPose > 0f ? NpcPose.Push : NpcPose.Skate, Time.time);
-            else
-                _rider.Animate(NpcPose.Cycle, (float)_state.CrankAngle);
+            _rider.Animate(NpcPose.Cycle, (float)_state.CrankAngle);
         }
 
         private void Look(float dt)
@@ -320,11 +280,9 @@ namespace OpeningBell.City
             _headYaw = Mathf.Clamp(_headYaw + look.x, -110f, 110f);
             _pitch = Mathf.Clamp(_pitch - look.y, -70f, 80f);
             if (Mathf.Abs(look.x) < 0.01f) _headYaw = Mathf.MoveTowards(_headYaw, 0f, 40f * dt); // eyes drift back to the road
-            float eye = _vehicle.Kind == VehicleKind.Skateboard ? EyeHeight + _visual.SaddleHeight : 1.52f;
-            float roll = _vehicle.Kind == VehicleKind.Skateboard ? 0f : (float)(-_state.Lean * Mathf.Rad2Deg * 0.4f);
-            float wobble = (float)_state.Wobble * Mathf.Sin(Time.time * 38f) * 2.5f;
-            _pivot.localPosition = new Vector3(0f, eye, 0f);
-            _pivot.localRotation = Quaternion.Euler(_pitch, _headYaw, roll + wobble);
+            float roll = (float)(-_state.Lean * Mathf.Rad2Deg * 0.4f);
+            _pivot.localPosition = new Vector3(0f, 1.52f, 0f);
+            _pivot.localRotation = Quaternion.Euler(_pitch, _headYaw, roll);
 
             if (!_chase) return;
             // Chase camera: behind and above, pulled in when a wall is in the way.
@@ -344,7 +302,6 @@ namespace OpeningBell.City
             string text = $"{(_state.Speed * 3.6).ToString("0", c)} km/h · {_vehicle.Name}";
             if (_vehicle.BatteryCapacityWh > 0)
                 text += $" · Assist {RideDynamics.AssistNames[_state.Assist]} · Battery {_vehicle.BatteryFraction.ToString("P0", c)}";
-            if (_state.Wobble > 0.25) text += " · SPEED WOBBLES";
             if (_vehicle.Condition < 0.5) text += " · needs a tune-up";
             return text;
         }

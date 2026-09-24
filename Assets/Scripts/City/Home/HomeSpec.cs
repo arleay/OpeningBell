@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace OpeningBell.City
@@ -6,7 +7,7 @@ namespace OpeningBell.City
 
     /// <summary>
     /// A home the player can own (or, for the apartment, rents from the start): where it is, what's indoors, its lot,
-    /// and its price. The houses come from the town plan's walkable lots; the penthouse sits on Harborview Tower.
+    /// and its price. The houses come from the town plan's walkable lots; the penthouse is the top of Harborview Tower.
     /// </summary>
     public sealed class HomeSpec
     {
@@ -24,6 +25,10 @@ namespace OpeningBell.City
         public float LotWidth, LotDepth;
         /// <summary>Local position of the front door in <see cref="Root"/>.</summary>
         public Vector3 DoorLocal;
+        /// <summary>Ceiling height when it isn't whole storeys (the penthouse), else 0.</summary>
+        public float Height;
+        /// <summary>Furniture that comes with it: added to your belongings, where it stands, when you buy.</summary>
+        public readonly List<(string Id, int Variant, Vector3 At, float Yaw)> Staging = new List<(string, int, Vector3, float)>();
 
         public static decimal PriceOf(HomeKind kind) => kind switch
         {
@@ -37,7 +42,7 @@ namespace OpeningBell.City
         public bool Indoors(Vector3 world)
         {
             Vector3 p = Root.InverseTransformPoint(world);
-            return Mathf.Abs(p.x) < Size.x / 2f - 0.05f && Mathf.Abs(p.z) < Size.y / 2f - 0.05f && p.y > -0.5f && p.y < Floors * HouseBuilder.Storey + 0.5f;
+            return Mathf.Abs(p.x) < Size.x / 2f - 0.05f && Mathf.Abs(p.z) < Size.y / 2f - 0.05f && p.y > -0.5f && p.y < (Height > 0f ? Height + 0.1f : Floors * HouseBuilder.Storey + 0.5f);
         }
 
         public bool OnLot(Vector3 world)

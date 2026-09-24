@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace OpeningBell.City
 {
-    public enum MapIcon { Home, Office, Coffee, Mart, Fuel, Bike, Skate, Car, Shop, Food, Bar, Atm, Police, Mechanic, Dealer, Casino, Parking }
+    public enum MapIcon { Home, Office, Coffee, Mart, Fuel, Bike, Car, Shop, Food, Bar, Atm, Police, Mechanic, Dealer, Casino, Parking }
 
     /// <summary>
     /// Minimap icons drawn in code: a coloured round badge with a white 12×12 pixel glyph, doubled up to 32×32
@@ -44,11 +44,6 @@ namespace OpeningBell.City
             {
                 "............", ".......##...", "...#####....", "....#..#....", "...#....#...", ".###....###.",
                 "#...#..#...#", "#...#.#....#", "#...#......#", ".###......##", "............", "............",
-            }),
-            [MapIcon.Skate] = (new Color(0.55f, 0.3f, 0.7f), new[]
-            {
-                "............", "............", "............", "............", "#..........#", "############",
-                ".##########.", "..#......#..", ".###....###.", ".###....###.", "............", "............",
             }),
             [MapIcon.Car] = (new Color(0.9f, 0.75f, 0.1f), new[]
             {

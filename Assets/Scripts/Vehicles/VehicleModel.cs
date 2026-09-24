@@ -3,13 +3,12 @@ using System.Collections.Generic;
 
 namespace OpeningBell.Vehicles
 {
-    // Serialized by value in assets and saves: append only, never reorder.
+    // Serialized by value in assets and saves: never renumber. 0 was Skateboard (retired; old saves drop them).
     public enum VehicleKind
     {
-        Skateboard,
-        Bicycle,
-        EBike,
-        Car,
+        Bicycle = 1,
+        EBike = 2,
+        Car = 3,
     }
 
     /// <summary>
@@ -21,7 +20,7 @@ namespace OpeningBell.Vehicles
     {
         public double Mass = 12;                 // kg, vehicle only (rider added separately)
         public double WheelDiameter = 0.7;       // m
-        public double Wheelbase = 1.05;          // m (skateboard: truck spacing)
+        public double Wheelbase = 1.05;          // m
         public double RollingResistance = 0.005; // Crr on smooth ground
         /// <summary>How much soft ground (grass) adds to rolling resistance: knobbly tyres barely care, slicks sink.</summary>
         public double RoughnessPenalty = 2;
@@ -39,12 +38,6 @@ namespace OpeningBell.Vehicles
         public double MotorPower = 0;            // W; 0 = no motor
         public double AssistCutoff = 0;          // m/s where assistance stops
         public double BatteryWh = 0;
-
-        // Skateboards.
-        public double DeckLength = 0.8;          // m
-        public double WheelDurometer = 99;       // A scale: harder rolls faster on smooth ground, worse on rough
-        public double BearingFactor = 1;         // rolling-resistance multiplier (precision bearings < 1)
-        public double TruckLooseness = 0.5;      // 0 tight (stable) … 1 loose (carves)
 
         public RideSpec Clone() => (RideSpec)MemberwiseClone();
     }
@@ -105,20 +98,12 @@ namespace OpeningBell.Vehicles
         public double Price;
         public string Description = "";
         public double WheelDiameter;
-        public double WheelDurometer;
-        public double BearingFactor;
-        /// <summary>Set explicitly (0 is a valid "tight"), hence the flag.</summary>
-        public bool SetsTruckLooseness;
-        public double TruckLooseness;
         public double BatteryMultiplier;
 
         /// <summary>The spec with this part fitted.</summary>
         public void ApplyTo(RideSpec spec)
         {
             if (WheelDiameter > 0) spec.WheelDiameter = WheelDiameter;
-            if (WheelDurometer > 0) spec.WheelDurometer = WheelDurometer;
-            if (BearingFactor > 0) spec.BearingFactor = BearingFactor;
-            if (SetsTruckLooseness) spec.TruckLooseness = TruckLooseness;
             if (BatteryMultiplier > 0) spec.BatteryWh *= BatteryMultiplier;
         }
     }

@@ -21,8 +21,6 @@ namespace OpeningBell.Gameplay
         /// <summary>Throw a punch (left mouse).</summary>
         public InputAction Attack { get; private set; }
         public InputAction OpenMenu { get; private set; }
-        /// <summary>Hop on / off the skateboard you're carrying.</summary>
-        public InputAction Ride { get; private set; }
         /// <summary>First-person / chase camera while riding.</summary>
         public InputAction CameraToggle { get; private set; }
         /// <summary>Held while driving: look freely around the car (orbit in chase view, turn the head in first person).</summary>
@@ -54,7 +52,6 @@ namespace OpeningBell.Gameplay
             Interact = _player.AddAction("Interact", InputActionType.Button, "<Keyboard>/e");
             Attack = _player.AddAction("Attack", InputActionType.Button, "<Mouse>/leftButton");
             OpenMenu = _player.AddAction("Menu", InputActionType.Button, "<Keyboard>/escape");
-            Ride = _player.AddAction("Ride", InputActionType.Button, "<Keyboard>/r");
             CameraToggle = _player.AddAction("Camera", InputActionType.Button, "<Keyboard>/c");
             FreeLook = _player.AddAction("FreeLook", InputActionType.Button, "<Mouse>/rightButton");
             Assist = _player.AddAction("Assist", InputActionType.Button, "<Keyboard>/q");

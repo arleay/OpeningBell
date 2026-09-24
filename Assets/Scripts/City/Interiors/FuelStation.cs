@@ -7,8 +7,8 @@ namespace OpeningBell.City
 {
     /// <summary>
     /// Tidewater Fuel (spec §27, §64): a forecourt behind the Maple shops with a driveway off Exchange St, a
-    /// canopy and two pumps. Pull up, get out, [E] at the pump to fill the tank; the Corner Mart next door is
-    /// the shop. Open all day and night (card pumps).
+    /// canopy and two pumps. Pull up, get out, take the nozzle and fill the tank; jerry cans on a rack by the pumps;
+    /// the Corner Mart next door is the shop. Open all day and night (card pumps).
     /// </summary>
     public static class FuelStation
     {
@@ -72,18 +72,29 @@ namespace OpeningBell.City
                 pump.gameObject.AddComponent<FuelPump>().Configure(c.Game, c.Hud);
             }
 
+            // The jerry can rack at the end of the west island.
+            Transform rack = Kit.Group(dyn, "Jerry can rack", new Vector3(114f, 0.15f, 32.2f));
+            Material red = c.P.Lit(new Color(0.75f, 0.1f, 0.08f), 0.35f);
+            k.Box(rack, "Shelf", new Vector3(0f, 0.45f, 0f), new Vector3(0.9f, 0.9f, 0.4f), c.P.Lit(new Color(0.3f, 0.3f, 0.32f), 0.3f))
+                .AddComponent<JerryCanRack>().Configure(c.Game);
+            for (int i = 0; i < 3; i++)
+                k.Box(rack, "Jerry can", new Vector3(-0.28f + i * 0.28f, 1.05f, 0f), new Vector3(0.12f, 0.3f, 0.26f), red, collider: false);
+
             c.Anchor("fuel_pump_west", new Vector3(114f, 0f, 28f));
             c.Anchor("fuel_bay_west", new Vector3(116.4f, 0f, 28f));
             c.Anchor("fuel_driveway", new Vector3(128f, 0f, 29f));
         }
     }
 
-    /// <summary>Fills up the car you parked next to it, paid by card at the pump.</summary>
+    /// <summary>
+    /// A pump: [E] takes the nozzle (walk it to your car and hold the left button to fill; [E] here again hangs it up
+    /// and pays); with the jerry can in your hands, [E] fills the can instead.
+    /// </summary>
     public sealed class FuelPump : Interactable
     {
         private GameBootstrap _game;
         private InteractionHud _hud;
-        public const float Reach = 5f;
+        private FuelHands _hands;
 
         public void Configure(GameBootstrap game, InteractionHud hud)
         {
@@ -91,57 +102,61 @@ namespace OpeningBell.City
             _hud = hud;
         }
 
-        /// <summary>Your car parked at this pump (the one you drove last, if several are).</summary>
-        public OwnedVehicle CarHere()
-        {
-            OwnedVehicle best = null;
-            float bestDistance = Reach;
-            foreach (OwnedVehicle v in _game.Vehicles.Vehicles)
-            {
-                if (v.Kind != VehicleKind.Car || v.State != VehicleState.Parked) continue;
-                float d = new Vector2((float)v.X - transform.position.x, (float)v.Z - transform.position.z).magnitude;
-                if (d < bestDistance || (d < Reach && v == _game.Vehicles.LastRidden))
-                {
-                    best = v;
-                    bestDistance = d;
-                }
-            }
-            return best;
-        }
+        private FuelHands Hands => _hands != null ? _hands : _hands = FindAnyObjectByType<FuelHands>();
 
-        private double LitersNeeded(OwnedVehicle v) => Mathf.Max(0f, (float)(v.FuelCapacity - v.FuelLiters));
-        private decimal Cost(double liters) => Trading.Money.RoundCents((decimal)liters * FuelStation.PricePerLiter);
+        private static string Money(decimal m) => "$" + m.ToString("N2", CultureInfo.InvariantCulture);
+
+        public override bool CanInteract => base.CanInteract && Hands != null &&
+            (Hands.Held == FuelHands.Tool.Can || (Hands.Held == FuelHands.Tool.Nozzle && Hands.Pump == this) || Hands.CanTake);
 
         public override string Prompt
         {
             get
             {
-                OwnedVehicle v = CarHere();
-                if (v == null) return "Fuel pump · park your car here";
-                double liters = LitersNeeded(v);
-                return liters < 0.5 ? $"{v.Name}: tank is full"
-                    : $"Fill up {v.Name} · {liters.ToString("0.0", CultureInfo.InvariantCulture)} L · ${Cost(liters).ToString("N2", CultureInfo.InvariantCulture)}";
+                FuelHands h = Hands;
+                if (h == null) return "Fuel pump";
+                if (h.Held == FuelHands.Tool.Nozzle && h.Pump == this)
+                    return h.Pumped > 0.05 ? $"Hang up and pay · {h.Pumped.ToString("0.0", CultureInfo.InvariantCulture)} L · {Money(h.PumpedCost)}" : "Hang up the nozzle";
+                if (h.Held == FuelHands.Tool.Can)
+                {
+                    double liters = FuelHands.CanCapacity - _game.Vehicles.JerryCan;
+                    return liters < 0.05 ? "Jerry can: full" : $"Fill the jerry can · {liters.ToString("0.0", CultureInfo.InvariantCulture)} L · {Money(Trading.Money.RoundCents((decimal)liters * FuelStation.PricePerLiter))}";
+                }
+                return "Take the nozzle";
             }
         }
 
-        public override string Details => $"Regular ${FuelStation.PricePerLiter.ToString("0.00", CultureInfo.InvariantCulture)}/L · card only";
+        public override string Details => $"Regular ${FuelStation.PricePerLiter.ToString("0.00", CultureInfo.InvariantCulture)}/L · card only · pay when you hang up";
 
         public override void Interact()
         {
-            OwnedVehicle v = CarHere();
-            if (v == null) return;
-            double liters = LitersNeeded(v);
-            if (liters < 0.5) return;
-            decimal cost = Cost(liters);
-            string error = _game.Economy.Spend(cost, "Fuel", _game.Clock.Now);
-            if (error != null)
+            FuelHands h = Hands;
+            if (h == null) return;
+            if (h.Held == FuelHands.Tool.Nozzle && h.Pump == this) h.HangUp();
+            else if (h.Held == FuelHands.Tool.Can)
             {
-                _hud.ShowToast(error);
-                return;
+                string result = h.FillCan();
+                if (result != null) _hud.ShowToast(result);
             }
-            _game.Vehicles.SetFuel(v, v.FuelCapacity);
-            decimal bank = _game.Economy.Bank.Balance;
-            _hud.ShowToast($"Filled up: {liters.ToString("0.0", CultureInfo.InvariantCulture)} L  -${cost.ToString("N2", CultureInfo.InvariantCulture)}   ·   Bank {(bank < 0 ? "-$" : "$")}{System.Math.Abs(bank).ToString("N2", CultureInfo.InvariantCulture)}");
+            else h.TakeNozzle(this);
         }
+    }
+
+    /// <summary>A rack of red jerry cans by the pumps: $24.99 for one (it comes empty).</summary>
+    public sealed class JerryCanRack : Interactable
+    {
+        private GameBootstrap _game;
+        private FuelHands _hands;
+
+        public void Configure(GameBootstrap game) => _game = game;
+
+        private FuelHands Hands => _hands != null ? _hands : _hands = FindAnyObjectByType<FuelHands>();
+
+        public override bool CanInteract => base.CanInteract && Hands != null && _game.Vehicles.JerryCan < 0 && Hands.CanTake;
+        public override string Prompt => _game.Vehicles.JerryCan < 0
+            ? $"Buy a jerry can · ${FuelHands.CanPrice.ToString("0.00", CultureInfo.InvariantCulture)}"
+            : "Jerry cans ([J] takes yours out)";
+        public override string Details => "10 litres, comes empty: fill it at a pump. For when you run dry out of town.";
+        public override void Interact() => Hands?.BuyCan();
     }
 }

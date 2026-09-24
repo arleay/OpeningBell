@@ -25,3 +25,6 @@
 *.unitypackage
 crashlytics-buildid.txt
 sysinfo.txt
+
+# Raw third-party downloads, cleaned up before they go into Assets
+/Imports/

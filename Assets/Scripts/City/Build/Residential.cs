@@ -166,7 +166,7 @@ namespace OpeningBell.City
             const float height = 10.5f;
             Transform b = Kit.Group(root, "Walk-up " + seed);
             FacadeStyle style = rng.Next(2) == 0 ? FacadeStyle.Brick : FacadeStyle.Townhouse;
-            k.Facade(b, "Walk-up", new Vector3(x0, 0f, z0), new Vector3(x1, height, z1), c.P.Facade(style, false), c.P.Lit(new Color(0.26f, 0.25f, 0.25f)));
+            ModularFacade.Build(c, b, "Walk-up", new Vector3(x0, 0f, z0), new Vector3(x1, height, z1), style, seed);
             Material metal = c.P.Lit(new Color(0.2f, 0.2f, 0.22f), 0.4f);
             // Entrances on the Rail Row side (north), each with a canopy and a number.
             for (float x = x0 + 8f; x < x1 - 6f; x += 20f)
@@ -218,7 +218,7 @@ namespace OpeningBell.City
             Rect r = GroveTerrace;
             float y = StreetMap.Plan.StreetGrade(r.center);
             Transform b = Kit.Group(root, "Grove Terrace", new Vector3(0f, y, 0f));
-            k.Facade(b, "Grove Terrace", new Vector3(r.xMin, 0f, r.yMin + 1f), new Vector3(r.xMax, 16.5f, r.yMax), c.P.Facade(FacadeStyle.Stucco, false), c.P.Lit(new Color(0.24f, 0.24f, 0.25f)));
+            ModularFacade.Build(c, b, "Grove Terrace", new Vector3(r.xMin, 0f, r.yMin + 1f), new Vector3(r.xMax, 16.5f, r.yMax), FacadeStyle.Stucco, 4390);
             Material slab = c.P.Lit(new Color(0.82f, 0.82f, 0.8f), 0.1f);
             Material glass = c.P.Glass(new Color(0.6f, 0.7f, 0.75f, 0.3f));
             for (float floor = 3.3f; floor < 16f; floor += 3.3f)

@@ -30,6 +30,9 @@ namespace OpeningBell.Tests
             Assert.IsTrue(title.Visible);
             Assert.IsFalse(player.ControlEnabled, "the world waits behind the menu");
             yield return CaptureWithHud(player, hud, "title.png");
+            title.ShowCredits();
+            for (int i = 0; i < 3; i++) yield return null;
+            yield return CaptureWithHud(player, hud, "title-credits.png");
 
             title.ShowCreator();
             title.Step(0, 1); // the other body type

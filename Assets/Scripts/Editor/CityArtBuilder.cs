@@ -84,8 +84,8 @@ namespace OpeningBell.EditorTools
                 }
             }
 
-            // Quaternius props (food) and plants (trees, bushes, grass), collected like the kits.
-            foreach (string folder in new[] { ArtImportRules.Props, ArtImportRules.Nature })
+            // Quaternius props (food) and plants (trees, bushes, grass), Poly Haven furniture and the Sketchfab packs, collected like the kits.
+            foreach (string folder in new[] { ArtImportRules.Props, ArtImportRules.Nature, ArtImportRules.PolyHaven, ArtImportRules.Sketchfab })
             {
                 report.AppendLine("== " + Path.GetFileName(folder.TrimEnd('/')));
                 foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { folder.TrimEnd('/') }).OrderBy(AssetDatabase.GUIDToAssetPath))

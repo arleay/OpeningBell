@@ -13,249 +13,6 @@ MonoBehaviour:
   m_Name: VehicleLibrary
   m_EditorClassIdentifier: 
   models:
-  - Id: skate_street
-    Name: Curbside Street Deck
-    Kind: 0
-    Price: 95
-    Description: 'Classic 8" street board: small hard wheels, tight trucks. Quick on smooth pavement, twitchy on rough.'
-    ColorR: 0.14
-    ColorG: 0.14
-    ColorB: 0.16
-    Spec:
-      Mass: 2.2
-      WheelDiameter: 0.052
-      Wheelbase: 0.36
-      RollingResistance: 0.005
-      RoughnessPenalty: 2
-      DragArea: 0.5
-      BrakeDecel: 6
-      MaxLeanDeg: 35
-      MaxSteerDeg: 40
-      LowestGear: 1.2
-      HighestGear: 4
-      Gears: 1
-      MotorPower: 0
-      AssistCutoff: 0
-      BatteryWh: 0
-      DeckLength: 0.8
-      WheelDurometer: 99
-      BearingFactor: 1.1
-      TruckLooseness: 0.3
-    Car:
-      Mass: 1300
-      CenterOfMassHeight: 0.55
-      Wheelbase: 2.6
-      TrackWidth: 1.55
-      FrontWeight: 0.58
-      Drive: 0
-      AwdFrontShare: 0.4
-      IdleRpm: 850
-      RedlineRpm: 6500
-      CurveRpm:
-      - 1000
-      - 2500
-      - 4000
-      - 5500
-      - 6500
-      CurveTorque:
-      - 120
-      - 165
-      - 180
-      - 165
-      - 140
-      GearRatios:
-      - 3.5
-      - 2.05
-      - 1.4
-      - 1
-      - 0.8
-      ReverseRatio: 3.2
-      FinalDrive: 4.1
-      DrivetrainEfficiency: 0.88
-      StallRpm: 2200
-      StallMultiplier: 1.8
-      WheelRadius: 0.32
-      TireGrip: 1
-      PeakSlipAngle: 0.14
-      BrakeTorque: 4160
-      BrakeFront: 0.65
-      HandbrakeTorque: 1600
-      SpringRate: 32000
-      Damping: 3200
-      RestLength: 0.38
-      Travel: 0.2
-      AntiRoll: 9000
-      DragCoefficient: 0.32
-      FrontalArea: 2.1
-      DownforceCoefficient: 0
-      MaxSteerDeg: 34
-      FuelCapacity: 50
-      FuelPerKwh: 0.3
-      IdleFuelPerHour: 0.8
-    Mesh: 
-    EngineSound: 
-  - Id: skate_cruiser
-    Name: Harbor Cruiser
-    Kind: 0
-    Price: 120
-    Description: Short cruiser with soft 60 mm wheels and loose trucks. Carves, soaks up cracks, gets nervous when fast.
-    ColorR: 0.18
-    ColorG: 0.55
-    ColorB: 0.55
-    Spec:
-      Mass: 2.4
-      WheelDiameter: 0.06
-      Wheelbase: 0.33
-      RollingResistance: 0.005
-      RoughnessPenalty: 2
-      DragArea: 0.5
-      BrakeDecel: 6
-      MaxLeanDeg: 35
-      MaxSteerDeg: 40
-      LowestGear: 1.2
-      HighestGear: 4
-      Gears: 1
-      MotorPower: 0
-      AssistCutoff: 0
-      BatteryWh: 0
-      DeckLength: 0.74
-      WheelDurometer: 80
-      BearingFactor: 1.05
-      TruckLooseness: 0.6
-    Car:
-      Mass: 1300
-      CenterOfMassHeight: 0.55
-      Wheelbase: 2.6
-      TrackWidth: 1.55
-      FrontWeight: 0.58
-      Drive: 0
-      AwdFrontShare: 0.4
-      IdleRpm: 850
-      RedlineRpm: 6500
-      CurveRpm:
-      - 1000
-      - 2500
-      - 4000
-      - 5500
-      - 6500
-      CurveTorque:
-      - 120
-      - 165
-      - 180
-      - 165
-      - 140
-      GearRatios:
-      - 3.5
-      - 2.05
-      - 1.4
-      - 1
-      - 0.8
-      ReverseRatio: 3.2
-      FinalDrive: 4.1
-      DrivetrainEfficiency: 0.88
-      StallRpm: 2200
-      StallMultiplier: 1.8
-      WheelRadius: 0.32
-      TireGrip: 1
-      PeakSlipAngle: 0.14
-      BrakeTorque: 4160
-      BrakeFront: 0.65
-      HandbrakeTorque: 1600
-      SpringRate: 32000
-      Damping: 3200
-      RestLength: 0.38
-      Travel: 0.2
-      AntiRoll: 9000
-      DragCoefficient: 0.32
-      FrontalArea: 2.1
-      DownforceCoefficient: 0
-      MaxSteerDeg: 34
-      FuelCapacity: 50
-      FuelPerKwh: 0.3
-      IdleFuelPerHour: 0.8
-    Mesh: 
-    EngineSound: 
-  - Id: skate_longboard
-    Name: Downhill Longboard
-    Kind: 0
-    Price: 185
-    Description: Long deck, big 70 mm wheels, good bearings. Rolls forever and stays calm at speed; wide turns.
-    ColorR: 0.62
-    ColorG: 0.46
-    ColorB: 0.28
-    Spec:
-      Mass: 3.6
-      WheelDiameter: 0.07
-      Wheelbase: 0.7
-      RollingResistance: 0.005
-      RoughnessPenalty: 2
-      DragArea: 0.5
-      BrakeDecel: 6
-      MaxLeanDeg: 35
-      MaxSteerDeg: 40
-      LowestGear: 1.2
-      HighestGear: 4
-      Gears: 1
-      MotorPower: 0
-      AssistCutoff: 0
-      BatteryWh: 0
-      DeckLength: 1
-      WheelDurometer: 78
-      BearingFactor: 1
-      TruckLooseness: 0.45
-    Car:
-      Mass: 1300
-      CenterOfMassHeight: 0.55
-      Wheelbase: 2.6
-      TrackWidth: 1.55
-      FrontWeight: 0.58
-      Drive: 0
-      AwdFrontShare: 0.4
-      IdleRpm: 850
-      RedlineRpm: 6500
-      CurveRpm:
-      - 1000
-      - 2500
-      - 4000
-      - 5500
-      - 6500
-      CurveTorque:
-      - 120
-      - 165
-      - 180
-      - 165
-      - 140
-      GearRatios:
-      - 3.5
-      - 2.05
-      - 1.4
-      - 1
-      - 0.8
-      ReverseRatio: 3.2
-      FinalDrive: 4.1
-      DrivetrainEfficiency: 0.88
-      StallRpm: 2200
-      StallMultiplier: 1.8
-      WheelRadius: 0.32
-      TireGrip: 1
-      PeakSlipAngle: 0.14
-      BrakeTorque: 4160
-      BrakeFront: 0.65
-      HandbrakeTorque: 1600
-      SpringRate: 32000
-      Damping: 3200
-      RestLength: 0.38
-      Travel: 0.2
-      AntiRoll: 9000
-      DragCoefficient: 0.32
-      FrontalArea: 2.1
-      DownforceCoefficient: 0
-      MaxSteerDeg: 34
-      FuelCapacity: 50
-      FuelPerKwh: 0.3
-      IdleFuelPerHour: 0.8
-    Mesh: 
-    EngineSound: 
   - Id: bike_bmx
     Name: Rook BMX
     Kind: 1
@@ -2184,66 +1941,6 @@ MonoBehaviour:
     Mesh: mclaren
     EngineSound: V8
   parts:
-  - Id: wheels_soft60
-    Name: Soft 60mm wheels (80A)
-    Fits: 0
-    Slot: 0
-    Price: 38
-    Description: Grippier, smoother over cracks and rough asphalt.
-    WheelDiameter: 0.06
-    WheelDurometer: 80
-    BearingFactor: 0
-    SetsTruckLooseness: 0
-    TruckLooseness: 0
-    BatteryMultiplier: 0
-  - Id: wheels_big70
-    Name: Big 70mm wheels (78A)
-    Fits: 0
-    Slot: 0
-    Price: 48
-    Description: Roll the longest and ignore rough ground.
-    WheelDiameter: 0.07
-    WheelDurometer: 78
-    BearingFactor: 0
-    SetsTruckLooseness: 0
-    TruckLooseness: 0
-    BatteryMultiplier: 0
-  - Id: bearings_precision
-    Name: Precision bearings
-    Fits: 0
-    Slot: 1
-    Price: 32
-    Description: 'Less friction: coast further on every push.'
-    WheelDiameter: 0
-    WheelDurometer: 0
-    BearingFactor: 0.85
-    SetsTruckLooseness: 0
-    TruckLooseness: 0
-    BatteryMultiplier: 0
-  - Id: trucks_loose
-    Name: Loose trucks (carve)
-    Fits: 0
-    Slot: 2
-    Price: 55
-    Description: Sharper turns, less stable when fast.
-    WheelDiameter: 0
-    WheelDurometer: 0
-    BearingFactor: 0
-    SetsTruckLooseness: 1
-    TruckLooseness: 0.85
-    BatteryMultiplier: 0
-  - Id: trucks_tight
-    Name: Tight trucks (stable)
-    Fits: 0
-    Slot: 2
-    Price: 55
-    Description: Calm at speed, wider turns.
-    WheelDiameter: 0
-    WheelDurometer: 0
-    BearingFactor: 0
-    SetsTruckLooseness: 1
-    TruckLooseness: 0.15
-    BatteryMultiplier: 0
   - Id: battery_extended
     Name: Extended battery (+50%)
     Fits: 2
@@ -2281,7 +1978,7 @@ MonoBehaviour:
     OdometerKm: 98000
     Condition: 0.82
     TireCondition: 0.8
-    FuelFraction: 0.6
+    FuelFraction: 0.45
     Seller: Jordan
     Description: 2016 Brisk GTi. Quick, fun, new clutch. Selling because I moved downtown.
   - Id: used_pickup_1
@@ -2308,7 +2005,7 @@ MonoBehaviour:
     OdometerKm: 6100
     Condition: 0.97
     TireCondition: 0.85
-    FuelFraction: 0.6
+    FuelFraction: 0.25
     Seller: Rocco
     Description: 'Fulmine SVJ. Black Ghost spec. Garage kept, never tracked. Neighbours hate me.'
   - Id: used_cavallo_1
@@ -2317,7 +2014,7 @@ MonoBehaviour:
     OdometerKm: 2200
     Condition: 0.99
     TireCondition: 0.85
-    FuelFraction: 0.6
+    FuelFraction: 0.55
     Seller: Private collector
     Description: 'Cavallo Ibrido. Red, of course. Two owners, full history, delivery miles only.'
   - Id: used_ringmark_1
@@ -2326,7 +2023,7 @@ MonoBehaviour:
     OdometerKm: 41000
     Condition: 0.86
     TireCondition: 0.85
-    FuelFraction: 0.6
+    FuelFraction: 0.2
     Seller: Dev
     Description: 'Ringmark V10. 2010 V10, manual-feel paddles, new clutch pack. Carbon sideblades.'
   - Id: used_havoc_1
@@ -2335,7 +2032,7 @@ MonoBehaviour:
     OdometerKm: 38000
     Condition: 0.84
     TireCondition: 0.85
-    FuelFraction: 0.6
+    FuelFraction: 0.4
     Seller: Tyrell
     Description: 'Havoc 707. White on black. Burnouts: some. Speeding tickets: several. Engine: perfect.'
   - Id: used_predator_1
@@ -2344,7 +2041,7 @@ MonoBehaviour:
     OdometerKm: 29000
     Condition: 0.88
     TireCondition: 0.85
-    FuelFraction: 0.6
+    FuelFraction: 0.65
     Seller: Brandon
     Description: 'Haulmark Predator. Lifted, lit, never actually off-road. Mud tires still have nubs.'
   - Id: used_kessel_1
@@ -2353,7 +2050,7 @@ MonoBehaviour:
     OdometerKm: 3400
     Condition: 0.95
     TireCondition: 0.85
-    FuelFraction: 0.6
+    FuelFraction: 0.3
     Seller: Vance Motorsport
     Description: 'Kessel RSR. Ex-endurance chassis, rebuilt engine. Road-registered on a technicality.'
   - Id: used_brava_1
@@ -2362,7 +2059,7 @@ MonoBehaviour:
     OdometerKm: 17000
     Condition: 0.93
     TireCondition: 0.85
-    FuelFraction: 0.6
+    FuelFraction: 0.5
     Seller: Marisol
     Description: 'Brava Toro. Giallo yellow, full options. Selling to buy a boat.'
   - Id: used_stallion_1
@@ -2371,7 +2068,7 @@ MonoBehaviour:
     OdometerKm: 5200
     Condition: 0.94
     TireCondition: 0.85
-    FuelFraction: 0.6
+    FuelFraction: 0.35
     Seller: Vance Motorsport
     Description: 'Stallion GT3. Customer racing car, spare wheels included. Loud. Very loud.'
   - Id: used_vireo_1

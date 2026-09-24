@@ -189,6 +189,8 @@ namespace OpeningBell.City
                 Name = "Northstar Mart", Trade = Trade.Discount, Front = new Vector2(-441f, -5.5f + 30f), Inward = Vector2.up, Width = 20f, Depth = 14f,
                 Brand = new Color(0.75f, 0.12f, 0.12f), Tagline = "SNACKS · COFFEE · ICE", Style = FacadeStyle.Stucco,
             }, 9001);
+            // Bagged ice by the shop door, as every station has.
+            k.Solid(k.Fit(root, "gas_ice", new Vector3(6.5f, 0f, 29.45f), new Vector3(1.8f, 0f, 0f), 180f)); // the pack faces +z
             // The tall sign on the corner: seen from the tunnel mouth, lit at night.
             Transform sign = Kit.Group(root, "Northstar sign", new Vector3(-18f, 0f, 3f), 45f);
             k.Box(sign, "Pole", new Vector3(0f, 11f, 0f), new Vector3(1f, 22f, 1f), c.P.Lit(new Color(0.3f, 0.3f, 0.32f), 0.4f));

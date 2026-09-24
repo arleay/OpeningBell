@@ -121,7 +121,7 @@ namespace OpeningBell.City
             if (b.Trade == Trade.Vacant)
             {
                 // Empty storefront: papered windows, a leasing sign. Not enterable.
-                k.Facade(root, b.Name, new Vector3(-hw, 0f, 0f), new Vector3(hw, top + b.Floors * Storey, d), c.P.Facade(b.Style, b.Floors == 0), roof);
+                ModularFacade.Build(c, root, b.Name, new Vector3(-hw, 0f, 0f), new Vector3(hw, Mathf.Max(top + b.Floors * Storey, ModularFacade.ShopStorey + 2.5f), d), b.Style, seed, storefront: true);
                 k.Span(root, "Papered window", new Vector3(-hw + 0.8f, 0.6f, -0.03f), new Vector3(hw - 0.8f, 3f, 0f), c.P.Lit(new Color(0.72f, 0.66f, 0.52f)), collider: false);
                 k.Text(root, b.Tagline ?? "FOR LEASE", new Vector3(0f, 2f, -0.05f), 0f, 0.3f, new Color(0.7f, 0.12f, 0.1f));
                 return;
@@ -133,8 +133,8 @@ namespace OpeningBell.City
             float leftW = doorX - 0.8f - (-hw + 0.8f), rightW = hw - 0.8f - (doorX + 0.8f);
             if (leftW > 1.5f) windows.Add(((-hw + 0.8f + doorX - 0.8f) / 2f, leftW - 0.4f));
             if (rightW > 1.5f) windows.Add(((doorX + 0.8f + hw - 0.8f) / 2f, rightW - 0.4f));
-            Material inside = c.P.Lit(InsideColor(b.Trade), 0.05f);
-            Material floor = c.P.Lit(FloorColor(b.Trade), 0.3f);
+            Material inside = c.P.Surface(Finish.Plaster, InsideColor(b.Trade), 0.05f);
+            Material floor = c.P.Surface(FloorFinish(b.Trade), FloorColor(b.Trade), 0.3f);
             Shops.ShopShell(c, root, f, top, Wall, outside, inside, floor, doorX, 1.2f, windows.ToArray());
             if (b.Floors > 0) ModularFacade.Build(c, root, "Flats above", new Vector3(-hw, top, 0f), new Vector3(hw, top + b.Floors * Storey, d), b.Style, seed);
             else k.Span(root, "Roof", new Vector3(-hw, top, 0f), new Vector3(hw, top + 0.3f, d), roof);
@@ -226,7 +226,10 @@ namespace OpeningBell.City
         {
             Color[] walls = { new Color(0.55f, 0.3f, 0.24f), new Color(0.78f, 0.74f, 0.66f), new Color(0.4f, 0.42f, 0.44f), new Color(0.62f, 0.5f, 0.38f),
                 new Color(0.3f, 0.36f, 0.34f), new Color(0.7f, 0.66f, 0.56f) };
-            return c.P.Lit(walls[rng.Next(walls.Length)], 0.05f);
+            // Red and tan ones are brick; the pale and dark ones rendered or painted, the grey one bare concrete.
+            Finish[] finishes = { Finish.Brick, Finish.PaintedPlaster, Finish.Concrete, Finish.Brick, Finish.PaintedPlaster, Finish.Plaster };
+            int i = rng.Next(walls.Length);
+            return c.P.Surface(finishes[i], walls[i], 0.05f);
         }
 
         private static Color InsideColor(Trade t) => t switch
@@ -235,6 +238,13 @@ namespace OpeningBell.City
             Trade.Diner => new Color(0.86f, 0.82f, 0.72f),
             Trade.Tattoo or Trade.SmokeShop => new Color(0.25f, 0.23f, 0.26f),
             _ => new Color(0.88f, 0.87f, 0.83f),
+        };
+
+        private static Finish FloorFinish(Trade t) => t switch
+        {
+            Trade.Diner or Trade.Laundromat or Trade.Pharmacy => Finish.Tiles,
+            Trade.Gym => Finish.Concrete,
+            _ => Finish.WoodFloor,
         };
 
         private static Color FloorColor(Trade t) => t switch
@@ -309,6 +319,13 @@ namespace OpeningBell.City
                 case Trade.Supermarket:
                 case Trade.FishMarket:
                     Aisles(c, r, b.Trade, hw, front, back, rng);
+                    if (b.Trade == Trade.Discount) Convenience(c, r, hw, d, front, back);
+                    if (b.Trade == Trade.Hardware || b.Trade == Trade.AutoParts)
+                    {
+                        // Stock room behind the till: a steel rack against the back wall and a pile of boxes.
+                        k.Solid(k.Fit(r, "gas_shelf_metal", new Vector3(-hw * 0.3f, 0f, d - 0.45f), new Vector3(2.4f, 0f, 0.7f), 180f));
+                        k.Solid(k.Fit(r, "gas_boxs_3", new Vector3(-hw + 1.1f, 0f, d - 0.6f), new Vector3(1.4f, 0f, 0.8f)));
+                    }
                     break;
                 case Trade.Barber:
                     for (float x = -hw + 1.2f; x < hw - 1f; x += 2f)
@@ -432,6 +449,16 @@ namespace OpeningBell.City
             }
         }
 
+        /// <summary>
+        /// One item of shop stock: the Sketchfab grocery pack ("food_…") is modelled at real size with its origin on
+        /// the shelf, so it goes in as is; the Quaternius food is scaled to a 24 cm item.
+        /// </summary>
+        private static void Stock(Kit k, Transform r, string item, Vector3 at, float yaw)
+        {
+            if (item.StartsWith("food_")) k.Model(r, item, at, yaw);
+            else k.Prop(r, item, at, 0.24f, yaw);
+        }
+
         /// <summary>Two-sided aisles of shelving with goods (bottles, boxes, tins), coolers for liquor and groceries.</summary>
         private static void Aisles(CityContext c, Transform r, Trade t, float hw, float front, float back, System.Random rng)
         {
@@ -439,10 +466,12 @@ namespace OpeningBell.City
             Material shelf = c.P.Lit(t == Trade.Pharmacy ? new Color(0.9f, 0.9f, 0.9f) : new Color(0.5f, 0.52f, 0.55f), 0.4f);
             string[] goods = t switch
             {
-                Trade.Liquor => new[] { "Bottle1", "Bottle2", "Bottle1" },
-                Trade.Supermarket => new[] { "Bread", "Jar_Large", "Soda", "Apple", "Orange", "KetchupBottle", "PeanutButter" },
+                Trade.Liquor => new[] { "food_sm_wine_bottle", "food_sm_beer_bottle", "food_sm_bottle", "food_sm_wine_bottle", "food_sm_beer_can" },
+                Trade.Supermarket => new[] { "food_sm_cereal", "food_sm_pasta", "food_sm_canned_food_3", "food_sm_juice_carton", "food_sm_milk_bottle",
+                    "food_sm_sause", "food_sm_coffee_box", "food_sm_olive_oil", "food_sm_porridge" },
                 Trade.FishMarket => new[] { "Fish", "Fish", "Lettuce_Whole", "Fish" },
-                Trade.Discount => new[] { "Soda", "ChocolateBar", "Jar_Large", "Bottle2" },
+                Trade.Discount => new[] { "food_sm_snack", "food_sm_chocolate_bar", "food_sm_canned_food_4", "food_sm_detergent_powder", "food_sm_dishwashing_liquid", "food_sm_bleach" },
+                Trade.Pharmacy => new[] { "food_sm_pills_box", "food_sm_protein_jar", "food_sm_detergent_liquid", "food_sm_pills_box", "food_sm_glue" },
                 _ => null,
             };
             Color[] boxes = { new Color(0.8f, 0.3f, 0.2f), new Color(0.2f, 0.4f, 0.7f), new Color(0.9f, 0.8f, 0.3f), new Color(0.3f, 0.6f, 0.35f), new Color(0.9f, 0.9f, 0.88f) };
@@ -455,7 +484,7 @@ namespace OpeningBell.City
                     foreach (float side in new[] { -1f, 1f })
                         for (float z = front + 0.2f; z < back - 0.1f; z += goods != null ? 0.28f : 0.45f)
                         {
-                            if (goods != null) k.Prop(r, goods[rng.Next(goods.Length)], new Vector3(x + side * 0.42f, y, z), 0.24f, side > 0f ? 90f : 270f);
+                            if (goods != null) Stock(k, r, goods[rng.Next(goods.Length)], new Vector3(x + side * 0.42f, y, z), side > 0f ? 90f : 270f);
                             else
                             {
                                 float h = 0.15f + (float)rng.NextDouble() * 0.2f;
@@ -473,6 +502,23 @@ namespace OpeningBell.City
             if (t == Trade.AutoParts)
                 for (float z = front; z < back; z += 0.8f)
                     k.Cylinder(r, "Tyre", new Vector3(hw - 0.5f, 0.35f, z), 0.7f, 0.25f, c.P.Lit(new Color(0.08f, 0.08f, 0.09f))).transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+        }
+
+        /// <summary>
+        /// Convenience-store fittings (the gas-station pack) in the strip between the last aisle and the right-hand wall:
+        /// coffee and slush machines on a drinks counter by the windows, an ice-cream chest behind them, and the
+        /// cigarette rack on the wall behind the till. Local frame: x across the shop, z from the storefront (0) back.
+        /// </summary>
+        private static void Convenience(CityContext c, Transform r, float hw, float d, float front, float back)
+        {
+            Kit k = c.Kit;
+            if (back - front < 4f || k.Art == null || k.Art.Model("gas_coffee_machine") == null) return;
+            float x = hw - 0.42f;
+            k.Span(r, "Drinks counter", new Vector3(hw - 0.75f, 0f, front), new Vector3(hw - 0.05f, 0.9f, front + 1.5f), c.P.Lit(new Color(0.3f, 0.3f, 0.32f), 0.3f));
+            k.Fit(r, "gas_coffee_machine", new Vector3(x, 0.9f, front + 0.35f), new Vector3(0f, 0.8f, 0f), 270f); // the pack faces +z: yaw 270 turns fronts to -x, into the shop
+            k.Fit(r, "gas_ice_slush_machine", new Vector3(x, 0.9f, front + 1.05f), new Vector3(0f, 0.75f, 0f), 270f);
+            k.Solid(k.Fit(r, "gas_fridge", new Vector3(hw - 0.55f, 0f, front + 2.5f), new Vector3(0f, 0.9f, 0f), 270f));
+            k.Fit(r, "gas_cigars", new Vector3(-hw * 0.3f, 1.1f, d - 0.18f), new Vector3(1.8f, 0f, 0f), 180f);
         }
 
         private static void GlassCase(CityContext c, Transform r, Vector3 at, float length, float width)

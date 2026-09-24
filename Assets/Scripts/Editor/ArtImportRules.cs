@@ -16,12 +16,19 @@ namespace OpeningBell.EditorTools
         public const string Props = "Assets/Art/ThirdParty/Quaternius/Props/";
         /// <summary>Quaternius trees, bushes and grass (converted from the Stylized Nature MegaKit GLBs, 1 unit tall).</summary>
         public const string Nature = "Assets/Art/ThirdParty/Quaternius/Nature/";
+        /// <summary>Poly Haven CC0 furniture (1K FBX + diffuse and OpenGL normal maps), one folder per model.</summary>
+        public const string PolyHaven = "Assets/Art/ThirdParty/PolyHaven/";
+        /// <summary>Sketchfab CC-BY packs split into one FBX per prop by Tools/Blender/split_pack.py (credited in-game).</summary>
+        public const string Sketchfab = "Assets/Art/ThirdParty/Sketchfab/";
 
         /// <summary>One-shot clips that staff play on repeat while working.</summary>
         private static readonly string[] AlsoLooped = { "Interact", "PickUp_Table", "Fixing_Kneeling" };
 
+        /// <summary>CC0 ambientCG texture sets for the triplanar city surfaces (colour + normal per set).</summary>
+        public const string Surfaces = "Assets/Resources/Surfaces/";
+
         /// <summary>Bump when a rule changes: Unity re-imports what this postprocessor touched.</summary>
-        public override uint GetVersion() => 14;
+        public override uint GetVersion() => 17;
 
         private void OnPreprocessModel()
         {
@@ -35,7 +42,7 @@ namespace OpeningBell.EditorTools
                 importer.importAnimation = assetPath.StartsWith(Animations);
                 importer.materialImportMode = ModelImporterMaterialImportMode.ImportViaMaterialDescription;
             }
-            else if ((assetPath.StartsWith(Kenney) && !assetPath.Contains("/CarKit/")) || assetPath.StartsWith(Props) || assetPath.StartsWith(Nature))
+            else if ((assetPath.StartsWith(Kenney) && !assetPath.Contains("/CarKit/")) || assetPath.StartsWith(Props) || assetPath.StartsWith(Nature) || assetPath.StartsWith(PolyHaven) || assetPath.StartsWith(Sketchfab))
             {
                 importer.animationType = ModelImporterAnimationType.None;
                 importer.importAnimation = false;
@@ -55,6 +62,30 @@ namespace OpeningBell.EditorTools
                 // Leaf cards are alpha-tested: without coverage-preserving mips distant canopies thin out to sticks.
                 nature.mipMapsPreserveCoverage = true;
                 nature.alphaTestReferenceValue = 0.5f;
+                return;
+            }
+            if (assetPath.StartsWith(Sketchfab))
+            {
+                // Props are seen at arm's length at most: 1K is plenty (the street pack ships 2-4K maps).
+                var tex = (TextureImporter)assetImporter;
+                tex.maxTextureSize = 1024;
+                string file = System.IO.Path.GetFileNameWithoutExtension(assetPath).ToLowerInvariant();
+                if (file.Contains("normal") || file.EndsWith("_nor") || file.Contains("_nor_")) tex.textureType = TextureImporterType.NormalMap;
+                return;
+            }
+            if (assetPath.StartsWith(PolyHaven))
+            {
+                if (assetPath.Contains("_nor_gl_")) ((TextureImporter)assetImporter).textureType = TextureImporterType.NormalMap;
+                return;
+            }
+            if (assetPath.StartsWith(Surfaces))
+            {
+                // ambientCG sets: "<Name>_Normal.jpg" is OpenGL-convention (+Y up), which is Unity's own.
+                var surface = (TextureImporter)assetImporter;
+                if (assetPath.EndsWith("_Normal.jpg")) surface.textureType = TextureImporterType.NormalMap;
+                surface.anisoLevel = 4; // roads and sidewalks are seen at grazing angles
+                // Terrain layers recolour the grass photo on the CPU (TerrainBuilder.PhotoLayer).
+                surface.isReadable = assetPath.EndsWith("/Grass_Color.jpg");
                 return;
             }
             if (!assetPath.StartsWith(Kenney)) return;

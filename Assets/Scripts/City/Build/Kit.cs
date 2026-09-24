@@ -29,6 +29,12 @@ namespace OpeningBell.City
         public readonly Palette P;
         /// <summary>Third-party models; null (or missing entries) means primitives only.</summary>
         public readonly CityArt Art;
+
+        /// <summary>
+        /// Metres per Kenney City Kit (Commercial) unit for its props (dumpsters): the kit's road tile is one unit
+        /// for a lane pair, so ~7.4 m makes 3.7 m lanes.
+        /// </summary>
+        public const float CommercialScale = 7.4f;
         private readonly Mesh _cube, _cylinder, _sphere, _capsule, _quad;
 
         public Kit(Palette palette, CityArt art = null)
@@ -75,12 +81,54 @@ namespace OpeningBell.City
         /// A copy of the art model named <paramref name="model"/>, or null when it isn't available (callers then
         /// build their primitive version). Art models carry no colliders; callers add what gameplay needs.
         /// </summary>
+        /// <summary>
+        /// Kenney furniture names the builders and the home catalog ask for, served by better models when they are
+        /// in the library (Poly Haven CC0 and the Sketchfab CC-BY packs: textured, properly proportioned), with the extra turn that makes each face
+        /// -z like the kit. Callers keep the kit names, so one table restyles every room in town.
+        /// </summary>
+        private static readonly Dictionary<string, (string Model, float Yaw)> Upgrades = new Dictionary<string, (string, float)>
+        {
+            ["loungeSofa"] = ("sofa_02", 0f),
+            ["loungeDesignSofa"] = ("sofa_02", 0f),
+            ["loungeChair"] = ("modern_arm_chair_01", 0f),
+            ["tableCoffee"] = ("modern_coffee_table_01", 0f),
+            ["cabinetTelevision"] = ("modern_wooden_cabinet", 0f),
+            ["bookcaseOpen"] = ("wooden_display_shelves_01", 0f),
+            ["cabinetBedDrawer"] = ("side_table_01", 0f),
+            ["cabinetBedDrawerTable"] = ("side_table_01", 0f),
+            ["sideTableDrawers"] = ("side_table_01", 0f),
+            ["desk"] = ("office_desk_computer_desk", 0f),
+            ["chairDesk"] = ("office_ws_chair", 0f),
+            ["computerMouse"] = ("office_ws_mouse", 0f),
+            ["computerKeyboard"] = ("office_keyboard", 180f), // faces +z, Kenney -z
+            ["plant"] = ("office_cactus_cylinder", 0f),
+            ["chair"] = ("dining_chair_02", 0f),
+        };
+
+        /// <summary>The model actually used for <paramref name="model"/>, turning <paramref name="yaw"/> by its upgrade's offset.</summary>
+        private string Resolve(string model, ref float yaw)
+        {
+            if (Art != null && Upgrades.TryGetValue(model, out var up) && Art.Model(up.Model) != null)
+            {
+                yaw += up.Yaw;
+                return up.Model;
+            }
+            return model;
+        }
+
         public GameObject Model(Transform parent, string model, Vector3 position, float yaw, Vector3 scale)
+        {
+            string asked = model;
+            model = Resolve(model, ref yaw);
+            return Place(parent, model, asked, position, yaw, scale);
+        }
+
+        private GameObject Place(Transform parent, string model, string label, Vector3 position, float yaw, Vector3 scale)
         {
             GameObject prefab = Art != null ? Art.Model(model) : null;
             if (prefab == null) return null;
             GameObject go = Object.Instantiate(prefab, parent, false);
-            go.name = model;
+            go.name = label;
             go.transform.localPosition = position;
             // Keep the file's own root rotation (Blender exports stand up with a -90° X root); yaw turns it about y.
             go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f) * prefab.transform.localRotation;
@@ -100,6 +148,8 @@ namespace OpeningBell.City
         /// </summary>
         public GameObject Fit(Transform parent, string model, Vector3 bottom, Vector3 size, float yaw = 0f, bool stretch = false)
         {
+            string asked = model;
+            model = Resolve(model, ref yaw);
             if (Art == null || Art.Model(model) == null) return null;
             Bounds b = Art.ModelBounds(model);
             bool quarter = Mathf.RoundToInt(yaw / 90f) % 2 != 0;
@@ -113,7 +163,7 @@ namespace OpeningBell.City
                     if (size[i] > 0f) scale[i] = size[i] / extent[i];
             if (quarter) scale = new Vector3(scale.z, scale.y, scale.x); // back to the model's own axes
 
-            GameObject go = Model(parent, model, Vector3.zero, yaw, scale);
+            GameObject go = Place(parent, model, asked, Vector3.zero, yaw, scale);
             go.transform.localPosition = bottom - Quaternion.Euler(0f, yaw, 0f) * Vector3.Scale(b.center, scale) + Vector3.up * (b.extents.y * scale.y);
             return go;
         }
@@ -129,7 +179,8 @@ namespace OpeningBell.City
         public void Solid(GameObject model)
         {
             if (model == null) return;
-            Bounds b = Art.ModelBounds(model.name);
+            float yaw = 0f;
+            Bounds b = Art.ModelBounds(Resolve(model.name, ref yaw)); // named for what was asked; sized by what was placed
             var box = model.AddComponent<BoxCollider>();
             box.center = b.center;
             box.size = b.size;

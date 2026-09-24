@@ -39,7 +39,7 @@ namespace OpeningBell.City
             Roads(c, root, map);
             Driveways(c, root, map);
             foreach (Rect r in CityPlan.Paved)
-                Tag(c.Kit.Span(root, "Paving", new Vector3(r.xMin, -0.05f, r.yMin), new Vector3(r.xMax, 0.005f, r.yMax), c.P.Wettable(c.P.Lit(new Color(0.46f, 0.46f, 0.45f), 0.04f))), 0.25f);
+                Tag(c.Kit.Span(root, "Paving", new Vector3(r.xMin, -0.05f, r.yMin), new Vector3(r.xMax, 0.005f, r.yMax), c.P.Wettable(c.P.Surface(Finish.Paving, new Color(0.46f, 0.46f, 0.45f), 0.04f))), 0.25f);
             Water(c, root);
             Markings(c, root, map);
             CurbRamps(c, root, walks);
@@ -112,9 +112,9 @@ namespace OpeningBell.City
                 }
             }
 
-            road.Build(root, "Road surface", c.P.Wettable(c.P.Lit(Asphalt, 0.05f)), collider: true, roughness: 0.3f);
-            walk.Build(root, "Sidewalks", c.P.Wettable(c.P.Lit(Concrete, 0.08f)), collider: true, roughness: 0.2f);
-            deck.Build(root, "Bridge decks", c.P.Lit(new Color(0.55f, 0.54f, 0.51f), 0.05f), collider: true);
+            road.Build(root, "Road surface", c.P.Wettable(c.P.Surface(Finish.Asphalt, Asphalt, 0.05f)), collider: true, roughness: 0.3f);
+            walk.Build(root, "Sidewalks", c.P.Wettable(c.P.Surface(Finish.Paving, Concrete, 0.08f)), collider: true, roughness: 0.2f);
+            deck.Build(root, "Bridge decks", c.P.Surface(Finish.Concrete, new Color(0.55f, 0.54f, 0.51f), 0.05f), collider: true);
         }
 
         private static void SidewalkStrip(MeshBuilder walk, StreetMap.Segment s, float from, float to, float side, float depth)
@@ -205,9 +205,9 @@ namespace OpeningBell.City
                     mb.Quad(V(a - left, ga), V(b + ext - left, gb), V(b + ext + left, gb), V(a + left, ga));
                 }
             }
-            alley.Build(root, "Alleys", c.P.Wettable(c.P.Lit(new Color(0.25f, 0.25f, 0.25f), 0.05f)), collider: true, roughness: 0.35f);
+            alley.Build(root, "Alleys", c.P.Wettable(c.P.Surface(Finish.Asphalt, new Color(0.25f, 0.25f, 0.25f), 0.05f)), collider: true, roughness: 0.35f);
             dirt.Build(root, "Dirt roads", c.P.Lit(new Color(0.42f, 0.36f, 0.28f), 0.02f), collider: true, roughness: 0.75f);
-            Material concrete = c.P.Lit(new Color(0.58f, 0.57f, 0.54f), 0.08f);
+            Material concrete = c.P.Surface(Finish.Concrete, new Color(0.58f, 0.57f, 0.54f), 0.08f);
             foreach (var (p, dir, width, g) in ramps) Ramp(c.Kit, root, p, dir, width, g, concrete);
         }
 
@@ -265,7 +265,7 @@ namespace OpeningBell.City
                     walls.Quad(new Vector3(px, b0 + 0.8f, z), new Vector3(x, b0 + 0.8f, z), new Vector3(x, b1 + 0.8f, z1), new Vector3(px, b1 + 0.8f, z1));
                 }
             }
-            walls.Build(w, "Canal walls", c.P.Lit(new Color(0.5f, 0.49f, 0.46f), 0.05f), collider: true);
+            walls.Build(w, "Canal walls", c.P.Surface(Finish.Concrete, new Color(0.5f, 0.49f, 0.46f), 0.05f), collider: true);
             w.gameObject.AddComponent<WaterVolume>().Configure(c);
         }
 
@@ -333,13 +333,13 @@ namespace OpeningBell.City
         }
 
         /// <summary>
-        /// Ramps from the road up to the kerb at both ends of every crosswalk (spec §9): wheelchairs, bikes and
-        /// skateboards (which can't climb a 15 cm kerb) use them.
+        /// Ramps from the road up to the kerb at both ends of every crosswalk (spec §9): wheelchairs and bikes
+        /// use them.
         /// </summary>
         private static void CurbRamps(CityContext c, Transform root, SidewalkGraph walks)
         {
             Transform ramps = Kit.Group(root, "Curb ramps");
-            Material concrete = c.P.Lit(new Color(0.6f, 0.59f, 0.56f), 0.08f);
+            Material concrete = c.P.Surface(Finish.Concrete, new Color(0.6f, 0.59f, 0.56f), 0.08f);
             foreach (StreetMap.Node n in c.Roads.Map.Nodes)
             foreach (StreetMap.Approach a in n.Approaches)
             {
@@ -406,16 +406,7 @@ namespace OpeningBell.City
                 k.Box(bench, "Back", new Vector3(0f, 0.75f, 0.22f), new Vector3(1.8f, 0.4f, 0.06f), wood, collider: false);
                 k.Box(bench, "LegL", new Vector3(-0.8f, 0.22f, 0f), new Vector3(0.08f, 0.44f, 0.45f), pole, collider: false);
                 k.Box(bench, "LegR", new Vector3(0.8f, 0.22f, 0f), new Vector3(0.08f, 0.44f, 0.45f), pole, collider: false);
-                Vector3 binAt = p + bench.right * 1.4f;
-                GameObject bin = k.Model(f, "trashcan", binAt, yaw, 0.22f);
-                if (bin != null)
-                {
-                    var solid = bin.AddComponent<CapsuleCollider>(); // in model units: ×0.22 is a 0.24 m radius, 0.95 m tall
-                    solid.radius = 1.1f;
-                    solid.height = 4.3f;
-                    solid.center = new Vector3(0f, 2.15f, 0f);
-                }
-                else k.Cylinder(f, "Bin", binAt + new Vector3(0f, 0.45f, 0f), 0.5f, 0.9f, c.P.Lit(new Color(0.2f, 0.28f, 0.22f)), collider: true);
+                StreetProps.TrashCan(c, f, p + bench.right * 1.4f, yaw);
                 c.Place(p, PlaceKind.Bench, "bench");
             }
             foreach (Vector3 p in new[] { new Vector3(80.5f, 0f, -6.2f), new Vector3(114f, 0f, -6.2f) })
@@ -433,14 +424,14 @@ namespace OpeningBell.City
             // Dumpsters behind the Maple shops.
             foreach (Vector3 p in new[] { new Vector3(68f, 0f, 10.8f), new Vector3(88.5f, 0f, 11f), new Vector3(121f, 0f, 9.8f) })
             {
-                GameObject dumpster = k.Model(f, "dumpster", p, 90f, KitBuildings.Scale);
+                GameObject dumpster = k.Model(f, "dumpster", p, 90f, Kit.CommercialScale);
                 if (dumpster == null) continue;
                 var solid = dumpster.AddComponent<BoxCollider>(); // model units (×7.4 ≈ 2.1 × 1.6 × 2.7 m)
                 solid.center = new Vector3(0f, 0.105f, 0f);
                 solid.size = new Vector3(0.28f, 0.21f, 0.37f);
             }
             foreach (Vector3 p in new[] { new Vector3(49f, 0f, -8.3f), new Vector3(141f, 0f, -8.3f), new Vector3(-39f, 0f, 64f) })
-                k.Cylinder(f, "Hydrant", p + new Vector3(0f, 0.35f, 0f), 0.24f, 0.7f, c.P.Lit(new Color(0.7f, 0.15f, 0.1f), 0.4f), collider: true);
+                StreetProps.Hydrant(c, f, p, 0f);
         }
 
         /// <summary>
@@ -644,6 +635,12 @@ namespace OpeningBell.City
                     else if (n.Control == NodeControl.StopOnStem && lane.IsStem)
                     {
                         Transform sign = Kit.Group(names, "Stop sign", V(at, n.Grade), Yaw(d));
+                        GameObject model = k.Fit(sign, "street_stop", Vector3.zero, new Vector3(0f, 2.9f, 0f), 180f); // the model's face is its +z
+                        if (model != null)
+                        {
+                            k.Cylinder(sign, "Pole collider", new Vector3(0f, 1.2f, 0f), 0.07f, 2.4f, pole, collider: true).GetComponent<Renderer>().enabled = false;
+                            continue;
+                        }
                         k.Cylinder(sign, "Pole", new Vector3(0f, 1.2f, 0f), 0.07f, 2.4f, pole, collider: true);
                         GameObject plate = k.Cylinder(sign, "Plate", new Vector3(0f, 2.3f, -0.05f), 0.75f, 0.03f, c.P.Lit(new Color(0.75f, 0.1f, 0.08f), 0.3f));
                         plate.transform.localRotation = Quaternion.Euler(90f, 0f, 22.5f);

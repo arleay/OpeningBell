@@ -49,6 +49,11 @@ namespace OpeningBell.Tests
         protected void HoldKeys(params UnityEngine.InputSystem.Key[] keys) =>
             UnityEngine.InputSystem.InputSystem.QueueStateEvent(_keyboard, new UnityEngine.InputSystem.LowLevel.KeyboardState(keys));
 
+        protected void HoldLeftButton(bool down) =>
+            UnityEngine.InputSystem.InputSystem.QueueStateEvent(_mouse, down
+                ? new UnityEngine.InputSystem.LowLevel.MouseState().WithButton(UnityEngine.InputSystem.LowLevel.MouseButton.Left)
+                : new UnityEngine.InputSystem.LowLevel.MouseState());
+
         protected void MoveMouse(Vector2 delta) =>
             UnityEngine.InputSystem.InputSystem.QueueStateEvent(_mouse, new UnityEngine.InputSystem.LowLevel.MouseState { delta = delta });
 

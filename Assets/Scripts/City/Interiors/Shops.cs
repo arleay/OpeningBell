@@ -24,9 +24,9 @@ namespace OpeningBell.City
             Rect f = CityPlan.CoffeeShop; // x 64..78, z -5.5..8
             Transform root = Kit.Group(c.Static, "Half Past Nine");
             Transform dyn = Kit.Group(c.Dynamic, "Half Past Nine");
-            Material brick = c.P.Lit(new Color(0.46f, 0.24f, 0.18f), 0.05f);
-            Material inside = c.P.Lit(new Color(0.85f, 0.8f, 0.7f), 0.05f);
-            Material floor = c.P.Lit(new Color(0.42f, 0.3f, 0.2f), 0.3f);
+            Material brick = c.P.Surface(Finish.Brick, new Color(0.46f, 0.24f, 0.18f), 0.05f);
+            Material inside = c.P.Surface(Finish.Plaster, new Color(0.85f, 0.8f, 0.7f), 0.05f);
+            Material floor = c.P.Surface(Finish.WoodFloor, new Color(0.42f, 0.3f, 0.2f), 0.3f);
             Material wood = c.P.Lit(new Color(0.35f, 0.23f, 0.14f), 0.3f);
             Material counterTop = c.P.Lit(new Color(0.15f, 0.15f, 0.16f), 0.5f);
             const float top = 4.2f, t = 0.25f;
@@ -91,9 +91,9 @@ namespace OpeningBell.City
             Rect f = CityPlan.CornerMart; // x 112..126.5, z -5.5..7
             Transform root = Kit.Group(c.Static, "Corner Mart");
             Transform dyn = Kit.Group(c.Dynamic, "Corner Mart");
-            Material wall = c.P.Lit(new Color(0.78f, 0.76f, 0.7f), 0.05f);
-            Material inside = c.P.Lit(new Color(0.92f, 0.92f, 0.9f), 0.05f);
-            Material floor = c.P.Lit(new Color(0.8f, 0.8f, 0.78f), 0.35f);
+            Material wall = c.P.Surface(Finish.PaintedPlaster, new Color(0.78f, 0.76f, 0.7f), 0.05f);
+            Material inside = c.P.Surface(Finish.Plaster, new Color(0.92f, 0.92f, 0.9f), 0.05f);
+            Material floor = c.P.Surface(Finish.Tiles, new Color(0.8f, 0.8f, 0.78f), 0.35f);
             const float top = 5f, t = 0.25f;
             const float doorX = 119f;
 
@@ -105,12 +105,12 @@ namespace OpeningBell.City
 
             // Shelves stocked on both faces, drink fridges along the back, counter by the door.
             Material shelf = c.P.Lit(new Color(0.55f, 0.57f, 0.6f), 0.4f);
-            // Per shelf level: what's on it and how tall each item stands (the food pack's models, sized to real goods).
-            (string[] Items, float Height)[] levels =
+            // Per shelf level: what's on it (the grocery pack, modelled at real size: drinks, tins and jars, boxes).
+            string[][] levels =
             {
-                (new[] { "Bottle1", "Bottle2", "Bottle1", "Soda" }, 0.3f),
-                (new[] { "Jar_Large", "PeanutButter", "KetchupBottle", "MustardBottle", "MayoBottle" }, 0.2f),
-                (new[] { "Bread", "Cheese_Singles", "ChocolateBar", "Bread" }, 0.13f),
+                new[] { "food_sm_bottle", "food_sm_juice_carton", "food_sm_milk_bottle", "food_sm_olive_oil", "food_sm_wine_bottle" },
+                new[] { "food_sm_canned_food_2", "food_sm_sause", "food_sm_canned_food_5", "food_sm_protein_jar", "food_sm_salt", "food_sm_canned_food_7" },
+                new[] { "food_sm_cereal", "food_sm_pasta", "food_sm_coffee_box", "food_sm_porridge", "food_sm_snack" },
             };
             for (int row = 0; row < 3; row++)
             {
@@ -123,14 +123,10 @@ namespace OpeningBell.City
                     {
                         k.Span(root, "Ledge", new Vector3(x + side * 0.3f - (side < 0f ? 0.28f : 0f), y - 0.03f, -0.5f),
                             new Vector3(x + side * 0.3f + (side > 0f ? 0.28f : 0f), y, 4.5f), shelf, collider: false);
-                        var (items, height) = levels[level];
+                        string[] items = levels[level];
                         int n = 0;
-                        for (float z = -0.35f; z < 4.4f; z += 0.24f, n++)
-                        {
-                            string item = items[(n + row) % items.Length];
-                            bool flat = item == "ChocolateBar" || item == "Cheese_Singles";
-                            k.Prop(root, item, new Vector3(x + side * 0.44f, y, z), height, side > 0f ? 90f : 270f, flat ? 0.16f : 0f);
-                        }
+                        for (float z = -0.35f; z < 4.4f; z += 0.2f, n++)
+                            k.Model(root, items[(n + row) % items.Length], new Vector3(x + side * 0.44f, y, z), side > 0f ? 90f : 270f);
                     }
                 }
             }
@@ -147,6 +143,7 @@ namespace OpeningBell.City
             }
             k.Pane(root, "Fridge doors", new Vector3(116.2f, 0.25f, 5.68f), new Vector3(126f, 2.05f, 5.7f), new Color(0.75f, 0.85f, 0.95f, 0.2f));
             k.Span(root, "Counter", new Vector3(112.5f, 0f, -2.6f), new Vector3(116.5f, 1f, -1.9f), c.P.Lit(new Color(0.3f, 0.3f, 0.32f), 0.3f));
+            k.Solid(k.Fit(root, "gas_fridge", new Vector3(115.8f, 0f, 2.5f), new Vector3(0f, 0.9f, 0f), 270f)); // ice-cream chest, lids to the till
             k.Box(root, "Register", new Vector3(114f, 1.12f, -2.2f), new Vector3(0.4f, 0.25f, 0.35f), c.P.Lit(new Color(0.12f, 0.12f, 0.13f), 0.4f), collider: false);
             c.PointLight(root, new Vector3(116f, 4.4f, 0.5f), 10f, 1.2f, new Color(0.95f, 0.98f, 1f));
             c.PointLight(root, new Vector3(123f, 4.4f, 2.5f), 10f, 1.2f, new Color(0.95f, 0.98f, 1f));

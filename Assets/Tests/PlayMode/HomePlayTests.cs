@@ -5,6 +5,7 @@ using OpeningBell.City;
 using OpeningBell.Gameplay;
 using OpeningBell.Home;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
@@ -75,6 +76,39 @@ namespace OpeningBell.Tests
             return null;
         }
 
+        /// <summary>The rented apartment is a home like any other: furniture goes down on its floor.</summary>
+        [UnityTest]
+        public IEnumerator Apartment_TakesFurniture()
+        {
+            yield return Setup();
+            HomeSpec apartment = W.Find(HomeSpec.ApartmentId);
+            Assert.IsTrue(W.Owns(apartment));
+            _player.PlaceAt(apartment.Root.TransformPoint(new Vector3(0.5f, 0.1f, -1.5f)), 0f, 10f);
+            yield return null;
+            Hold("nightstand");
+            // As the player aims: from eye height in the middle of the room, at floor spots all round it.
+            Vector3 eye = apartment.Root.TransformPoint(new Vector3(0.3f, 1.62f, -0.8f));
+            var refused = new System.Collections.Generic.List<string>();
+            for (float x = -2.4f; x <= 2.4f; x += 0.8f)
+            for (float z = -2f; z <= 2f; z += 0.8f)
+            {
+                Vector3 floor = apartment.Root.TransformPoint(new Vector3(x, 0f, z));
+                Carrier.Target aimed = W.Hands.Evaluate(new Ray(eye, floor - eye));
+                if (aimed.Home == null) refused.Add($"({x:0.0}, {z:0.0}): {aimed.Why}");
+            }
+            Assert.IsEmpty(refused, "aimed at the apartment floor but not 'at home': " + string.Join("; ", refused));
+            Carrier.Target t = PlaceSomewhere(apartment);
+            Assert.AreSame(apartment, t.Home, Why(t));
+            Assert.AreEqual(ItemState.Placed, _game.Belongings.Items.Single().State);
+
+            // A home on the market (open house) says it isn't yours, rather than "set it down at home".
+            HomeSpec penthouse = W.Homes.First(h => h.Kind == HomeKind.Penthouse);
+            Assert.IsFalse(W.Owns(penthouse));
+            Hold("nightstand");
+            Carrier.Target there = Aim(penthouse.Root.TransformPoint(new Vector3(3f, 0.3f, -2f)));
+            StringAssert.Contains("isn't yours", Why(there));
+        }
+
         [UnityTest]
         public IEnumerator Sofa_Bought_Collected_Trailered_Home_AndSaved()
         {
@@ -109,7 +143,6 @@ namespace OpeningBell.Tests
 
             // Onto the trailer: the gate's up, so first it refuses.
             W.Hands.PickUp(W.View(bought.Uid));
-            Assert.AreEqual(Carrier.LargeSpeed, _player.SpeedFactor, "a sofa is slow going");
             StringAssert.Contains("gate", Why(Aim(trailer.transform.position + Vector3.up * 0.1f)));
             W.Loaner.Trailer.GetComponentInChildren<TrailerGate>().Set(true);
             Carrier.Target onTrailer = Aim(trailer.transform.position + Vector3.up * 0.1f);
@@ -402,10 +435,6 @@ namespace OpeningBell.Tests
             HomeSpec penthouse = W.Find(HomeSales.PenthouseId);
             Assert.IsNotNull(penthouse);
             Assert.IsNull(W.Buy(penthouse));
-            _player.PlaceAt(_city.Anchors["penthouse_inside"] + Vector3.up * 0.1f, 180f, 0f);
-            for (int i = 0; i < 4; i++) yield return null;
-            Assert.Greater(_player.transform.position.y, 60f, "standing in the penthouse");
-            yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "home-penthouse.png");
 
             // Delivery: to the newest home, next morning.
             ShowroomItem lamp = Object.FindObjectsByType<ShowroomItem>(FindObjectsSortMode.None).First(s => s.Item.Id == "floor_lamp");
@@ -414,7 +443,7 @@ namespace OpeningBell.Tests
             DeliveryDesk delivery = Object.FindAnyObjectByType<DeliveryDesk>();
             delivery.Interact();
             delivery.Interact();
-            OwnedItem item = _game.Belongings.Items.Single();
+            OwnedItem item = _game.Belongings.Items.Single(i => i.ItemId == "floor_lamp" && i.State == ItemState.Delivering);
             Assert.AreEqual(ItemState.Delivering, item.State);
             _game.SkipTo(new System.DateTime(item.DeliverAt).AddMinutes(1));
             yield return new WaitForSecondsRealtime(0.7f);
@@ -425,5 +454,100 @@ namespace OpeningBell.Tests
             Assert.AreEqual(3, _game.Estate.Owned.Count, "all three homes kept");
             Assert.IsTrue(_game.Estate.Locked(starter.Id), "still locked");
         }
+
+        /// <summary>
+        /// Harborview: residents-only lift out of hours, buy it, ride the lift from the lobby to the top, the furniture
+        /// that comes with it, the rooms and the terrace, and the view by day, at dusk and at night (home-penthouse-*.png).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Penthouse_LiftToTheTop_FurnishedWithAView()
+        {
+            yield return Setup();
+            HomeSpec ph = W.Find(HomeSales.PenthouseId);
+            Vector3 lobby = _city.Anchors["penthouse_lobby"];
+            ElevatorButton call = Object.FindObjectsByType<ElevatorButton>(FindObjectsSortMode.None)
+                .Where(b => b.name == "Call").OrderBy(b => Vector3.Distance(b.transform.position, lobby)).First();
+            Elevator lift = call.GetComponentInParent<Elevator>();
+            Assert.AreEqual(0, call.Floor, "the lobby's call button");
+            _game.SkipTo(_game.Clock.Now.Date.AddHours(20));
+            Assert.AreEqual("residents only", call.LockReason(), "out of hours, not yours");
+
+            int before = _game.Belongings.Items.Count;
+            Assert.IsNull(W.Buy(ph));
+            Assert.AreEqual(ph.Staging.Count, _game.Belongings.Items.Count - before, "it comes furnished");
+            Assert.IsTrue(_game.Belongings.Items.Skip(before).All(i => i.State == ItemState.Placed && i.Property == ph.Id));
+            Assert.IsNull(call.LockReason(), "yours now");
+            _game.SkipTo(_game.Clock.Now.Date.AddDays(1).AddHours(12));
+
+            // The lobby, then up in the lift.
+            _player.PlaceAt(lobby + new Vector3(0f, 0.05f, -9f), 0f, -4f);
+            for (int i = 0; i < 4; i++) yield return null;
+            yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "home-penthouse-lobby.png");
+            call.Interact();
+            yield return WaitUntil(() => lift.Logic.DoorOpen > 0.95f, 15f, "the lift at the lobby");
+            _player.PlaceAt(lift.transform.position + Vector3.up * 0.05f, 180f, 0f);
+            yield return null;
+            lift.GetComponentsInChildren<ElevatorButton>().First(b => b.name == "Button PH" && b.transform.position.y < lift.transform.position.y + 3f).Interact();
+            yield return WaitUntil(() => _player.transform.position.y > HarborviewTower.Grade + 80f, 40f, "the ride up");
+            Assert.AreEqual(1, lift.CarFloor);
+
+            Vector3 inside = _city.Anchors["penthouse_inside"];
+            Assert.AreEqual(ph, W.HomeAt(inside));
+            Assert.IsTrue(ph.Indoors(inside + Vector3.up * 3.6f), "the ceiling's indoors");
+            Vector3 terrace = _city.Anchors["penthouse_terrace"];
+            Assert.IsFalse(ph.Indoors(terrace), "the roof terrace is outdoors");
+            Assert.IsTrue(ph.Contains(terrace), "but it's yours");
+
+            Camera cam = _player.GetComponentInChildren<Camera>();
+            IEnumerator Shot(Vector3 at, float yaw, float pitch, string name)
+            {
+                _player.PlaceAt(at + Vector3.up * 0.05f, yaw, pitch);
+                for (int i = 0; i < 6; i++) yield return null;
+                yield return CaptureCamera(cam, name);
+            }
+            float fy = HarborviewTower.Grade + HarborviewTower.PenthouseFloor;
+            Vector3 P(float x, float y, float z) => new Vector3(HarborviewTower.X + x, fy + y, HarborviewTower.Z + z);
+            yield return Shot(P(-1f, 0f, 3.5f), 180f, 6f, "home-penthouse.png");
+            Assert.Greater(RenderSettings.fogEndDistance, 700f, "the air's clear up here");
+            yield return Shot(P(3f, 0f, -2f), 225f, 4f, "home-penthouse-living.png");
+            yield return Shot(P(4f, 0f, -9.3f), 200f, 14f, "home-penthouse-window.png");
+            yield return Shot(P(8f, 0f, 3f), 30f, 8f, "home-penthouse-kitchen.png");
+            yield return Shot(P(-9.5f, 0f, -9f), 10f, 4f, "home-penthouse-bedroom.png");
+            yield return Shot(P(-10.5f, 0f, 3.2f), 20f, 8f, "home-penthouse-bath.png");
+            yield return Shot(P(10f, 0f, -8.5f), 160f, 10f, "home-penthouse-office.png");
+            yield return Shot(P(1.5f, RoofDeck(), -3.5f), 200f, 8f, "home-penthouse-terrace.png");
+
+            // Walk up the stairs to the roof (no bumping your head), then try to jump off the edge.
+            UseSimulatedInput();
+            _player.PlaceAt(P(3.8f, 0.05f, 4.9f), 0f, 0f);
+            yield return null;
+            HoldKeys(Key.W);
+            yield return WaitUntil(() => _player.transform.position.y > fy + RoofDeck() - 0.1f, 10f, "the climb to the roof");
+            HoldKeys();
+            _player.PlaceAt(P(1f, RoofDeck() + 0.05f, -9f), 180f, 0f);
+            yield return null;
+            for (int i = 0; i < 6; i++)
+            {
+                HoldKeys(Key.W, Key.Space);
+                yield return new WaitForSeconds(0.25f);
+            }
+            HoldKeys();
+            Assert.Greater(_player.transform.position.z, HarborviewTower.Z - 12f, "can't get over the edge");
+            Assert.Greater(_player.transform.position.y, fy + RoofDeck() - 0.2f, "still on the roof");
+
+            _game.SkipTo(_game.Clock.Now.Date.AddHours(19).AddMinutes(20));
+            yield return new WaitForSeconds(0.3f);
+            yield return Shot(P(-1f, 0f, 3.5f), 215f, 6f, "home-penthouse-dusk.png");
+            _game.SkipTo(_game.Clock.Now.Date.AddHours(22));
+            yield return new WaitForSeconds(0.3f);
+            yield return Shot(P(-1f, 0f, 3.5f), 180f, 6f, "home-penthouse-night.png");
+            yield return Shot(P(4f, 0f, -9.3f), 200f, 14f, "home-penthouse-window-night.png");
+            yield return Shot(P(-6f, RoofDeck(), 3f), 160f, 12f, "home-penthouse-pool.png");
+            _player.PlaceAt(new Vector3(HarborviewTower.X - 30f, HarborviewTower.Grade + 0.05f, 55f), 20f, -32f);
+            for (int i = 0; i < 6; i++) yield return null;
+            yield return CaptureCamera(cam, "home-penthouse-tower.png");
+        }
+
+        private static float RoofDeck() => HarborviewTower.RoofDeck;
     }
 }

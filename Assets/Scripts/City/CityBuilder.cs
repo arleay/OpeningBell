@@ -128,6 +128,7 @@ namespace OpeningBell.City
             Woods = Forest.Build(_c, viewCamera);
             Parked = ParkedCars.Build(_c, viewCamera);
             _c.Parked = Parked;
+            Backdrop.Build(_c);
 
             // Shelf goods, yard and street clutter: a mesh per material instead of thousands of little renderers.
             var merge = new List<Transform>();
@@ -158,7 +159,7 @@ namespace OpeningBell.City
 
             Weather = WeatherSystem.Build(_c, daylight, Pedestrians, Traffic, viewCamera);
 
-            // Owned bikes and boards: parked ones in the world, riding on the player.
+            // Owned bikes: parked ones in the world, riding on the player.
             Fleet = new GameObject("Fleet").AddComponent<FleetView>();
             Fleet.transform.SetParent(transform, false);
             PlayerInteractor interactor = player.GetComponentInChildren<PlayerInteractor>();
@@ -173,6 +174,7 @@ namespace OpeningBell.City
             Home.Loaner.Configure(Home, Fleet, Driver);
             _c.FleetView = Fleet;
             _c.Driver = Driver;
+            player.gameObject.AddComponent<FuelHands>().Configure(_c, player);
             player.gameObject.AddComponent<Footsteps>().Configure(player);
             PlayerBody body = null;
             if (art != null && art.HasPeople)
@@ -204,7 +206,6 @@ namespace OpeningBell.City
             _c.PlaceInfo["City Hall"] = (PlaceCategory.Work, Hours.Of(9, 17));
             _c.PlaceInfo["Corner Mart"] = (PlaceCategory.Shop, Shops.MartHours);
             _c.PlaceInfo["Half Past Nine"] = (PlaceCategory.Food, Shops.CoffeeHours);
-            _c.PlaceInfo["Curbside Skate"] = (PlaceCategory.Shop, MobilityShops.SkateHours);
             _c.PlaceInfo["Hillside Cycles"] = (PlaceCategory.Shop, MobilityShops.BikeHours);
             _c.PlaceInfo["Westgate Motors"] = (PlaceCategory.Shop, Dealerships.DealerHours);
             _c.PlaceInfo[MechanicShop.Name] = (PlaceCategory.Shop, MechanicShop.ShopHours);

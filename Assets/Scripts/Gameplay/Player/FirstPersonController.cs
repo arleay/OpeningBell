@@ -82,9 +82,6 @@ namespace OpeningBell.Gameplay
         /// </summary>
         public bool Browsing { get; set; }
 
-        /// <summary>Carrying something: walking speed scales by this (big furniture is slow going).</summary>
-        public float SpeedFactor { get; set; } = 1f;
-
         /// <summary>Both hands on something you're carrying: no punching, no riding off.</summary>
         public bool HandsFull { get; set; }
 
@@ -122,7 +119,7 @@ namespace OpeningBell.Gameplay
             _pitch = Mathf.Clamp(_pitch - look.y, -pitchLimit, pitchLimit);
 
             Vector2 move = Vector2.ClampMagnitude(input.Move.ReadValue<Vector2>(), 1f);
-            float speed = (input.Sprint.IsPressed() && SpeedFactor >= 1f ? sprintSpeed : walkSpeed) * SpeedFactor;
+            float speed = input.Sprint.IsPressed() ? sprintSpeed : walkSpeed;
             Vector3 wanted = (transform.right * move.x + transform.forward * move.y) * speed;
             bool grounded = _body.isGrounded;
             _planar = Vector3.MoveTowards(_planar, wanted, (grounded ? groundAcceleration : airAcceleration) * dt);

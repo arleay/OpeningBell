@@ -191,13 +191,19 @@ namespace OpeningBell.City
             Material post = c.P.Lit(new Color(0.5f, 0.52f, 0.53f), 0.5f);
             float len = Vector3.Distance(a, b);
             Vector3 dir = (b - a).normalized;
+            // The chain-link pack's frame (3.1 m: post, top rail and kerb) stretched to each bay, its length along the
+            // model's x; the mesh fabric is ours (the pack's own mesh panel is a separate piece). Posts where the art is missing.
+            float yaw = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg - 90f;
+            bool art = k.Art != null && k.Art.Model("chain_curb_straight") != null;
             var mesh = new MeshBuilder();
             for (float s = 0f; s < len; s += 3f)
             {
                 float e = Mathf.Min(len, s + 3f);
                 bool gap = gapAt >= 0f && s <= gapAt && gapAt < e; // a panel's missing: a way in
-                k.Cylinder(parent, "Fence post", a + dir * s + Vector3.up * height / 2f, 0.07f, height, post, collider: true);
+                if (!art) k.Cylinder(parent, "Fence post", a + dir * s + Vector3.up * height / 2f, 0.07f, height, post, collider: true);
+                else if (gap) k.Model(parent, "chain_singkepost_curb", a + dir * s, 0f, new Vector3(1f, height / 2.33f, 1f));
                 if (gap) continue;
+                if (art) k.Model(parent, "chain_curb_straight", a + dir * (s + e) / 2f, yaw, new Vector3((e - s) / 3.1f, height / 2.33f, 1f));
                 mesh.Panel(a + dir * s, a + dir * e, height, 0.5f);
                 mesh.Panel(a + dir * e, a + dir * s, height, 0.5f);
                 var box = new GameObject("Fence collider").AddComponent<BoxCollider>();
@@ -206,6 +212,7 @@ namespace OpeningBell.City
                 box.transform.rotation = Quaternion.LookRotation(dir);
                 box.size = new Vector3(0.05f, height, e - s);
             }
+            if (art) k.Model(parent, "chain_singkepost_curb", b, 0f, new Vector3(1f, height / 2.33f, 1f)); // closes the last bay
             mesh.Build(parent, "Chain-link", ChainLink(c), collider: false);
         }
 

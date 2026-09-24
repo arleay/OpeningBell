@@ -4,8 +4,8 @@ using UnityEngine;
 namespace OpeningBell.City
 {
     /// <summary>
-    /// TODO(art): primitive bike / e-bike / skateboard built from a model's real dimensions (wheel size,
-    /// wheelbase, deck length) until vehicle art exists. Origin on the ground between the wheels, facing +z.
+    /// TODO(art): primitive bike / e-bike built from a model's real dimensions (wheel size,
+    /// wheelbase) until vehicle art exists. Origin on the ground between the wheels, facing +z.
     /// Spins wheels by distance travelled, turns the cranks and leans the frame.
     /// </summary>
     public sealed class VehicleVisual : MonoBehaviour
@@ -25,36 +25,8 @@ namespace OpeningBell.City
             var v = root.AddComponent<VehicleVisual>();
             v._frame = Kit.Group(root.transform, "Frame");
             Color paint = new Color(model.ColorR, model.ColorG, model.ColorB);
-            if (model.Kind == VehicleKind.Skateboard) v.BuildBoard(kit, model, paint);
-            else v.BuildBike(kit, model, paint);
+            v.BuildBike(kit, model, paint);
             return v;
-        }
-
-        private void BuildBoard(Kit kit, VehicleModel model, Color paint)
-        {
-            RideSpec s = model.Spec;
-            float r = (float)s.WheelDiameter / 2f, half = (float)s.Wheelbase / 2f, deck = (float)s.DeckLength;
-            float deckY = (float)s.WheelDiameter + 0.03f;
-            Material metal = kit.P.Lit(new Color(0.7f, 0.7f, 0.72f), 0.6f);
-            Material urethane = kit.P.Lit(new Color(0.92f, 0.88f, 0.7f), 0.3f);
-            kit.Box(_frame, "Deck", new Vector3(0f, deckY, 0f), new Vector3(0.21f, 0.018f, deck), kit.P.Lit(paint, 0.3f), collider: false);
-            kit.Box(_frame, "Grip", new Vector3(0f, deckY + 0.01f, 0f), new Vector3(0.2f, 0.004f, deck - 0.06f), kit.P.Lit(new Color(0.08f, 0.08f, 0.08f)), collider: false);
-            _wheels = new Transform[4];
-            int i = 0;
-            foreach (float z in new[] { -half, half })
-            {
-                kit.Box(_frame, "Truck", new Vector3(0f, r + 0.012f, z), new Vector3(0.16f, 0.025f, 0.04f), metal, collider: false);
-                foreach (float x in new[] { -0.085f, 0.085f })
-                {
-                    Transform w = Kit.Group(_frame, "Wheel", new Vector3(x, r, z));
-                    GameObject disc = kit.Cylinder(w, "Tyre", Vector3.zero, r * 2f, 0.035f, urethane);
-                    disc.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
-                    _wheels[i++] = w;
-                }
-            }
-            _wheelRadius = r;
-            SaddleHeight = deckY + 0.02f;
-            Length = deck;
         }
 
         private void BuildBike(Kit kit, VehicleModel model, Color paint)

@@ -5,79 +5,30 @@ using UnityEngine;
 namespace OpeningBell.City
 {
     /// <summary>
-    /// Phase 13 shops on Maple between the coffee shop and the mart: Curbside Skate Co. (boards and parts,
-    /// 10 AM–8 PM) and Hillside Cycles (bikes, e-bikes, service, fast charger, 9 AM–7 PM). Plus e-bike chargers
-    /// at home and at the Calder Building.
+    /// Phase 13 shops on Maple between the coffee shop and the mart: an empty unit to let and Hillside Cycles
+    /// (bikes, e-bikes, service, fast charger, 9 AM–7 PM). Plus e-bike chargers at home and at the Calder Building.
     /// </summary>
     public static class MobilityShops
     {
-        public static readonly Hours SkateHours = Hours.Of(10, 20);
         public static readonly Hours BikeHours = Hours.Of(9, 19);
 
         public static void Build(CityContext c)
         {
-            SkateShop(c);
+            EmptyShop(c);
             BikeShop(c);
             Charger(c, "Home charger", new Vector3(8.6f, 0f, -5.25f), 250f);
             Charger(c, "Public charger", new Vector3(161.5f, 0f, -5.9f), 250f);
         }
 
-        private static void SkateShop(CityContext c)
+        /// <summary>The unit between the coffee shop and Hillside Cycles: empty, papered up, to let.</summary>
+        private static void EmptyShop(CityContext c)
         {
             Kit k = c.Kit;
-            Rect f = CityPlan.SkateShop; // x 78.5..94, z -5.5..9
-            Transform root = Kit.Group(c.Static, "Curbside Skate");
-            Transform dyn = Kit.Group(c.Dynamic, "Curbside Skate");
-            const float doorX = 86.25f, top = 4.2f;
-            Shops.ShopShell(c, root, f, top, 0.25f, c.P.Lit(new Color(0.22f, 0.22f, 0.24f), 0.1f), c.P.Lit(new Color(0.9f, 0.9f, 0.88f)),
-                c.P.Lit(new Color(0.55f, 0.55f, 0.53f), 0.3f), doorX, 1.1f, new[] { (81.8f, 5.2f), (90.7f, 5.2f) });
-            ModularFacade.Build(c, root, "Flats above", new Vector3(f.xMin, top, f.yMin), new Vector3(f.xMax, 12f, f.yMax), FacadeStyle.Brick, 31);
-            k.Span(root, "Sign band", new Vector3(f.xMin, 3.35f, f.yMin - 0.12f), new Vector3(f.xMax, 4.15f, f.yMin), c.P.Lit(new Color(0.85f, 0.35f, 0.1f)), collider: false);
-            k.Text(root, "CURBSIDE SKATE CO.", new Vector3(doorX, 3.75f, f.yMin - 0.14f), 0f, 0.34f, new Color(0.1f, 0.1f, 0.1f));
-            k.Text(root, "OPEN 10 AM – 8 PM", new Vector3(doorX + 1.4f, 2.3f, f.yMin - 0.03f), 0f, 0.07f, new Color(0.95f, 0.93f, 0.88f));
-            Door door = c.SwingDoor(dyn, "door", new Vector3(doorX - 0.55f, 0f, f.yMin + 0.125f), 1.1f, 2.25f, c.P.Glass(new Color(0.6f, 0.7f, 0.75f, 0.35f)), glass: true);
-            door.LockReason = () => SkateHours.Contains(c.Game.Clock.Now) ? null : "closed (opens 10 AM)";
-
-            // Display table with the boards, counter with parts at the back.
-            Material wood = c.P.Lit(new Color(0.5f, 0.36f, 0.22f), 0.3f);
-            k.Span(root, "Display table", new Vector3(81.5f, 0f, 0.6f), new Vector3(91f, 0.75f, 2.6f), wood);
-            k.Span(root, "Counter", new Vector3(80.5f, 0f, 5.4f), new Vector3(92f, 1.02f, 6.1f), c.P.Lit(new Color(0.15f, 0.15f, 0.16f), 0.4f));
-            c.PointLight(root, new Vector3(83.5f, 3.6f, 2f), 9f, 1.1f, new Color(1f, 0.95f, 0.88f));
-            c.PointLight(root, new Vector3(89.5f, 3.6f, 2f), 9f, 1.1f, new Color(1f, 0.95f, 0.88f));
-
-            Vector3 station = new Vector3(doorX, 0f, 6.9f);
-            StaffNpc clerk = StaffNpc.Create(k, dyn, "Skate shop clerk", 7401, new Color(0.85f, 0.35f, 0.1f),
-                new WorkSchedule { Shift = SkateHours }, new List<Vector3> { station, new Vector3(93f, 0f, 6.9f), new Vector3(93.3f, 0f, 8.3f) },
-                180f, new[] { NpcPose.Stand, NpcPose.Phone, NpcPose.Stand },
-                () => "Yo. Boards on the table, parts up here.",
-                () => "Soft wheels if you ride Maple, the asphalt's rough. And use the curb ramps.",
-                c.Game, c.Hud, c.Player, look: "Punk");
-
-            Vector3 shopCentre = new Vector3(f.center.x, 0f, f.center.y);
-            string[] boards = { "skate_street", "skate_cruiser", "skate_longboard" };
-            for (int i = 0; i < boards.Length; i++)
-            {
-                if (!c.Game.Vehicles.Catalog.TryGetModel(boards[i], out VehicleModel model)) continue;
-                Transform spot = Kit.Group(root, "Board display", new Vector3(83.2f + i * 3.1f, 0.75f, 1.6f), 90f);
-                VehicleVisual.Build(k, spot, model);
-                Display(c, clerk, SaleKind.Vehicle, boards[i], spot.position + new Vector3(0f, 0.08f, 0f), new Vector3(1.1f, 0.3f, 0.5f), Vector3.zero, 0f, shopCentre);
-            }
-            string[] parts = { "wheels_soft60", "wheels_big70", "bearings_precision", "trucks_loose", "trucks_tight" };
-            Material metal = c.P.Lit(new Color(0.7f, 0.7f, 0.72f), 0.6f);
-            Material urethane = c.P.Lit(new Color(0.92f, 0.86f, 0.6f), 0.3f);
-            for (int i = 0; i < parts.Length; i++)
-            {
-                Vector3 at = new Vector3(81.6f + i * 2.3f, 1.02f, 5.55f);
-                if (parts[i].StartsWith("wheels"))
-                    for (int w = 0; w < 4; w++) k.Cylinder(root, "Wheel", at + new Vector3(-0.15f + w * 0.1f, 0.05f, 0f), 0.08f, 0.04f, urethane).transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
-                else k.Box(root, "Part", at + new Vector3(0f, 0.05f, 0f), new Vector3(0.3f, 0.1f, 0.12f), parts[i].StartsWith("bearings") ? c.P.Lit(new Color(0.15f, 0.15f, 0.2f)) : metal, collider: false);
-                Display(c, clerk, SaleKind.Part, parts[i], at + new Vector3(0f, 0.1f, 0f), new Vector3(0.8f, 0.4f, 0.6f), Vector3.zero, 0f, shopCentre);
-            }
-
-            c.Place(new Vector3(doorX, 0f, f.yMin - 0.8f), PlaceKind.Door, "Curbside Skate");
-            c.Anchor("skate_front_out", new Vector3(doorX, 0f, f.yMin - 2f));
-            c.Anchor("skate_table", new Vector3(83.2f, 0f, -0.4f));
-            c.Anchor("skate_counter", new Vector3(81.6f, 0f, 4.3f));
+            Rect f = CityPlan.EmptyShop; // x 78.5..94, z -5.5..9
+            Transform root = Kit.Group(c.Static, "Empty shop");
+            ModularFacade.Build(c, root, "Empty shop", new Vector3(f.xMin, 0f, f.yMin), new Vector3(f.xMax, 12f, f.yMax), FacadeStyle.Brick, 31, storefront: true);
+            k.Span(root, "Papered window", new Vector3(f.xMin + 0.8f, 0.6f, f.yMin - 0.05f), new Vector3(f.xMax - 0.8f, 3.05f, f.yMin - 0.03f), c.P.Lit(new Color(0.72f, 0.66f, 0.52f)), collider: false);
+            k.Text(root, "FOR LEASE", new Vector3(f.center.x, 2f, f.yMin - 0.07f), 0f, 0.3f, new Color(0.7f, 0.12f, 0.1f));
         }
 
         private static void BikeShop(CityContext c)

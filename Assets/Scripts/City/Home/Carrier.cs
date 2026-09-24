@@ -7,8 +7,8 @@ using UnityEngine.InputSystem;
 namespace OpeningBell.City
 {
     /// <summary>
-    /// Carrying and placing (TOWN_SPEC B). [E] on an item picks it up: small things in your hands at walking pace, big
-    /// ones slowly. While carrying, a see-through copy shows where it would go, green if it can, red with the reason
+    /// Carrying and placing (TOWN_SPEC B). [E] on an item picks it up: small things in your hands, big ones
+    /// out of view, at full pace either way. While carrying, a see-through copy shows where it would go, green if it can, red with the reason
     /// if not: [LMB] place, [R] turn 15° ([Shift]+[R] 5°), [G] grid snap on/off, [RMB] cancel (back where it was),
     /// [Ctrl]+[Z] undo the last move, [B] put it away in the home's storage. Things go down at home, in a vehicle's bed or at the store's pickup yard; boxes
     /// are unpacked when they're set down at home. Aiming at an item: [X] sells it (twice to confirm).
@@ -16,7 +16,6 @@ namespace OpeningBell.City
     public sealed class Carrier : MonoBehaviour
     {
         public const float Reach = 4.5f;
-        public const float LargeSpeed = 0.55f;
         private const float Grid = 0.25f;
 
         /// <summary>Where the held item would go, and whether it can.</summary>
@@ -110,7 +109,6 @@ namespace OpeningBell.City
             v.transform.localPosition = large ? new Vector3(0f, -3f, 0f) : new Vector3(0.18f, -0.42f, 0.55f);
             v.transform.localRotation = Quaternion.identity;
             foreach (Renderer r in v.GetComponentsInChildren<Renderer>()) r.enabled = !large;
-            _player.SpeedFactor = spec.Large ? LargeSpeed : 1f;
             _player.HandsFull = true;
             _yaw = _player.transform.eulerAngles.y + 180f; // facing you
             BuildGhost(v.Item.Boxed);
@@ -123,7 +121,6 @@ namespace OpeningBell.City
             SetLayer(_held.transform, 0);
             foreach (Renderer r in _held.GetComponentsInChildren<Renderer>()) r.enabled = true;
             _held = null;
-            _player.SpeedFactor = 1f;
             _player.HandsFull = false;
             if (_ghost != null) Destroy(_ghost);
             _ghost = null;
@@ -272,7 +269,15 @@ namespace OpeningBell.City
             t.At = at;
 
             // Where: yours, a vehicle, or the yard.
-            if (t.Home == null && t.Bed == null && !t.Yard) { t.Why = "Set it down at home, in a vehicle's bed or at the pickup yard."; return t; }
+            if (t.Home == null && t.Bed == null && !t.Yard)
+            {
+                // Standing in a home for sale (open house) reads like being at home: say whose it is.
+                HomeSpec other = _w.AnyHomeAt(hit.point);
+                t.Why = other != null
+                    ? $"{other.Name} isn't yours yet: buy it at the for-sale sign, or take this to {_w.MainHome.Name}."
+                    : "Set it down at home, in a vehicle's bed or at the pickup yard.";
+                return t;
+            }
             bool unbox = item.Boxed && t.Home != null;
             if (t.Bed != null || t.Yard)
             {

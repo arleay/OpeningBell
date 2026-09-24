@@ -61,6 +61,9 @@ namespace OpeningBell.City
             return null;
         }
 
+        /// <summary>Any home (yours or on the market) that <paramref name="world"/> is in, or null.</summary>
+        public HomeSpec AnyHomeAt(Vector3 world) => _c.Homes.Find(h => h.Contains(world));
+
         public HomeSpec Find(string id) => _c.Homes.Find(h => h.Id == id);
 
         /// <summary>Buys a home outright from the bank. An error, or null.</summary>
@@ -70,6 +73,15 @@ namespace OpeningBell.City
             string error = Game.Economy.Spend(h.Price, "Home: " + h.Name, Game.Clock.Now);
             if (error != null) return error;
             Estate.Acquire(h.Id);
+            foreach (var (id, variant, at, yaw) in h.Staging)
+            {
+                OwnedItem item = Belongings.Add(id, variant, ItemState.Placed);
+                item.Boxed = false;
+                item.Property = h.Id;
+                item.X = at.x; item.Y = at.y; item.Z = at.z;
+                item.Yaw = yaw;
+            }
+            if (h.Staging.Count > 0) Belongings.Touch();
             return null;
         }
 

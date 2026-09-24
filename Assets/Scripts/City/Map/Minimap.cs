@@ -54,7 +54,6 @@ namespace OpeningBell.City
             (MapIcon.Office, "calder_front_out", "Calder Building"),
             (MapIcon.Coffee, "coffee_front_out", "Half Past Nine"),
             (MapIcon.Mart, "mart_front_out", "Corner Mart"),
-            (MapIcon.Skate, "skate_front_out", "Curbside Skate"),
             (MapIcon.Bike, "bike_front_out", "Hillside Cycles"),
             (MapIcon.Fuel, "fuel_driveway", "Tidewater Fuel"),
         };

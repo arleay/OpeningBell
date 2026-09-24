@@ -240,8 +240,7 @@ namespace OpeningBell.City
                 new Contact { Name = "PennyBridge Support", Number = "5550100200", Line = a => a.SupportLine() },
                 new Contact { Name = "Calder Building", Number = "5550163300", Line = _ => "Calder Building front desk. Offices on the second floor are leased through reception; come by and ask for a tour." },
                 new Contact { Name = "Hillside Cycles", Number = "5550177410", Line = _ => "Hillside Cycles! Bikes, e-bikes, tune-ups. Swing by the shop and we'll get you rolling." },
-                new Contact { Name = "Curbside Skate", Number = "5550177902", Line = _ => "Curbside. Boards, wheels, bearings, the works. Come try some decks." },
-                new Contact { Name = "Tidewater Fuel", Number = "5550188120", Line = _ => "Tidewater Fuel. Pull up to any pump and pay at the pump." },
+                new Contact { Name = "Tidewater Fuel", Number = "5550188120", Line = _ => FindAnyTidewater() },
                 new Contact { Name = "Landlord", Number = "5550129954", Line = _ => "Yeah, hi. Rent comes out of your account automatically, so just keep it topped up and we're good." },
             };
 
@@ -362,6 +361,13 @@ namespace OpeningBell.City
             PhoneKit.Tap(end, HangUp);
 
             ShowTab(0);
+        }
+
+        /// <summary>Tidewater answers through the fuel hands (roadside delivery when you're stranded).</summary>
+        private static string FindAnyTidewater()
+        {
+            FuelHands hands = UnityEngine.Object.FindAnyObjectByType<FuelHands>();
+            return hands != null ? hands.CallTidewater() : "Tidewater Fuel. Pull up to any pump and pay at the pump.";
         }
 
         private string SupportLine()

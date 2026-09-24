@@ -86,7 +86,7 @@ namespace OpeningBell.City
                         steel.Quad(V(x, y0 + 0.42f, tz + r - 0.04f), V(x1, y1 + 0.42f, tz + r - 0.04f), V(x1, y1 + 0.42f, tz + r + 0.04f), V(x, y0 + 0.42f, tz + r + 0.04f));
                 }
             }
-            concrete.Build(rail, "Viaduct deck", c.P.Lit(new Color(0.52f, 0.51f, 0.48f), 0.05f), collider: true);
+            concrete.Build(rail, "Viaduct deck", c.P.Surface(Finish.Concrete, new Color(0.52f, 0.51f, 0.48f), 0.05f), collider: true);
             ballast.Build(rail, "Ballast", c.P.Lit(new Color(0.3f, 0.28f, 0.26f), 0.02f), collider: false);
             steel.Build(rail, "Rails", c.P.Lit(new Color(0.42f, 0.4f, 0.38f), 0.6f), collider: false);
 
@@ -240,10 +240,10 @@ namespace OpeningBell.City
             Kit k = c.Kit;
             Rect b = CityHallBlock;
             Transform hall = Kit.Group(root, "City Hall");
-            Material stone = c.P.Lit(new Color(0.78f, 0.74f, 0.66f), 0.1f);
+            Material stone = c.P.Surface(Finish.Concrete, new Color(0.78f, 0.74f, 0.66f), 0.1f);
             Material trim = c.P.Lit(new Color(0.9f, 0.88f, 0.82f), 0.12f);
             Material roof = c.P.Lit(new Color(0.3f, 0.36f, 0.34f), 0.2f);
-            Material plaza = c.P.Lit(new Color(0.6f, 0.57f, 0.52f), 0.08f);
+            Material plaza = c.P.Surface(Finish.Paving, new Color(0.6f, 0.57f, 0.52f), 0.08f);
             k.Span(hall, "Plaza", V(b.xMin, -0.05f, b.yMin), V(b.xMax, 0.01f, b.yMax), plaza).AddComponent<SurfaceTag>().Roughness = 0.2f;
             // The hall: three storeys with a portico facing Maple.
             Rect f = Rect.MinMaxRect(230f, 26f, 275f, 57f);
@@ -283,21 +283,7 @@ namespace OpeningBell.City
             c.Anchor("city_hall_plaza", V(252.5f, 0f, 2f));
         }
 
-        private static void Harborview(CityContext c, Transform root)
-        {
-            Kit k = c.Kit;
-            Rect lot = HarborviewLot;
-            float y = StreetMap.Plan.StreetGrade(lot.center);
-            Transform t = Kit.Group(root, "Harborview Tower", V(0f, y, 0f));
-            Material roof = c.P.Lit(new Color(0.22f, 0.23f, 0.25f));
-            k.Span(t, "Forecourt", V(lot.xMin, -0.05f, lot.yMin), V(lot.xMax, 0.01f, lot.yMax), c.P.Lit(new Color(0.5f, 0.5f, 0.49f), 0.06f));
-            // Podium with the lobby, then the tower: 18 floors, a crown that's lit at night.
-            k.Facade(t, "Podium", V(234f, 0f, 96f), V(270f, 7f, 128f), c.P.Facade(FacadeStyle.Concrete, true), roof);
-            k.Facade(t, "Tower", V(238f, 7f, 100f), V(266f, 62f, 124f), c.P.Facade(FacadeStyle.Glass, false), roof);
-            k.Span(t, "Crown", V(237.5f, 61.2f, 99.5f), V(266.5f, 61.9f, 124.5f), c.P.Lamp(new Color(0.7f, 0.72f, 0.74f), new Color(0.6f, 0.85f, 1f), 1.5f), collider: false);
-            k.Text(t, "HARBORVIEW", V(252f, 4.8f, 95.9f), 0f, 0.8f, new Color(0.95f, 0.95f, 0.92f));
-            c.Place(V(252f, y, 94.5f), PlaceKind.Door, "Harborview Tower");
-        }
+        private static void Harborview(CityContext c, Transform root) => HarborviewTower.Shell(c, root);
 
         private static void WaterTowerOnCrest(CityContext c, Transform root)
         {

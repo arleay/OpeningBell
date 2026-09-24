@@ -53,7 +53,7 @@ namespace OpeningBell.City
             Put(k, room, solid, "desk", new Vector3(0f, 0f, 1.745f), new Vector3(1.6f, DeskTop, 2.495f), stretch: true);
             Hide(keyboard);
             // The kit's peripherals are pale grey, which the monitor's light turns into a glowing slab; keep them dark.
-            GameObject kb = Put(k, room, table, "computerKeyboard", new Vector3(0.575f, DeskTop, 1.86f), new Vector3(1.025f, DeskTop, 2.04f));
+            GameObject kb = Put(k, room, table, "computerKeyboard", new Vector3(0.575f, DeskTop, 1.86f), new Vector3(1.025f, DeskTop, 2.04f), stretch: true);
             Kit.Recolor(Kit.Recolor(kb, "metalDark", plastic), "metalMedium", keys);
             Hide(mouse);
             Kit.Recolor(Put(k, room, table, "computerMouse", new Vector3(1.0975f, DeskTop, 1.895f), new Vector3(1.1625f, DeskTop, 2.005f)), "metalDark", plastic);

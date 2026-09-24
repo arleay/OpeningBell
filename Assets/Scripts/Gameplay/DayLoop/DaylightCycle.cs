@@ -33,6 +33,7 @@ namespace OpeningBell.Gameplay
 
         private Material _windowMaterial;
         private static readonly int SkyExposure = Shader.PropertyToID("_Exposure");
+        private static readonly int SkyGround = Shader.PropertyToID("_GroundColor");
 
         /// <summary>0 in daylight, 1 at night; eases across dawn and dusk. Street lights and lit windows follow it.</summary>
         public float NightFactor { get; private set; }
@@ -54,6 +55,32 @@ namespace OpeningBell.Gameplay
         }
 
         private void Update() => Apply();
+
+        private Camera _camera;
+        private float _farClip = 1000f;
+
+        /// <summary>
+        /// The air clears with height: fog reaches up to 4× farther from ~80 m above the ground (the penthouse, the
+        /// radio mast), and the far plane opens out to 3 km to match, so the hills and the sea show from the top.
+        /// </summary>
+        private float Altitude()
+        {
+            if (_camera == null || !_camera.isActiveAndEnabled) _camera = Camera.main;
+            if (_camera == null) return 1f;
+            Vector3 p = _camera.transform.position;
+            float ground = 0f;
+            foreach (Terrain t in Terrain.activeTerrains)
+            {
+                Vector3 o = t.transform.position, size = t.terrainData.size;
+                if (p.x < o.x || p.z < o.z || p.x > o.x + size.x || p.z > o.z + size.z) continue;
+                ground = t.SampleHeight(p) + o.y;
+                break;
+            }
+            float k = Mathf.Clamp01((p.y - ground - 12f) / 70f);
+            _farClip = Mathf.Lerp(1000f, 3000f, k);
+            if (!Mathf.Approximately(_camera.farClipPlane, _farClip)) _camera.farClipPlane = _farClip;
+            return 1f + k * 3f;
+        }
 
         /// <summary>Set by the weather: fog distance multiplier, share of sunlight that gets through, how grey the sky and ambient go.</summary>
         public float FogScale { get; set; } = 1f;
@@ -95,8 +122,11 @@ namespace OpeningBell.Gameplay
             RenderSettings.ambientGroundColor = new Color(ambient.r * 0.62f, ambient.g * 0.58f, ambient.b * 0.52f);
             Color fog = Color.Lerp(nightAmbient * 0.6f, sky, 0.75f);
             RenderSettings.fogColor = Color.Lerp(fog, new Color(fog.grayscale, fog.grayscale, fog.grayscale * 1.04f), Grey);
-            RenderSettings.fogStartDistance = fogStart * FogScale;
-            RenderSettings.fogEndDistance = fogEnd * FogScale;
+            float height = Altitude();
+            RenderSettings.fogStartDistance = fogStart * FogScale * height;
+            RenderSettings.fogEndDistance = Mathf.Min(fogEnd * FogScale * height, _farClip * 0.92f);
+            // Below the horizon, where nothing's drawn, the sky's ground is the haze: no dark band past the backdrop.
+            if (RenderSettings.skybox != null && RenderSettings.skybox.HasProperty(SkyGround)) RenderSettings.skybox.SetColor(SkyGround, RenderSettings.fogColor);
             // The procedural sky has no night of its own: dim it so evenings read blue, not brown; clouds dim it too.
             if (RenderSettings.skybox != null)
                 RenderSettings.skybox.SetFloat(SkyExposure, Mathf.Lerp(0.18f, 1.25f, Mathf.Clamp01(daylight * 1.5f)) * Mathf.Lerp(1f, 0.55f, Grey));

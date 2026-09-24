@@ -266,51 +266,6 @@ namespace OpeningBell.Tests
         }
 
         [UnityTest]
-        public IEnumerator Skateboard_BoughtAtTheSkateShop_RiddenHome_AndSaved()
-        {
-            UseSimulatedInput();
-            yield return Setup(10.25);
-            GameBootstrap game = Find<GameBootstrap>();
-
-            // 10. Walk to Curbside Skate and buy a board.
-            yield return Route("apartment", P(-1.8f, -1.9f), At("apartment_door_hall"), At("apartment_front_in"), At("apartment_front_out"), P(6f, -7.25f));
-            yield return Cross(P(48f, -7.25f), P(62f, -7.25f));
-            yield return Route("to the skate shop", P(86.25f, -7.25f), At("skate_front_out"), P(86.25f, -3.5f), At("skate_table"));
-            ForSaleDisplay cruiser = UnityEngine.Object.FindObjectsByType<ForSaleDisplay>(FindObjectsSortMode.None).First(d => d.Id == "skate_cruiser");
-            Assert.IsTrue(cruiser.CanInteract, "shop is staffed");
-            StringAssert.Contains("wheels", cruiser.Details, "spec card");
-            decimal bank = game.Economy.Bank.Balance;
-            cruiser.Interact();
-            Assert.AreEqual(bank - 120m, game.Economy.Bank.Balance);
-            OwnedVehicle board = game.Vehicles.Carried;
-            Assert.NotNull(board, "board in hand");
-            Assert.AreEqual("skate_cruiser", board.ModelId);
-
-            // 11–12. Out to the sidewalk, hop on and ride home (down and up the curb ramps at First St).
-            yield return Route("out", P(86.25f, -3.5f), At("skate_front_out"), P(86.25f, -7.25f), P(84f, -7.25f));
-            yield return TapKey(Key.R);
-            Assert.IsTrue(_city.Rider.IsRiding, "R rides the carried board");
-            yield return RideTo(P(66f, -7.25f), "west along Maple");
-            Assert.AreEqual(0.2, _city.Rider.Ground.Roughness, 0.01, "sidewalk under the wheels");
-            StringAssert.Contains("km/h", Find<InteractionHud>().StatusText);
-            yield return RideAcross(P(61.2f, -7.25f), P(48.5f, -7.25f));
-            yield return RideTo(P(8f, -7.25f), "home");
-            Assert.Greater(board.Odometer, 60, "odometer counts");
-            yield return TapKey(Key.R);
-            Assert.IsFalse(_city.Rider.IsRiding);
-            Assert.AreSame(board, game.Vehicles.Carried, "picked the board back up");
-            yield return Route("inside", At("apartment_front_out"), At("apartment_front_in"), At("apartment_door_hall"), P(-1.8f, -1.9f));
-
-            // 13. Saved.
-            game.Save();
-            Assert.IsTrue(SaveSystem.TryRead("slot1", out SaveGame save, out _));
-            Assert.IsTrue(save.HasVehicles);
-            OwnedVehicleSaveData saved = save.Vehicles.Vehicles.Single();
-            Assert.AreEqual((int)VehicleState.Carried, saved.State);
-            Assert.AreEqual(board.Odometer, saved.Odometer, 1e-6);
-        }
-
-        [UnityTest]
         public IEnumerator Bike_BoughtRiddenParked_StaysWhereItWasLeft_AfterReload()
         {
             UseSimulatedInput();
@@ -453,13 +408,53 @@ namespace OpeningBell.Tests
             parked.transform.SetPositionAndRotation(new Vector3(bay.x, 0f, bay.z), Quaternion.identity);
             game.Vehicles.Park(car, bay.x, 0f, bay.z, 0f);
             FuelPump pump = UnityEngine.Object.FindObjectsByType<FuelPump>(FindObjectsSortMode.None).OrderBy(x => Vector3.Distance(x.transform.position, bay)).First();
-            Assert.AreSame(car, pump.CarHere());
+            FuelHands hands = _player.GetComponent<FuelHands>();
             decimal bank = game.Economy.Bank.Balance;
             double before = car.FuelLiters;
-            StringAssert.StartsWith("Fill up", pump.Prompt);
+            Assert.AreEqual("Take the nozzle", pump.Prompt);
             pump.Interact();
+            Assert.AreEqual(FuelHands.Tool.Nozzle, hands.Held, "the nozzle's in your hand");
+            // Hold the left button aimed at the car: fuel pours from the nozzle.
+            _player.PlaceAt(new Vector3(bay.x - 1.9f, 0.05f, bay.z - 0.6f), 75f, 22f);
+            yield return null;
+            HoldLeftButton(true);
+            yield return new WaitForSeconds(0.6f);
+            Assert.IsTrue(hands.Flowing, "fuel flows while the button's held");
+            yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "fuel-nozzle.png");
+            HoldLeftButton(false);
+            yield return null;
+            for (int i = 0; i < 40 && car.FuelLiters < car.FuelCapacity; i++) hands.Flow(car, 1f);
             Assert.AreEqual(car.FuelCapacity, car.FuelLiters, 1e-9, "full tank");
+            Assert.AreEqual(bank, game.Economy.Bank.Balance, "paid when you hang up");
+            StringAssert.StartsWith("Hang up and pay", pump.Prompt);
+            pump.Interact();
+            Assert.AreEqual(FuelHands.Tool.None, hands.Held);
             Assert.AreEqual(bank - Trading.Money.RoundCents((decimal)(car.FuelCapacity - before) * FuelStation.PricePerLiter), game.Economy.Bank.Balance);
+
+            // A jerry can: bought empty, filled at the pump, poured into a dry tank.
+            UnityEngine.Object.FindAnyObjectByType<JerryCanRack>().Interact();
+            Assert.AreEqual(FuelHands.Tool.Can, hands.Held);
+            Assert.AreEqual(0, game.Vehicles.JerryCan, 1e-9);
+            StringAssert.StartsWith("Fill the jerry can", pump.Prompt);
+            pump.Interact();
+            Assert.AreEqual(FuelHands.CanCapacity, game.Vehicles.JerryCan, 1e-9);
+            game.Vehicles.SetFuel(car, 0);
+            hands.Flow(car, 30f);
+            Assert.AreEqual(FuelHands.CanCapacity, car.FuelLiters, 1e-9, "the can's ten litres in the tank");
+            Assert.AreEqual(0, game.Vehicles.JerryCan, 1e-9);
+            hands.PutAwayCan();
+
+            // Stranded: Tidewater's van brings ten litres twenty minutes after the call.
+            game.Vehicles.SetFuel(car, 0);
+            decimal beforeCall = game.Economy.Bank.Balance;
+            StringAssert.Contains("van", hands.CallTidewater());
+            Assert.AreEqual(beforeCall - FuelHands.RoadsideFee - Trading.Money.RoundCents(10m * FuelStation.PricePerLiter), game.Economy.Bank.Balance);
+            StringAssert.Contains("on its way", hands.CallTidewater(), "one van at a time");
+            game.SkipTo(game.Clock.Now.AddMinutes(FuelHands.RoadsideMinutes + 1));
+            yield return null;
+            yield return null;
+            Assert.AreEqual(FuelHands.RoadsideLiters, car.FuelLiters, 1e-9, "delivered");
+            game.Vehicles.SetFuel(car, car.FuelCapacity);
 
             // Saved and restored exactly where it was left.
             game.Save();

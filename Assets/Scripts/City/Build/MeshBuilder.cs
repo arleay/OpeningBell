@@ -117,6 +117,13 @@ namespace OpeningBell.City
             }
         }
 
+        /// <summary>A closed axis-aligned box (all six faces), for merging many small ones into one mesh.</summary>
+        public void Cuboid(Vector3 min, Vector3 max)
+        {
+            Slab(new[] { new Vector3(min.x, max.y, min.z), new Vector3(max.x, max.y, min.z), new Vector3(max.x, max.y, max.z), new Vector3(min.x, max.y, max.z) }, max.y - min.y);
+            Quad(new Vector3(min.x, min.y, min.z), new Vector3(min.x, min.y, max.z), new Vector3(max.x, min.y, max.z), new Vector3(max.x, min.y, min.z));
+        }
+
         public Mesh ToMesh(string name)
         {
             var mesh = new Mesh { name = name, indexFormat = IndexFormat.UInt32 };

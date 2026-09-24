@@ -24,6 +24,22 @@ namespace OpeningBell.Tests
             yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), file);
         }
 
+        /// <summary>
+        /// A shot of the first object called <paramref name="name"/>, from <paramref name="distance"/> out along
+        /// <paramref name="face"/> (in the object's own frame, or its parent's for models placed with a yaw of their own).
+        /// </summary>
+        private IEnumerator ShotOf(string name, Vector3 face, bool ownFrame, float distance, float pitch, string file)
+        {
+            GameObject target = GameObject.Find(name);
+            Assert.IsNotNull(target, name + " is placed somewhere");
+            Transform frame = ownFrame ? target.transform : target.transform.parent;
+            Vector3 dir = frame.TransformDirection(face);
+            dir.y = 0f;
+            dir.Normalize();
+            Vector3 at = target.transform.position + dir * distance;
+            yield return Shot(new Vector3(at.x, target.transform.position.y, at.z), Mathf.Atan2(-dir.x, -dir.z) * Mathf.Rad2Deg, pitch, file);
+        }
+
         [UnityTest]
         public IEnumerator City_IsDressed_AndPhotographed()
         {
@@ -69,6 +85,13 @@ namespace OpeningBell.Tests
             yield return Shot(new Vector3(-10f, 120f, -230f), 0f, 32f, "art-town-aerial.png");
             yield return Shot(new Vector3(-60f, 0f, -7.5f), -90f, 2f, "art-town-street.png");
             yield return Shot(new Vector3(66f, 0f, -20.5f), 80f, -2f, "art-mainstreet.png");
+            // The pack props: kerbside works, a stop sign, alley bags, a chain-link fence, a convenience counter.
+            yield return ShotOf("works", Vector3.back, true, 4f, 8f, "art-works.png");
+            yield return ShotOf("Stop sign", Vector3.back, true, 4f, -4f, "art-stop.png");
+            yield return ShotOf("Bin bags", Vector3.back, true, 4f, 10f, "art-alley.png");
+            yield return ShotOf("chain_curb_straight", Vector3.back, false, 6f, 0f, "art-fence.png");
+            // Name-searchable: the counter keeps its collider (collider-less props get merged into one mesh).
+            yield return ShotOf("Drinks counter", Vector3.left, false, 2.8f, 14f, "art-convenience.png");
 
             game.SkipTo(game.Clock.Now.Date.AddHours(21.2));
             for (int i = 0; i < 10; i++) yield return null;

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace OpeningBell.City
 {
     /// <summary>
-    /// How catalog items look: a Kenney furniture model fitted to the item's size and tinted by its colour, or a few
+    /// How catalog items look: a furniture model (Kenney, or its Poly Haven / Sketchfab upgrade) fitted to the item's size and tinted by its colour, or a few
     /// boxes for the things the kit doesn't have (monitors, arms, art, the tower PC), or a shipping box while boxed.
     /// Local frame: origin at the bottom centre, the front facing -z.
     /// </summary>
@@ -47,6 +47,8 @@ namespace OpeningBell.City
             else if (item.IsArm) Arm(c, r, item, variant);
             else if (item.Id == "pc_tower")
             {
+                // The workspace pack's tower, scaled to the catalog height; a dark case with a light strip without it.
+                if (k.Fit(r, "office_ws_pc", Vector3.zero, new Vector3(0f, item.Height, 0f)) != null) return root;
                 k.Box(r, "Case", new Vector3(0f, item.Height / 2f, 0f), new Vector3(item.Width, item.Height, item.Depth), c.P.Lit(new Color(0.12f, 0.12f, 0.13f), 0.5f), collider: false);
                 k.Box(r, "Light strip", new Vector3(0f, item.Height * 0.55f, -item.Depth / 2f - 0.003f), new Vector3(0.02f, item.Height * 0.7f, 0.004f), c.P.Glow(new Color(0.3f, 0.7f, 1f)), collider: false);
             }

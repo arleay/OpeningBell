@@ -119,7 +119,7 @@ namespace OpeningBell.City
             _chasePosition = _car.transform.position - _car.transform.forward * 6f + Vector3.up * 2.5f;
             _entering = false;
             _hud.ShowToast("W gas · S brake/reverse · A/D steer · Space handbrake · C camera · hold right mouse to look around · E get out", 7f);
-            if (_vehicle.FuelLiters <= 0) _hud.ShowToast("The tank is empty. Push it to a pump... or call someone.");
+            if (_vehicle.FuelLiters <= 0) _hud.ShowToast("The tank is empty. Call Tidewater Fuel for roadside delivery, or bring fuel in a jerry can.");
         }
 
         public void Exit()

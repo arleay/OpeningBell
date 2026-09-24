@@ -42,7 +42,7 @@ namespace OpeningBell.City
         public static string Describe(OwnedVehicle v, GameBootstrap game)
         {
             var c = CultureInfo.InvariantCulture;
-            string text = $"Condition {v.Condition:P0} · {(v.Kind == VehicleKind.Skateboard ? "wheels" : "tyres")} {v.TireCondition:P0} · {(v.Odometer / 1000).ToString("0.0", c)} km";
+            string text = $"Condition {v.Condition:P0} · tyres {v.TireCondition:P0} · {(v.Odometer / 1000).ToString("0.0", c)} km";
             if (v.BatteryCapacityWh > 0) text += $" · battery {v.BatteryFraction:P0}";
             if (v.FuelCapacity > 0) text += $" · fuel {v.FuelFraction:P0}";
             return text + $"\nResale about ${v.ResaleValue(game.Clock.Now).ToString("N0", c)}";
@@ -145,7 +145,7 @@ namespace OpeningBell.City
             root.transform.SetParent(transform, false);
             root.transform.position = new Vector3((float)v.X, -100f, (float)v.Z); // never flash at the origin
             VehicleVisual visual = VehicleVisual.Build(_kit, root.transform, model);
-            visual.Animate(0, 0, v.Kind == VehicleKind.Skateboard ? 0 : 0.12); // on its kickstand
+            visual.Animate(0, 0, 0.12); // on its kickstand
             var box = root.AddComponent<BoxCollider>();
             box.center = new Vector3(0f, 0.5f, 0f);
             box.size = new Vector3(0.5f, 1f, Mathf.Max(0.6f, visual.Length));

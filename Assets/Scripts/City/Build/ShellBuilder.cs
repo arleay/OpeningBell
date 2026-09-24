@@ -25,17 +25,10 @@ namespace OpeningBell.City
                 Rect f = s.Footprint;
                 int seed = 7000 + index;
                 string name = $"Building {index++} ({s.Style})";
-                // The parking garage keeps its banded concrete facade; the kit has nothing like it.
+                // The parking garage keeps its banded concrete facade.
                 Transform group = Kit.Group(root, name);
-                float tallest = 0f;
-                bool dressed = s.Sign != "PARKING" && KitBuildings.Build(c, group, s, seed, out tallest);
-                if (dressed)
-                {
-                    var solid = new GameObject(name + " collider").AddComponent<BoxCollider>();
-                    solid.transform.SetParent(group, false);
-                    solid.center = new Vector3(f.center.x, tallest / 2f, f.center.y);
-                    solid.size = new Vector3(f.width, tallest, f.height);
-                }
+                bool dressed = s.Sign != "PARKING";
+                if (dressed) Row(c, group, s, seed);
                 else
                 {
                     float baseTop = 0f;
@@ -66,6 +59,35 @@ namespace OpeningBell.City
                     float height = Mathf.Min(s.Height - 1.5f, s.Storefront ? StorefrontHeight + 1.2f : 5.2f);
                     c.Kit.Text(root, s.Sign, new Vector3(signAt.x, height, signAt.y), yaw, 0.75f, new Color(0.92f, 0.9f, 0.84f));
                 }
+            }
+        }
+
+        /// <summary>
+        /// A shell's frontage as a row of 1–4 separate buildings of differing widths and heights (a street of
+        /// neighbours, not one long block), each a textured <see cref="ModularFacade"/> volume the full lot deep.
+        /// </summary>
+        private static void Row(CityContext c, Transform group, Shell s, int seed)
+        {
+            Rect f = s.Footprint;
+            var rng = new System.Random(seed);
+            Vector2 outward = FrontDirection(f, out _);
+            bool alongX = Mathf.Abs(outward.y) > 0.5f; // front faces ±z, so the row runs along x
+            float start = alongX ? f.xMin : f.yMin, length = alongX ? f.width : f.height;
+            int count = Mathf.Clamp(Mathf.RoundToInt(length / 14f), 1, 4);
+            // Uneven splits: each building 70–130% of an even share, rescaled to fill the frontage exactly.
+            var shares = new float[count];
+            float total = 0f;
+            for (int i = 0; i < count; i++) total += shares[i] = 0.7f + 0.6f * (float)rng.NextDouble();
+            float at = start;
+            for (int i = 0; i < count; i++)
+            {
+                float w = length * shares[i] / total;
+                // The first keeps the plan's height (signs are placed from it); neighbours step up and down.
+                float height = i == 0 ? s.Height : Mathf.Max(ModularFacade.ShopStorey + 3.2f, s.Height * (0.75f + 0.5f * (float)rng.NextDouble()));
+                Vector3 min = alongX ? new Vector3(at, 0f, f.yMin) : new Vector3(f.xMin, 0f, at);
+                Vector3 max = alongX ? new Vector3(at + w, height, f.yMax) : new Vector3(f.xMax, height, at + w);
+                ModularFacade.Build(c, group, $"Block {i}", min, max, s.Style, seed * 7 + i, s.Storefront);
+                at += w;
             }
         }
 

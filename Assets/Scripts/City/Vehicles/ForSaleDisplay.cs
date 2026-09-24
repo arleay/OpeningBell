@@ -15,9 +15,9 @@ namespace OpeningBell.City
     }
 
     /// <summary>
-    /// Something on a shop floor or counter: a bike or board, a part, or a service. Aim at it for the spec card;
-    /// [E] buys it with the bank card. Bikes are rolled out front; boards go in your hands; parts go on the board
-    /// you're carrying (or the e-bike you brought in); services need your bike parked outside (spec §41–42).
+    /// Something on a shop floor or counter: a bike, a part, or a service. Aim at it for the spec card;
+    /// [E] buys it with the bank card. Bikes are rolled out front; parts go on the e-bike you brought in; services
+    /// need your bike parked outside (spec §41–42).
     /// </summary>
     public sealed class ForSaleDisplay : Interactable
     {
@@ -89,9 +89,7 @@ namespace OpeningBell.City
                     {
                         Fleet.Catalog.TryGetModel(_id, out VehicleModel m);
                         RideSpec s = m.Spec;
-                        string stats = m.Kind == VehicleKind.Skateboard
-                            ? $"{s.DeckLength * 100:0} cm deck · {s.WheelDiameter * 1000:0} mm {s.WheelDurometer:0}A wheels · {(s.TruckLooseness > 0.55 ? "loose" : s.TruckLooseness < 0.35 ? "tight" : "medium")} trucks"
-                            : $"{s.Mass.ToString("0.#", c)} kg · {s.Gears} gear{(s.Gears == 1 ? "" : "s")} · {s.WheelDiameter / 0.0254:0}\" wheels";
+                        string stats = $"{s.Mass.ToString("0.#", c)} kg · {s.Gears} gear{(s.Gears == 1 ? "" : "s")} · {s.WheelDiameter / 0.0254:0}\" wheels";
                         if (m.Kind == VehicleKind.EBike) stats += $" · {s.MotorPower:0} W to {s.AssistCutoff * 2.237:0} mph · {s.BatteryWh:0} Wh";
                         return m.Description + "\n" + stats;
                     }
@@ -113,12 +111,6 @@ namespace OpeningBell.City
 
         private OwnedVehicle PartTarget(PartSpec p, out string why)
         {
-            if (p.Fits == VehicleKind.Skateboard)
-            {
-                OwnedVehicle board = Fleet.Carried;
-                why = board == null ? "Bring your skateboard (carry it in)." : null;
-                return board;
-            }
             OwnedVehicle bike = BroughtInBike(p.Fits);
             why = bike == null ? "Park your e-bike out front first." : null;
             return bike;
@@ -128,7 +120,7 @@ namespace OpeningBell.City
         private OwnedVehicle BroughtInBike(VehicleKind? kind = null)
         {
             bool Near(OwnedVehicle v) =>
-                v.State == VehicleState.Parked && v.Kind != VehicleKind.Skateboard && (kind == null || v.Kind == kind) &&
+                v.State == VehicleState.Parked && (kind == null || v.Kind == kind) &&
                 new Vector2((float)v.X - _shop.x, (float)v.Z - _shop.z).magnitude < BringItInRadius;
             OwnedVehicle last = Fleet.LastRidden;
             if (last != null && Near(last)) return last;
@@ -176,10 +168,8 @@ namespace OpeningBell.City
                     Fleet.Catalog.TryGetModel(_id, out VehicleModel m);
                     Vector3 spot = FreePickupSpot();
                     OwnedVehicle v = Fleet.Add(_id, price, now, spot.x, spot.y, spot.z, _pickupYaw);
-                    _staff.Say(m.Kind == VehicleKind.Skateboard ? "She's all yours. Stay off the grass." : "Rolled it out front for you. Enjoy the ride.");
-                    _hud.ShowToast(m.Kind == VehicleKind.Skateboard
-                        ? $"Bought the {v.Name}. Press R to ride it."
-                        : $"Bought the {v.Name}. It's parked out front: [E] to ride.");
+                    _staff.Say("Rolled it out front for you. Enjoy the ride.");
+                    _hud.ShowToast($"Bought the {v.Name}. It's parked out front: [E] to ride.");
                     break;
                 }
                 case SaleKind.Part:

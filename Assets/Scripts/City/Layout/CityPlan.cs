@@ -279,7 +279,7 @@ namespace OpeningBell.City
         public static readonly Rect CalderBuilding = Rect.MinMaxRect(144f, -5.5f, 168f, 18.5f);
         public static readonly Rect CoffeeShop = Rect.MinMaxRect(64f, -5.5f, 78f, 8f);
         public static readonly Rect CornerMart = Rect.MinMaxRect(112f, -5.5f, 126.5f, 7f);
-        public static readonly Rect SkateShop = Rect.MinMaxRect(78.5f, -5.5f, 94f, 9f);
+        public static readonly Rect EmptyShop = Rect.MinMaxRect(78.5f, -5.5f, 94f, 9f);
         public static readonly Rect BikeShop = Rect.MinMaxRect(94.5f, -5.5f, 111.5f, 9f);
 
         /// <summary>Paved ground (plazas, lots, the core blocks); everywhere else is the terrain's grass and dirt.</summary>
@@ -304,7 +304,7 @@ namespace OpeningBell.City
             new Shell(-36.5f, 51f, -12f, 61.5f, 8f, FacadeStyle.Townhouse),
             new Shell(-8f, 51f, 20f, 61.5f, 9f, FacadeStyle.Brick),
             new Shell(24f, 51f, 46.5f, 61.5f, 7.5f, FacadeStyle.Stucco),
-            // Commercial block (coffee shop, skate shop, bike shop and mart are special)
+            // Commercial block (coffee shop, empty unit, bike shop and mart are special)
             new Shell(63.5f, 50f, 94f, 61.5f, 11f, FacadeStyle.Stucco, storefront: true),
             new Shell(97f, 50f, 126.5f, 61.5f, 12f, FacadeStyle.Concrete),
             // Town centre (Calder is special)

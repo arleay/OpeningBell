@@ -13,10 +13,6 @@ namespace OpeningBell.City
         Drink,
         /// <summary>Seated on a bike; <c>time</c> is the crank angle in radians.</summary>
         Cycle,
-        /// <summary>Standing on a board, knees soft.</summary>
-        Skate,
-        /// <summary>Kicking off the ground on a board.</summary>
-        Push,
         /// <summary>Jogging or running (fights, fleeing); <c>stride</c> as for Walk.</summary>
         Run,
     }
@@ -157,10 +153,6 @@ namespace OpeningBell.City
                     // stride 1 is a 1.35 m/s stroll (PedestrianView's convention); match the clip's pace to it.
                     speed = stride * 1.35f / _walkClipSpeed;
                     break;
-                case NpcPose.Push:
-                    state = "Walk";
-                    speed = 0.8f;
-                    break;
                 case NpcPose.Run:
                     state = "Jog";
                     speed = Mathf.Max(0.6f, stride * 1.35f / 4.83f); // the jog clip covers 4.83 m/s
@@ -169,7 +161,7 @@ namespace OpeningBell.City
                 case NpcPose.Typing: state = "Interact"; break;
                 case NpcPose.Phone: state = "Talk"; break;
                 case NpcPose.Cycle: state = "Drive"; break;
-                default: state = "Idle"; break; // Stand, Drink, Skate
+                default: state = "Idle"; break; // Stand, Drink
             }
             int hash = Hash(state);
             if (hash != _state)
@@ -250,18 +242,6 @@ namespace OpeningBell.City
                     legR = -70f + 28f * Mathf.Sin(time + Mathf.PI);
                     armL = armR = -62f;
                     drop = 0f;
-                    break;
-                case NpcPose.Skate:
-                    legL = -8f;
-                    legR = 8f;
-                    armL = -20f + Mathf.Sin(t * 1.1f) * 4f;
-                    armR = 15f;
-                    break;
-                case NpcPose.Push:
-                    legL = -8f;
-                    legR = 45f * Mathf.Sin(t * 7f);
-                    armL = -30f;
-                    armR = 30f;
                     break;
                 default:
                     armL = Mathf.Sin(t * 1.3f) * 2f;

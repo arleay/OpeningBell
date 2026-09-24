@@ -96,7 +96,6 @@ namespace OpeningBell.City
             Kit k = c.Kit;
             Transform f = Kit.Group(root, "Sidewalk clutter");
             Material pole = c.P.Lit(new Color(0.35f, 0.36f, 0.37f), 0.35f);
-            Material red = c.P.Lit(new Color(0.72f, 0.16f, 0.1f), 0.4f);
             Material blue = c.P.Lit(new Color(0.12f, 0.25f, 0.55f), 0.35f);
             Material white = c.P.Lit(new Color(0.92f, 0.92f, 0.9f), 0.2f);
             Material dark = c.P.Lit(new Color(0.08f, 0.09f, 0.1f), 0.8f);
@@ -121,21 +120,18 @@ namespace OpeningBell.City
                         Vector2 p = s.At(t) + outward * (s.HalfWidth + 0.6f);
                         double roll = rng.NextDouble();
                         string item = commercial
-                            ? (roll < 0.2 ? "papers" : roll < 0.4 ? "bin" : roll < 0.52 ? "planter" : roll < 0.62 ? "sign" : roll < 0.7 ? "hydrant" : roll < 0.76 ? "mail" : null)
-                            : (roll < 0.14 ? "hydrant" : roll < 0.19 ? "mail" : roll < 0.28 ? "bin" : null);
+                            ? (roll < 0.2 ? "papers" : roll < 0.4 ? "bin" : roll < 0.52 ? "planter" : roll < 0.62 ? "sign" : roll < 0.7 ? "hydrant" : roll < 0.76 ? "mail" : roll < 0.8 ? "works" : null)
+                            : (roll < 0.14 ? "hydrant" : roll < 0.19 ? "mail" : roll < 0.28 ? "bin" : roll < 0.31 ? "works" : null);
                         if (item == null || clear.Exists(x => (x.P - p).sqrMagnitude < x.R * x.R)) continue;
                         // Local frame: +z away from the street, toward the buildings.
                         float yaw = Mathf.Atan2(outward.x, outward.y) * Mathf.Rad2Deg;
                         var at = new Vector3(p.x, s.GradeAt(t), p.y);
-                        if (!Free(at, yaw, new Vector3(item == "papers" ? 0.75f : 0.4f, 0.6f, 0.35f))) continue;
+                        if (!Free(at, yaw, new Vector3(item == "papers" ? 0.75f : item == "works" ? 1.7f : 0.4f, 0.6f, 0.35f))) continue;
                         Transform g = Kit.Group(f, item, at, yaw);
                         switch (item)
                         {
                             case "hydrant":
-                                k.Cylinder(g, "Body", new Vector3(0f, 0.3f, 0f), 0.26f, 0.6f, red, collider: true);
-                                k.Cylinder(g, "Cap", new Vector3(0f, 0.63f, 0f), 0.32f, 0.06f, red);
-                                k.Sphere(g, "Dome", new Vector3(0f, 0.68f, 0f), 0.22f, red);
-                                k.Box(g, "Nozzles", new Vector3(0f, 0.42f, 0f), new Vector3(0.42f, 0.1f, 0.1f), red, collider: false);
+                                Hydrant(c, g, Vector3.zero, 0f);
                                 break;
                             case "mail":
                                 foreach (float x in new[] { -0.2f, 0.2f })
@@ -156,6 +152,15 @@ namespace OpeningBell.City
                                 break;
                             case "bin":
                                 TrashCan(c, g, Vector3.zero, 0f);
+                                break;
+                            case "works":
+                                // Kerbside works: a water-filled barrier (red, now and then concrete) along the kerb, a cone at each end.
+                                GameObject barrier = k.Fit(g, rng.NextDouble() < 0.7 ? "street_red_barrier" : "street_concrete_barrier",
+                                    new Vector3(0f, 0f, 0.1f), new Vector3(1.8f, 0f, 0f));
+                                if (barrier == null) break;
+                                k.Solid(barrier);
+                                foreach (float x in new[] { -1.35f, 1.35f })
+                                    k.Fit(g, "street_cone", new Vector3(x, 0f, -0.1f), new Vector3(0f, 0.7f, 0f), rng.Next(4) * 90f);
                                 break;
                             case "planter":
                                 GameObject pot = k.Prop(g, "planter", Vector3.zero, 0.75f);
@@ -178,9 +183,35 @@ namespace OpeningBell.City
             }
         }
 
-        /// <summary>The kit's street bin (0.22 scale ≈ 0.95 m tall) with a solid body; a plain drum without the kit.</summary>
+        /// <summary>A red fire hydrant (street pack, 80 cm), solid; a plain red post where the art is missing.</summary>
+        internal static void Hydrant(CityContext c, Transform parent, Vector3 at, float yaw)
+        {
+            GameObject h = c.Kit.Fit(parent, "street_hydrant", at, new Vector3(0f, 0.8f, 0f), Mathf.Round(yaw / 90f) * 90f);
+            if (h != null)
+            {
+                c.Kit.Solid(h);
+                return;
+            }
+            Material red = c.P.Lit(new Color(0.7f, 0.15f, 0.1f), 0.4f);
+            c.Kit.Cylinder(parent, "Body", at + new Vector3(0f, 0.3f, 0f), 0.26f, 0.6f, red, collider: true);
+            c.Kit.Sphere(parent, "Dome", at + new Vector3(0f, 0.65f, 0f), 0.22f, red);
+        }
+
+        /// <summary>
+        /// A street bin (Sketchfab street pack, 1 m tall) with a solid body and, now and then, a bin bag dumped beside
+        /// it; the Kenney kit's bin, then a plain drum, where the art is missing.
+        /// </summary>
         internal static void TrashCan(CityContext c, Transform parent, Vector3 at, float yaw)
         {
+            GameObject street = c.Kit.Fit(parent, "street_bin", at, new Vector3(0f, 1f, 0f), Mathf.Round(yaw / 90f) * 90f);
+            if (street != null)
+            {
+                c.Kit.Solid(street);
+                // Deterministic per spot (no RNG stream here): about one bin in three has a bag beside it.
+                if (Mathf.Abs(Mathf.Sin(at.x * 12.9898f + at.z * 78.233f)) < 0.33f)
+                    c.Kit.Fit(parent, "street_trashbag", at + Quaternion.Euler(0f, yaw, 0f) * new Vector3(0.75f, 0f, 0.1f), new Vector3(0f, 0.6f, 0f), Mathf.Round(yaw / 90f) * 90f + 90f);
+                return;
+            }
             GameObject bin = c.Kit.Model(parent, "trashcan", at, yaw, 0.22f);
             if (bin == null)
             {
@@ -317,7 +348,14 @@ namespace OpeningBell.City
                             if (roll < 0.3)
                             {
                                 if (!Free(at, yaw, new Vector3(1.4f, 0.8f, 1f))) continue;
-                                GameObject dumpster = k.Model(f, "dumpster", at, yaw + 90f, KitBuildings.Scale);
+                                // The gas-station pack's rusty blue dumpster, 2 m long along the wall; the Kenney one where it's missing.
+                                GameObject rusty = k.Fit(f, "gas_dumpster", at, new Vector3(2f, 0f, 0f), yaw);
+                                if (rusty != null)
+                                {
+                                    k.Solid(rusty);
+                                    continue;
+                                }
+                                GameObject dumpster = k.Model(f, "dumpster", at, yaw + 90f, Kit.CommercialScale);
                                 if (dumpster == null) continue;
                                 var solid = dumpster.AddComponent<BoxCollider>(); // model units (×7.4 ≈ 2.1 × 1.6 × 2.7 m)
                                 solid.center = new Vector3(0f, 0.105f, 0f);
@@ -327,8 +365,19 @@ namespace OpeningBell.City
                             {
                                 Transform g = Kit.Group(f, "Bin bags", at, yaw);
                                 int n = 2 + rng.Next(4);
+                                if (rng.NextDouble() < 0.3 && k.Fit(g, "street_barrel", Vector3.zero, new Vector3(0f, 0.95f, 0f)) is GameObject barrel)
+                                {
+                                    k.Solid(barrel); // an oil drum for a bin, a bag or two beside it
+                                    n = 1 + rng.Next(2);
+                                }
                                 for (int j = 0; j < n; j++)
                                 {
+                                    // The street pack's bags (two shapes) at 55-75 cm; black spheres where they're missing.
+                                    var spot = new Vector3(((float)rng.NextDouble() - 0.5f) * 1.2f, 0f, ((float)rng.NextDouble() - 0.5f) * 0.5f);
+                                    if (g.childCount > 0 && g.GetChild(0).name == "street_barrel") spot.x = 0.85f + j * 0.65f;
+                                    GameObject model = k.Fit(g, j % 2 == 0 ? "street_trashbag" : "street_trashbag2", spot,
+                                        new Vector3(0f, 0.55f + (float)rng.NextDouble() * 0.2f, 0f), rng.Next(4) * 90f);
+                                    if (model != null) continue;
                                     GameObject sack = k.Sphere(g, "Bag", new Vector3(((float)rng.NextDouble() - 0.5f) * 1.2f, 0.25f, ((float)rng.NextDouble() - 0.5f) * 0.5f), 0.6f, bag);
                                     sack.transform.localScale = new Vector3(0.6f, 0.5f + (float)rng.NextDouble() * 0.2f, 0.55f);
                                 }

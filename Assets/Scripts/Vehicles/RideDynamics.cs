@@ -4,7 +4,7 @@ namespace OpeningBell.Vehicles
 {
     public struct RideInput
     {
-        /// <summary>0–1: pedalling effort, or "keep pushing" on a skateboard.</summary>
+        /// <summary>0–1: pedalling effort.</summary>
         public double Throttle;
         public double Brake;
         /// <summary>-1 (left) … 1 (right).</summary>
@@ -28,10 +28,6 @@ namespace OpeningBell.Vehicles
         public double Lean;           // radians, bikes (visual + turn rate)
         public double YawRate;        // radians/s
         public double CrankAngle;     // radians, for the pedalling animation
-        public double PushTimer;      // skateboards: time until the next push
-        public bool Pushing;          // a push happened this step (animation)
-        public double Wobble;         // 0–1 speed wobble on a skateboard
-        public bool Bailed;           // fell off (wobble too strong)
         public int Assist = 2;        // e-bike assist level index
         public double MotorPower;     // W delivered this step
         public double Distance;       // metres this ride
@@ -45,9 +41,6 @@ namespace OpeningBell.Vehicles
     /// gravity on slopes; brakes. Turning rate follows lean (g·tan(lean)/v), capped by the steering angle at
     /// low speed. E-bikes add a motor that multiplies rider effort per assist level up to a cutoff speed and
     /// drains the battery by game time.</item>
-    /// <item>Skateboards: discrete pushes that lose effect near kicking speed; rolling resistance from wheel size,
-    /// hardness vs ground roughness and bearings; carving limited by truck looseness and wheel grip; speed
-    /// wobbles above a stability speed set by deck length and trucks, then a bail.</item>
     /// </list>
     /// Pure and deterministic; the Unity controller supplies grade and roughness from the ground under it.
     /// </summary>
@@ -71,10 +64,8 @@ namespace OpeningBell.Vehicles
         public static void Step(VehicleKind kind, RideSpec spec, RideState s, RideInput input, RideGround ground, double dt,
             double gameSecondsPerSecond, double condition, double tireCondition, ref double battery)
         {
-            s.Pushing = false;
             s.MotorPower = 0;
-            if (kind == VehicleKind.Skateboard) StepSkateboard(spec, s, input, ground, dt, tireCondition);
-            else StepBike(kind, spec, s, input, ground, dt, gameSecondsPerSecond, condition, tireCondition, ref battery);
+            StepBike(kind, spec, s, input, ground, dt, gameSecondsPerSecond, condition, tireCondition, ref battery);
             s.Distance += s.Speed * dt;
         }
 
@@ -133,57 +124,6 @@ namespace OpeningBell.Vehicles
             double fromBars = v * Math.Tan(spec.MaxSteerDeg * Math.PI / 180) / spec.Wheelbase;
             return Math.Sign(lean) * Math.Min(fromLean, fromBars);
         }
-
-        private static void StepSkateboard(RideSpec spec, RideState s, RideInput input, RideGround ground, double dt, double wheelCondition)
-        {
-            double mass = spec.Mass + RiderMass;
-            double v = s.Speed;
-            bool grass = ground.Roughness >= 0.9;
-
-            // Pushing: a kick every ~0.85 s while held, less useful as you approach kicking speed.
-            s.PushTimer -= dt;
-            if (input.Throttle > 0.1 && s.PushTimer <= 0 && input.Brake < 0.1)
-            {
-                double kick = (input.Sprint ? 1.25 : 0.9) * Math.Max(0, 1 - v / 6.5) * (grass ? 0.3 : 1);
-                v += kick;
-                s.PushTimer = 0.85;
-                s.Pushing = true;
-            }
-
-            // Rolling: small hard wheels are quick on smooth floors, soft big ones soak up rough pavement.
-            double hardness = Clamp01((spec.WheelDurometer - 75) / 25);
-            double crr = grass
-                ? 0.25
-                : 0.009 * (0.054 / spec.WheelDiameter) * (1 + ground.Roughness * (1.8 * hardness + 0.4)) * spec.BearingFactor *
-                  (1 + 0.5 * (1 - Clamp01(wheelCondition)));
-            double cos = 1 / Math.Sqrt(1 + ground.Grade * ground.Grade), sin = ground.Grade * cos;
-            double resist = crr * mass * G * cos + 0.5 * AirDensity * 0.5 * v * v + mass * G * sin;
-            double brake = Clamp01(input.Brake) * 2.2 * mass; // foot brake
-
-            // Carving: loose trucks turn tighter; wheel grip limits the turn at speed; carving bleeds speed.
-            double maxYaw = 0.8 + 0.8 * Clamp01(spec.TruckLooseness);
-            double grip = 4 + 2 * (1 - hardness);
-            double yaw = Clamp(input.Steer, -1, 1) * maxYaw;
-            if (v > 0.1) yaw = Clamp(yaw, -grip / v, grip / v);
-            if (v < 0.3) yaw *= v / 0.3;
-            double carveDrag = 0.05 * Math.Abs(yaw) * v * mass;
-
-            double accel = (-resist - brake - carveDrag) / mass;
-            s.Speed = Math.Max(0, v + accel * dt);
-            s.YawRate = yaw;
-            s.Heading = Wrap(s.Heading + yaw * dt);
-
-            // Stability: a longer deck and tighter trucks stay calm to higher speeds.
-            double stable = StableSpeed(spec);
-            s.Wobble = Clamp01((s.Speed - stable) / (0.35 * stable));
-            if (s.Wobble >= 1)
-            {
-                s.Bailed = true;
-                s.Speed = 0;
-            }
-        }
-
-        public static double StableSpeed(RideSpec spec) => 3.5 + 7 * spec.DeckLength + 2 * (1 - Clamp01(spec.TruckLooseness));
 
         private static double Clamp01(double x) => x < 0 ? 0 : x > 1 ? 1 : x;
         private static double Clamp(double x, double lo, double hi) => x < lo ? lo : x > hi ? hi : x;

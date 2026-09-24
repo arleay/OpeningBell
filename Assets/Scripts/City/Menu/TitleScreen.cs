@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 namespace OpeningBell.City
 {
     /// <summary>
-    /// The start-up screen: the game's title with Continue / New Game / Quit, and a character creator (body and
+    /// The start-up screen: the game's title with Continue / New Game / Credits / Quit, and a character creator (body and
     /// outfit, skin, hair and top colours, a name) with the character turning on a lit stage beside the menu. The
     /// world waits paused behind it. Shown once per launch (a new game reloads the scene straight into play); never in
     /// batch mode, so tests and headless runs aren't blocked.
@@ -26,7 +26,7 @@ namespace OpeningBell.City
         private PlayerBody _body;
         private PauseMenu _pause;
 
-        private VisualElement _overlay, _menu, _creator;
+        private VisualElement _overlay, _menu, _creator, _credits;
         private Label _bodyLabel, _outfitLabel;
         private TextField _name;
         private readonly List<(VisualElement Swatch, int Index, int Group)> _swatches = new List<(VisualElement, int, int)>();
@@ -140,6 +140,7 @@ namespace OpeningBell.City
         public void ShowCreator()
         {
             _menu.style.display = DisplayStyle.None;
+            _credits.style.display = DisplayStyle.None;
             _creator.style.display = DisplayStyle.Flex;
             RefreshCreator();
         }
@@ -348,6 +349,7 @@ namespace OpeningBell.City
             _menu.Add(Gap(36));
             if (_game.Continued) _menu.Add(Button("title-continue", "CONTINUE", Continue, primary: true));
             _menu.Add(Button("title-new", "NEW GAME", ShowCreator, primary: !_game.Continued));
+            _menu.Add(Button("title-credits", "CREDITS", ShowCredits));
             _menu.Add(Button("title-quit", "QUIT", Application.Quit));
             if (_game.Continued)
             {
@@ -373,6 +375,34 @@ namespace OpeningBell.City
             _creator.Add(Gap(22));
             _creator.Add(Button("title-start", "START", StartGame, primary: true));
             _creator.Add(Button("title-back", "BACK", ShowMenu));
+
+            _credits = new VisualElement { name = "title-credits-panel" };
+            _credits.style.display = DisplayStyle.None;
+            _credits.style.flexShrink = 1;
+            side.Add(_credits);
+            _credits.Add(Text("CREDITS", 28, Accent, bold: true));
+            _credits.Add(Gap(12));
+            var scroll = new ScrollView();
+            scroll.style.flexShrink = 1;
+            foreach (var (heading, lines) in Credits.Sections)
+            {
+                scroll.Add(Text(heading, 13, Dim, bold: true));
+                foreach (string line in lines)
+                {
+                    Label l = Text(line, 14, Color.white);
+                    l.style.whiteSpace = WhiteSpace.Normal;
+                    scroll.Add(l);
+                }
+                scroll.Add(Gap(12));
+            }
+            _credits.Add(scroll);
+            _credits.Add(Button("title-credits-back", "BACK", ShowMenu));
+        }
+
+        public void ShowCredits()
+        {
+            _menu.style.display = DisplayStyle.None;
+            _credits.style.display = DisplayStyle.Flex;
         }
 
         private RenderTexture GetStageTexture()
@@ -385,6 +415,7 @@ namespace OpeningBell.City
         {
             _menu.style.display = DisplayStyle.Flex;
             _creator.style.display = DisplayStyle.None;
+            _credits.style.display = DisplayStyle.None;
             ShowPreview();
         }
 

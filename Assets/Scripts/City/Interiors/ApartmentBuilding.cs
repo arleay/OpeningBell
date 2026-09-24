@@ -14,8 +14,8 @@ namespace OpeningBell.City
             Kit k = c.Kit;
             Transform root = Kit.Group(c.Static, "Apartment building");
             Rect f = CityPlan.ApartmentBuilding; // x -3.3..12.3, z -4.8..2.8
-            Material brick = c.P.Lit(new Color(0.6f, 0.35f, 0.26f), 0.05f);
-            Material plaster = c.P.Lit(new Color(0.8f, 0.77f, 0.7f), 0.05f);
+            Material brick = c.P.Surface(Finish.Brick, new Color(0.6f, 0.35f, 0.26f), 0.05f);
+            Material plaster = c.P.Surface(Finish.Plaster, new Color(0.8f, 0.77f, 0.7f), 0.05f);
             Material carpet = c.P.Lit(new Color(0.35f, 0.3f, 0.34f), 0.02f);
             Material ceiling = c.P.Lit(new Color(0.9f, 0.89f, 0.86f));
             Material wood = c.P.Lit(new Color(0.36f, 0.24f, 0.16f), 0.25f);

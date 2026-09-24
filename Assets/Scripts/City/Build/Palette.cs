@@ -3,6 +3,9 @@ using UnityEngine;
 
 namespace OpeningBell.City
 {
+    /// <summary>Photographed surface finishes (CC0 ambientCG sets in Resources/Surfaces) for <see cref="Palette.Surface"/>.</summary>
+    public enum Finish { Asphalt, Brick, Concrete, Corrugated, Grass, PaintedPlaster, Paving, Plaster, Tiles, WoodFloor, Siding }
+
     /// <summary>
     /// Material instances for the generated city, cloned from a few template assets (so their shader variants
     /// ship in builds) and shared per colour so static batching can merge them. Also tracks what glows at night.
@@ -13,7 +16,6 @@ namespace OpeningBell.City
         private readonly Dictionary<string, Material> _cache = new Dictionary<string, Material>();
         private readonly List<(Material Material, Color Off, Color On)> _lamps = new List<(Material, Color, Color)>();
         private readonly List<Material> _windows = new List<Material>();
-        private readonly List<Material> _kitWindows = new List<Material>();
         private static readonly int EmissionColor = Shader.PropertyToID("_EmissionColor");
         private static readonly int BaseMap = Shader.PropertyToID("_BaseMap");
         private static readonly int EmissionMap = Shader.PropertyToID("_EmissionMap");
@@ -47,6 +49,22 @@ namespace OpeningBell.City
             string key = $"lit{color}{smoothness}";
             if (_cache.TryGetValue(key, out Material m)) return m;
             m = new Material(_lit) { name = "City Lit", color = color };
+            m.SetFloat(Smoothness, smoothness);
+            return _cache[key] = m;
+        }
+
+        /// <summary>
+        /// A pale surface with a little light of its own (× <paramref name="glow"/>): stands in for the light that
+        /// bounces round a bright room, which the renderer doesn't compute, so ceilings and walls read white, not grey.
+        /// </summary>
+        public Material Bounce(Color color, float glow, float smoothness = 0.05f)
+        {
+            string key = $"bounce{color}{glow}{smoothness}";
+            if (_cache.TryGetValue(key, out Material m)) return m;
+            m = new Material(_litEmissive) { name = "City Bounce", color = color };
+            m.SetTexture(BaseMap, Texture2D.whiteTexture);
+            m.SetTexture(EmissionMap, Texture2D.whiteTexture);
+            m.SetColor(EmissionColor, color * glow);
             m.SetFloat(Smoothness, smoothness);
             return _cache[key] = m;
         }
@@ -99,19 +117,19 @@ namespace OpeningBell.City
         }
 
         /// <summary>
-        /// A Kenney kit palette texture, optionally tinted. With a window mask, the glass glows warm at night
-        /// (every window, dimmer than the facades' scattered lit ones).
+        /// Window glass for the outside-only facades: dark and glossy by day (it picks up the sky), and warm at night
+        /// when <paramref name="litAtNight"/> (someone's home), so a building shows a scatter of lit rooms.
         /// </summary>
-        public Material KitPalette(Texture2D palette, Texture2D windows, Color tint)
+        public Material Pane(bool litAtNight)
         {
-            string key = $"kit{palette.GetHashCode()}{tint}"; // Unity objects hash by identity; kits all name theirs "colormap"
+            string key = $"pane{litAtNight}";
             if (_cache.TryGetValue(key, out Material m)) return m;
-            m = new Material(_litEmissive) { name = "Kit " + palette.name, color = tint };
-            m.SetTexture(BaseMap, palette);
-            m.SetTexture(EmissionMap, windows);
+            m = new Material(_litEmissive) { name = litAtNight ? "Pane lit" : "Pane dark", color = new Color(0.16f, 0.2f, 0.24f) };
+            m.SetTexture(BaseMap, Texture2D.whiteTexture);
+            m.SetTexture(EmissionMap, Texture2D.whiteTexture);
             m.SetColor(EmissionColor, Color.black);
-            m.SetFloat(Smoothness, 0.15f);
-            if (windows != null) _kitWindows.Add(m);
+            m.SetFloat(Smoothness, 0.88f);
+            if (litAtNight) _windows.Add(m);
             return _cache[key] = m;
         }
 
@@ -125,6 +143,65 @@ namespace OpeningBell.City
             m.SetFloat(Smoothness, smoothness);
             return _cache[key] = m;
         }
+
+        private static readonly int BumpMap = Shader.PropertyToID("_BumpMap");
+        private static readonly int BumpScale = Shader.PropertyToID("_BumpScale");
+        private static readonly int Contrast = Shader.PropertyToID("_Parallax");
+        private static readonly int BaseMapSt = Shader.PropertyToID("_BaseMap_ST");
+        private static readonly int PhotoColour = Shader.PropertyToID("_OcclusionStrength");
+        private Material _triplanar;
+        private bool _triplanarLoaded;
+
+        /// <summary>
+        /// A photographed CC0 finish (Resources/Surfaces) projected in world space by the triplanar shader, so it
+        /// tiles at true scale on any generated box, span or road mesh. The texture is normalised to its own average
+        /// colour, then tinted: <paramref name="tint"/> is the colour the surface reads as from a distance (the same
+        /// colours the flat materials used), and the texture only adds the brick courses, grain and wear around it.
+        /// Falls back to a flat <see cref="Lit"/> where the assets are missing (EditMode tests).
+        /// </summary>
+        public Material Surface(Finish finish, Color tint, float smoothness = 0.1f)
+        {
+            string key = $"surface{finish}{tint}{smoothness}";
+            if (_cache.TryGetValue(key, out Material m)) return m;
+            if (!_triplanarLoaded)
+            {
+                _triplanarLoaded = true;
+                _triplanar = Resources.Load<Material>("Surfaces/Triplanar");
+            }
+            var albedo = Resources.Load<Texture2D>($"Surfaces/{finish}_Color");
+            if (_triplanar == null || albedo == null) return _cache[key] = Lit(tint, smoothness);
+            (float metres, float contrast, float bump, float hue) = FinishLook(finish);
+            m = new Material(_triplanar) { name = "City " + finish, color = tint };
+            m.SetTexture(BaseMap, albedo);
+            m.SetTexture(BumpMap, Resources.Load<Texture2D>($"Surfaces/{finish}_Normal"));
+            m.SetFloat(BumpScale, bump);
+            m.SetFloat(Contrast, contrast);
+            m.SetFloat(PhotoColour, hue);
+            m.SetFloat(Smoothness, smoothness);
+            m.SetVector(BaseMapSt, new Vector4(1f / metres, 0f, 0f, 0f));
+            return _cache[key] = m;
+        }
+
+        /// <summary>
+        /// Metres one texture tile covers (matched to the photo: brick courses ~7.5 cm, 60 cm paving slabs, 15 cm
+        /// siding boards), how much of its contrast survives (lower = calmer, more stylised), normal strength, and
+        /// how much of the photo's own hue variation to keep (0 for painted finishes: the paint colour is the tint's).
+        /// </summary>
+        private static (float Metres, float Contrast, float Bump, float Hue) FinishLook(Finish f) => f switch
+        {
+            Finish.Asphalt => (3f, 0.9f, 0.6f, 0f),
+            Finish.Brick => (1.6f, 0.85f, 1f, 0.7f),
+            Finish.Concrete => (3f, 0.7f, 0.5f, 0f),
+            Finish.Corrugated => (1.5f, 0.8f, 1f, 0f),
+            Finish.Grass => (2.5f, 0.75f, 0.6f, 0.5f),
+            Finish.PaintedPlaster => (2.5f, 0.6f, 0.6f, 0f),
+            Finish.Paving => (2.4f, 0.75f, 0.8f, 0f),
+            Finish.Plaster => (2.5f, 0.55f, 0.5f, 0f),
+            Finish.Tiles => (1.2f, 0.8f, 0.7f, 0f),
+            Finish.WoodFloor => (2f, 0.85f, 0.6f, 0.6f),
+            Finish.Siding => (2f, 0.6f, 1f, 0f),
+            _ => (2f, 0.8f, 1f, 0f),
+        };
 
         public Material Sign(Color color)
         {
@@ -162,8 +239,6 @@ namespace OpeningBell.City
             foreach (var (material, off, on) in _lamps) material.color = Color.Lerp(off, on, night);
             Color glow = new Color(1f, 0.86f, 0.66f) * (0.62f * night);
             foreach (Material w in _windows) w.SetColor(EmissionColor, glow);
-            Color kitGlow = new Color(1f, 0.82f, 0.58f) * (0.5f * night);
-            foreach (Material w in _kitWindows) w.SetColor(EmissionColor, kitGlow);
         }
     }
 }

@@ -219,8 +219,8 @@ namespace OpeningBell.City
             data.terrainLayers = new[]
             {
                 // Damp north-west greens: muted, a little olive, never lawn-bright.
-                MakeLayer("grass", new Color(0.29f, 0.36f, 0.21f), new Color(0.22f, 0.29f, 0.17f), 8f),
-                MakeLayer("forest", new Color(0.22f, 0.24f, 0.16f), new Color(0.16f, 0.18f, 0.12f), 6f),
+                MakeLayer("grass", new Color(0.29f, 0.36f, 0.21f), new Color(0.22f, 0.29f, 0.17f), 3f, "Grass"),
+                MakeLayer("forest", new Color(0.22f, 0.24f, 0.16f), new Color(0.16f, 0.18f, 0.12f), 3f, "Grass"),
                 MakeLayer("gravel", new Color(0.45f, 0.43f, 0.4f), new Color(0.36f, 0.35f, 0.33f), 4f),
                 MakeLayer("sand", new Color(0.66f, 0.6f, 0.48f), new Color(0.58f, 0.53f, 0.43f), 6f),
                 MakeLayer("rock", new Color(0.33f, 0.32f, 0.3f), new Color(0.25f, 0.25f, 0.25f), 10f),
@@ -256,9 +256,14 @@ namespace OpeningBell.City
             data.SetAlphamaps(0, 0, maps);
         }
 
-        /// <summary>A tiling noise texture between two colours (no texture assets needed).</summary>
-        private static TerrainLayer MakeLayer(string name, Color a, Color b, float tile)
+        /// <summary>
+        /// A tiling noise texture between two colours, or, given a readable <paramref name="photo"/> finish
+        /// (Resources/Surfaces), that photo recoloured so it averages to the midpoint of the two colours.
+        /// </summary>
+        private static TerrainLayer MakeLayer(string name, Color a, Color b, float tile, string photo = null)
         {
+            var source = photo != null ? Resources.Load<Texture2D>($"Surfaces/{photo}_Color") : null;
+            if (source != null && source.isReadable) return PhotoLayer(name, source, Color.Lerp(a, b, 0.5f), tile);
             const int size = 128;
             var pixels = new Color32[size * size];
             for (int y = 0; y < size; y++)
@@ -278,6 +283,33 @@ namespace OpeningBell.City
             }
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, true) { name = "terrain-" + name, wrapMode = TextureWrapMode.Repeat, anisoLevel = 4 };
             texture.SetPixels32(pixels);
+            texture.Apply(true, true);
+            return new TerrainLayer { name = name, diffuseTexture = texture, tileSize = new Vector2(tile, tile), smoothness = 0.05f };
+        }
+
+        /// <summary>
+        /// The photo divided by its own average and multiplied by <paramref name="average"/> (as the triplanar city
+        /// surfaces do), contrast eased to 75%, alpha kept low for the same matte reason as the noise layers.
+        /// </summary>
+        private static TerrainLayer PhotoLayer(string name, Texture2D source, Color average, float tile)
+        {
+            Color32[] px = source.GetPixels32();
+            double r = 0, g = 0, bl = 0;
+            foreach (Color32 p in px) { r += p.r; g += p.g; bl += p.b; }
+            var mean = new Color((float)(r / px.Length / 255.0), (float)(g / px.Length / 255.0), (float)(bl / px.Length / 255.0));
+            for (int i = 0; i < px.Length; i++)
+            {
+                Color p = px[i];
+                Color c = new Color(
+                    average.r * Mathf.Lerp(1f, p.r / mean.r, 0.75f),
+                    average.g * Mathf.Lerp(1f, p.g / mean.g, 0.75f),
+                    average.b * Mathf.Lerp(1f, p.b / mean.b, 0.75f));
+                Color32 o = c;
+                o.a = 10;
+                px[i] = o;
+            }
+            var texture = new Texture2D(source.width, source.height, TextureFormat.RGBA32, true) { name = "terrain-" + name, wrapMode = TextureWrapMode.Repeat, anisoLevel = 4 };
+            texture.SetPixels32(px);
             texture.Apply(true, true);
             return new TerrainLayer { name = name, diffuseTexture = texture, tileSize = new Vector2(tile, tile), smoothness = 0.05f };
         }

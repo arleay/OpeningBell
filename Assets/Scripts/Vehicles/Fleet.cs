@@ -5,17 +5,13 @@ using OpeningBell.Trading;
 
 namespace OpeningBell.Vehicles
 {
-    // Serialized by value in saves: append only.
+    // Serialized by value in saves: never renumber. 1 (Carried) and 2 (Stored) were skateboards' (retired).
     public enum VehicleState
     {
-        /// <summary>Standing somewhere in the world (bikes; a board set down).</summary>
-        Parked,
-        /// <summary>In the player's hands (a skateboard).</summary>
-        Carried,
-        /// <summary>Kept at home, out of the way (extra boards).</summary>
-        Stored,
-        /// <summary>Being ridden. Saved as Parked (bikes) or Carried (boards).</summary>
-        Riding,
+        /// <summary>Standing somewhere in the world.</summary>
+        Parked = 0,
+        /// <summary>Being ridden. Saved as Parked.</summary>
+        Riding = 3,
     }
 
     public enum ServiceKind
@@ -48,7 +44,7 @@ namespace OpeningBell.Vehicles
         public DateTime Purchased;
         public double Odometer;             // metres
         public double Condition = 1;        // frame / drivetrain, 0–1
-        public double TireCondition = 1;    // tyres or skate wheels, 0–1
+        public double TireCondition = 1;    // tyres, 0–1
         public double BatteryWh;
         public double BatteryCapacityWh;
         public double FuelLiters;
@@ -100,6 +96,11 @@ namespace OpeningBell.Vehicles
         public VehicleCatalog Catalog => _catalog;
         /// <summary>Last vehicle ridden (shops service "your bike").</summary>
         public OwnedVehicle LastRidden { get; private set; }
+        /// <summary>Litres in your jerry can, or -1 if you haven't bought one.</summary>
+        public double JerryCan { get; set; } = -1;
+        /// <summary>A roadside fuel delivery on its way: the car's id (null if none) and when it arrives.</summary>
+        public string RoadsideCar { get; set; }
+        public DateTime RoadsideAt { get; set; }
 
         public event Action<OwnedVehicle> Changed;
 
@@ -110,9 +111,7 @@ namespace OpeningBell.Vehicles
         /// <summary>A classifieds listing that has already been bought (each car exists once).</summary>
         public bool IsSold(string listingId) => _sold.Contains(listingId);
 
-        public OwnedVehicle Carried => _vehicles.Find(v => v.State == VehicleState.Carried);
-
-        /// <summary>Registers a purchased vehicle (payment is the caller's). Boards go into the player's hands.</summary>
+        /// <summary>Registers a purchased vehicle (payment is the caller's).</summary>
         public OwnedVehicle Add(string modelId, decimal pricePaid, DateTime now, double x, double y, double z, double yaw)
         {
             if (!_catalog.TryGetModel(modelId, out VehicleModel model)) throw new ArgumentException($"Unknown model {modelId}.");
@@ -130,13 +129,6 @@ namespace OpeningBell.Vehicles
                 FuelLiters = model.Kind == VehicleKind.Car ? model.Car.FuelCapacity : 0,
                 X = x, Y = y, Z = z, Yaw = yaw,
             };
-            if (model.Kind == VehicleKind.Skateboard)
-            {
-                // One board in hand; any other goes home.
-                OwnedVehicle carried = Carried;
-                if (carried != null) carried.State = VehicleState.Stored;
-                v.State = VehicleState.Carried;
-            }
             v.History.Add(new ServiceRecord { Date = now, Kind = ServiceKind.Purchase, Detail = model.Name, Cost = pricePaid });
             _vehicles.Add(v);
             Changed?.Invoke(v);
@@ -280,7 +272,7 @@ namespace OpeningBell.Vehicles
 
         public FleetSaveData CaptureState()
         {
-            var data = new FleetSaveData { NextId = _nextId };
+            var data = new FleetSaveData { NextId = _nextId, JerryCan = JerryCan, RoadsideCar = RoadsideCar ?? "", RoadsideAt = RoadsideAt.Ticks };
             data.Sold.AddRange(_sold);
             foreach (OwnedVehicle v in _vehicles)
             {
@@ -292,8 +284,8 @@ namespace OpeningBell.Vehicles
                     Odometer = v.Odometer, Condition = v.Condition, TireCondition = v.TireCondition,
                     BatteryWh = v.BatteryWh, BatteryCapacityWh = v.BatteryCapacityWh,
                     FuelLiters = v.FuelLiters, FuelCapacity = v.FuelCapacity,
-                    // A ride in progress is saved where it stands: boards back in hand, bikes parked under the rider.
-                    State = (int)(v.State == VehicleState.Riding ? (v.Kind == VehicleKind.Skateboard ? VehicleState.Carried : VehicleState.Parked) : v.State),
+                    // A ride in progress is saved where it stands: parked under the rider.
+                    State = (int)VehicleState.Parked,
                     X = v.X, Y = v.Y, Z = v.Z, Yaw = v.Yaw,
                     LastRidden = v == LastRidden,
                     Painted = v.Painted, PaintR = v.PaintR, PaintG = v.PaintG, PaintB = v.PaintB, Tinted = v.Tinted,
@@ -311,6 +303,9 @@ namespace OpeningBell.Vehicles
             _vehicles.Clear();
             LastRidden = null;
             _nextId = Math.Max(1, data.NextId);
+            JerryCan = data.JerryCan;
+            RoadsideCar = string.IsNullOrEmpty(data.RoadsideCar) ? null : data.RoadsideCar;
+            RoadsideAt = new DateTime(data.RoadsideAt);
             _sold.Clear();
             foreach (string id in data.Sold) _sold.Add(id);
             foreach (OwnedVehicleSaveData d in data.Vehicles)
@@ -341,6 +336,9 @@ namespace OpeningBell.Vehicles
         public int NextId = 1;
         public List<OwnedVehicleSaveData> Vehicles = new List<OwnedVehicleSaveData>();
         public List<string> Sold = new List<string>();
+        public double JerryCan = -1;
+        public string RoadsideCar = "";
+        public long RoadsideAt;
     }
 
     [Serializable]
