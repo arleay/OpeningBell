@@ -98,6 +98,8 @@ namespace OpeningBell.City
             Material fence = c.P.Lit(new Color(0.86f, 0.84f, 0.78f), 0.1f);
             Material fenceOld = c.P.Lit(new Color(0.55f, 0.5f, 0.42f), 0.05f);
             int houseNumber = 0;
+            // The first two walkable houses of each tier are on the market, built empty.
+            var onSale = new Dictionary<HouseTier, int>();
 
             foreach (Lot lot in PlanLots(c.Roads.Map))
             {
@@ -111,7 +113,22 @@ namespace OpeningBell.City
                 Transform house = Kit.Group(plot, $"House {++houseNumber} {tier}", new Vector3(0f, 0f, setback + size.y / 2f));
                 if (lot.Walkable || !KitHouse(c, house, size, rng))
                 {
-                    HouseBuilder.Build(c, house, tier, rng, lights);
+                    onSale.TryGetValue(tier, out int listed);
+                    bool forSale = lot.Walkable && listed < 2;
+                    if (forSale)
+                    {
+                        onSale[tier] = listed + 1;
+                        HomeKind kind = tier == HouseTier.Starter ? HomeKind.Starter : tier == HouseTier.Family ? HomeKind.Family : HomeKind.Mansion;
+                        StreetMap.Segment street = c.Roads.Map.Nearest(lot.Front, out _, out _);
+                        string streetName = street != null ? System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(street.Street.ToLowerInvariant()) : "Kell Valley";
+                        c.Homes.Add(new HomeSpec
+                        {
+                            Id = "house_" + houseNumber, Name = $"{10 + houseNumber * 2} {streetName}", Kind = kind, Price = HomeSpec.PriceOf(kind),
+                            Root = house, Size = size, Floors = tier == HouseTier.Starter ? 1 : 2, Plot = plot, LotWidth = lot.Width, LotDepth = depth,
+                            DoorLocal = new Vector3(DoorX(tier), 0f, -size.y / 2f),
+                        });
+                    }
+                    HouseBuilder.Build(c, house, tier, rng, lights, furnished: !forSale);
                     c.Place(house.TransformPoint(new Vector3(DoorX(tier), 0f, -size.y / 2f - 1.5f)), PlaceKind.Door, "house");
                 }
                 else c.Place(house.TransformPoint(new Vector3(0f, 0f, -size.y / 2f - 1.5f)), PlaceKind.Door, "house");

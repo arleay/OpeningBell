@@ -7,6 +7,7 @@
         "OpeningBell.Trading",
         "OpeningBell.Economy",
         "OpeningBell.Vehicles",
+        "OpeningBell.Home",
         "OpeningBell.Runtime",
         "OpeningBell.UI",
         "OpeningBell.Gameplay",

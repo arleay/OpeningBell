@@ -48,6 +48,8 @@ namespace OpeningBell.City
         public float Night;
         /// <summary>Real lights that only burn at night (street lamps).</summary>
         public readonly List<Light> NightLights = new List<Light>();
+        /// <summary>Homes the player can own (the apartment first), registered by the builders.</summary>
+        public readonly List<HomeSpec> Homes = new List<HomeSpec>();
         /// <summary>Every point light the builders placed (rooms, canopies): only those near the player stay on.</summary>
         public readonly List<Light> RoomLights = new List<Light>();
 

@@ -62,6 +62,10 @@ namespace OpeningBell
         public Inbox Inbox { get; private set; }
         /// <summary>What the player has drawn on charts, per symbol (saved with the game).</summary>
         public ChartDrawings Drawings { get; } = new ChartDrawings();
+        /// <summary>Furniture and tech bought (wherever it is), the store's loaner, and the homes owned.</summary>
+        public global::OpeningBell.Home.Belongings Belongings { get; } = new global::OpeningBell.Home.Belongings();
+        public global::OpeningBell.Home.Rental Rental { get; } = new global::OpeningBell.Home.Rental();
+        public global::OpeningBell.Home.Estate Estate { get; } = new global::OpeningBell.Home.Estate();
         /// <summary>What the player has found on the map (the city's discovery fills it; saved with the game).</summary>
         public HashSet<string> Discovered { get; } = new HashSet<string>(StringComparer.Ordinal);
         /// <summary>The player's bikes and boards (spec §16: persistent identity).</summary>
@@ -154,6 +158,12 @@ namespace OpeningBell
                 if (save.HasLook) Look = save.Look;
                 if (save.HasDrawings) Drawings.RestoreState(save.Drawings);
                 if (save.Discovered != null) Discovered.UnionWith(save.Discovered);
+                if (save.HasHome && save.Home != null)
+                {
+                    Belongings.RestoreState(save.Home.Belongings);
+                    Rental.RestoreState(save.Home.Rental);
+                    Estate.RestoreState(save.Home.Estate);
+                }
                 if (save.HasPlayer) PlacePlayer(save.Player);
                 Debug.Log($"Loaded save '{saveSlot}' (day {Days.DayNumber}, {Clock.Now:ddd MMM d HH:mm}).");
             }
@@ -181,6 +191,11 @@ namespace OpeningBell
                 HasDrawings = true,
                 Drawings = Drawings.CaptureState(),
                 Discovered = new List<string>(Discovered),
+                HasHome = true,
+                Home = new global::OpeningBell.Home.HomeSaveData
+                {
+                    Belongings = Belongings.CaptureState(), Rental = Rental.CaptureState(), Estate = Estate.CaptureState(),
+                },
             };
             if (player != null)
             {

@@ -12,6 +12,7 @@
         "OpeningBell.Gameplay",
         "OpeningBell.Economy",
         "OpeningBell.Vehicles",
+        "OpeningBell.Home",
         "OpeningBell.City"
     ],
     "includePlatforms": [

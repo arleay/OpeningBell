@@ -52,9 +52,11 @@ namespace OpeningBell.City
             public Transform Root;
             public Material Siding, InnerWall, FloorWood, FloorTile, Ceiling, Trim, Roof, Glass, DoorLeaf;
             public HouseLights Lights;
+            /// <summary>False for a house on the market: kitchen and bathroom fixtures only, the rooms left empty.</summary>
+            public bool Furnished;
         }
 
-        public static void Build(CityContext c, Transform root, HouseTier tier, System.Random rng, HouseLights lights)
+        public static void Build(CityContext c, Transform root, HouseTier tier, System.Random rng, HouseLights lights, bool furnished = true)
         {
             var x = new Ctx
             {
@@ -76,6 +78,7 @@ namespace OpeningBell.City
                     _ => new Color(0.38f, 0.26f, 0.17f),
                 }, 0.3f),
                 Lights = lights,
+                Furnished = furnished,
             };
             switch (tier)
             {
@@ -428,9 +431,14 @@ namespace OpeningBell.City
         private static void Put(Ctx x, string model, float x0, float z0, float x1, float z1, float yaw, float height = 0f,
             bool stretch = false, bool solid = true, float y = Floor)
         {
+            if (!x.Furnished && !Fixture(model)) return;
             GameObject go = x.K.Fit(x.Root, model, new Vector3((x0 + x1) / 2f, y, (z0 + z1) / 2f), new Vector3(x1 - x0, height, z1 - z0), yaw, stretch);
             if (go != null && solid) x.K.Solid(go);
         }
+
+        /// <summary>Built in: stays when a house is sold empty.</summary>
+        private static bool Fixture(string model) =>
+            model.StartsWith("kitchen") || model.StartsWith("bathroom") || model == "toilet" || model == "shower" || model.StartsWith("washer");
     }
 
     /// <summary>
