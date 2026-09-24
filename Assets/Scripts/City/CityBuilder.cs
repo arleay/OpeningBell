@@ -56,6 +56,8 @@ namespace OpeningBell.City
             if (!game.enabled) return; // bootstrap failed to start; nothing to hang the city on
 
             CityLayers.Apply();
+            CityLayers.CullDistances(viewCamera);
+            var buildTime = System.Diagnostics.Stopwatch.StartNew();
             var palette = new Palette(litTemplate, litEmissiveTemplate, glassTemplate, unlitTemplate, signTemplate);
             _c = new CityContext
             {
@@ -113,7 +115,14 @@ namespace OpeningBell.City
             Woods = Forest.Build(_c, viewCamera);
             Parked = ParkedCars.Build(_c, viewCamera);
 
+            // Shelf goods, yard and street clutter: a mesh per material instead of thousands of little renderers.
+            var merge = new List<Transform>();
+            foreach (Transform t in _c.Static.GetComponentsInChildren<Transform>())
+                if (t.name == "Interior" || t.name == "Yard" || t.name.EndsWith(" clutter")) merge.Add(t);
+            int folded = 0;
+            foreach (Transform t in merge) folded += MeshMerge.Merge(t);
             StaticBatchingUtility.Combine(_c.Static.gameObject);
+            Debug.Log($"Town built in {buildTime.ElapsedMilliseconds} ms ({_c.Static.GetComponentsInChildren<Renderer>().Length} static renderers after merging {folded}, {_c.RoomLights.Count} room lights).");
 
             var traffic = new TrafficSimulation(_c.Roads, seed: 3301);
             var peds = new PedestrianSimulation(walks, seed: 3302);
@@ -224,6 +233,19 @@ namespace OpeningBell.City
             if (_terminal != null && _terminal.Context != null && _terminal.Context.BuyUsedCar == null) _terminal.Context.BuyUsedCar = DeliverUsedCar;
             _c.Night = daylight.NightFactor;
             _c.P.ApplyNight(_c.Night);
+            // Point lights (rooms, canopies) only near the player: the far ones would light nothing you can see.
+            _roomTimer -= Time.deltaTime;
+            if (_roomTimer <= 0f)
+            {
+                _roomTimer = 0.5f;
+                Vector3 me = player.transform.position;
+                foreach (Light light in _c.RoomLights)
+                {
+                    if (light == null) continue;
+                    bool near = (light.transform.position - me).sqrMagnitude < RoomLightRadius * RoomLightRadius;
+                    if (light.gameObject.activeSelf != near) light.gameObject.SetActive(near);
+                }
+            }
             // Street lamps switch as a group, with a little hysteresis around dusk and dawn. Only the ones near the
             // player actually burn (the lamp heads glow everywhere; the pools of light don't reach that far anyway).
             bool on = _lightsOn ? _c.Night > 0.3f : _c.Night > 0.6f;
@@ -241,7 +263,9 @@ namespace OpeningBell.City
 
         /// <summary>Real night lights (street lamps, canopies, floodlights) burn within this distance of the player.</summary>
         public const float NightLightRadius = 190f;
-        private float _lightTimer;
+        /// <summary>Point lights (shop and house rooms, canopies) are on within this distance.</summary>
+        public const float RoomLightRadius = 90f;
+        private float _lightTimer, _roomTimer;
 
         private void OnDestroy() => _c?.P.Dispose();
 

@@ -176,8 +176,35 @@ namespace OpeningBell.City
     {
         public const int Vehicle = 8;
         public const int Pedestrian = 9;
+        /// <summary>Street and yard clutter: gone past <see cref="PropsDistance"/>.</summary>
+        public const int Props = 10;
+        /// <summary>Small things: gone past <see cref="DetailDistance"/>.</summary>
+        public const int Detail = 11;
+        /// <summary>Shop interiors, only seen through their windows: gone past <see cref="InteriorDistance"/>.</summary>
+        public const int Interior = 12;
+
+        public const float PropsDistance = 150f, DetailDistance = 60f, InteriorDistance = 75f;
 
         /// <summary>People and cars don't physically collide (people step aside, cars stop for them).</summary>
         public static void Apply() => Physics.IgnoreLayerCollision(Vehicle, Pedestrian, true);
+
+        /// <summary>Per-layer draw distances on a camera (0 = the far plane).</summary>
+        public static void CullDistances(Camera camera)
+        {
+            if (camera == null) return;
+            var d = new float[32];
+            d[Props] = PropsDistance;
+            d[Detail] = DetailDistance;
+            d[Interior] = InteriorDistance;
+            camera.layerCullDistances = d;
+            camera.layerCullSpherical = true; // turning on the spot doesn't pop things in and out
+        }
+
+        /// <summary>Puts a whole built group on a render layer (physics and interaction don't care which).</summary>
+        public static void Set(Transform root, int layer)
+        {
+            root.gameObject.layer = layer;
+            foreach (Transform child in root) Set(child, layer);
+        }
     }
 }

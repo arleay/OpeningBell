@@ -154,8 +154,10 @@ namespace OpeningBell.City
             Door door = c.SwingDoor(dyn, "door", new Vector3(doorX - 0.6f, 0f, Wall / 2f), 1.2f, 2.25f, c.P.Glass(new Color(0.6f, 0.7f, 0.75f, 0.35f)), glass: true);
             door.LockReason = () => hours.Contains(c.Game.Clock.Now) ? null : $"closed (opens {Hours.Clock(hours.Open)})";
 
-            // Inside.
-            Interior(c, root, b, rng);
+            // Inside (same frame as the shell; its own group so it can be culled at range).
+            Transform inner = Kit.Group(root, "Interior");
+            Interior(c, inner, b, rng);
+            CityLayers.Set(inner, CityLayers.Interior);
             Light lamp = c.PointLight(root, new Vector3(0f, top - 0.8f, d * 0.45f), Mathf.Max(8f, w * 0.8f), 1.1f, new Color(1f, 0.93f, 0.82f));
             // OPEN / CLOSED sign in the door glass; it says BACK SOON while the only member of staff is on a break.
             Transform doorSign = Kit.Group(dyn, "Door sign", new Vector3(doorX + 1.3f, 1.55f, Wall / 2f - 0.08f)); // in the window by the door

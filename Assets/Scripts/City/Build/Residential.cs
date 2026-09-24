@@ -26,9 +26,11 @@ namespace OpeningBell.City
         }
 
         /// <summary>A lot's clutter, in the lot's frame (origin on the sidewalk edge, +z into the lot).</summary>
-        public static void Yard(CityContext c, Transform plot, float width, float depth, float setback, Vector2 house, float driveX, bool rundown, System.Random rng)
+        public static void Yard(CityContext c, Transform lot, float width, float depth, float setback, Vector2 house, float driveX, bool rundown, System.Random rng)
         {
             Kit k = c.Kit;
+            // Its own group in the lot's frame, so the clutter can be culled at range (the house and fences stay).
+            Transform plot = Kit.Group(lot, "Yard");
             float half = width / 2f;
             Material post = c.P.Lit(new Color(0.3f, 0.3f, 0.32f), 0.3f);
             // Mailbox by the sidewalk, on the far side of the driveway.
@@ -130,6 +132,7 @@ namespace OpeningBell.City
                     for (int i = 0; i < 3; i++)
                         k.Cylinder(plot, "Old tyre", new Vector3(-driveX * 0.5f, 0.12f + i * 0.24f, setback - 2f), 0.7f, 0.24f, c.P.Lit(new Color(0.07f, 0.07f, 0.07f)));
             }
+            CityLayers.Set(plot, CityLayers.Props);
         }
 
         private static Transform FindDeep(Transform t, string name)

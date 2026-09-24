@@ -159,9 +159,16 @@ namespace OpeningBell.Gameplay
                 if (grounded && planarSpeed > 0.6f) Footstep?.Invoke(planarSpeed);
             }
 
+            // The spring is stiff: explicit steps are only stable under ~0.1 s, so integrate it in small steps, and at
+            // most a tenth of a second per frame (a hitch or a fast-forwarded clock would otherwise blow it up to NaN).
             const float stiffness = 170f;
-            _dipVelocity += (-stiffness * _dip - 2f * 0.8f * Mathf.Sqrt(stiffness) * _dipVelocity) * dt;
-            _dip += _dipVelocity * dt;
+            for (float left = Mathf.Min(dt, 0.1f); left > 1e-5f;)
+            {
+                float h = Mathf.Min(left, 1f / 120f);
+                _dipVelocity += (-stiffness * _dip - 2f * 0.8f * Mathf.Sqrt(stiffness) * _dipVelocity) * h;
+                _dip += _dipVelocity * h;
+                left -= h;
+            }
 
             float height = Mathf.Lerp(bobHeight.x, bobHeight.y, sprint) * _bobWeight;
             float sway = Mathf.Lerp(bobSway.x, bobSway.y, sprint) * _bobWeight;

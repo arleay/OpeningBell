@@ -108,6 +108,7 @@ namespace OpeningBell.Tests
                 (new Vector3(-460f, 12f, -30f), 50f, 14f, "strip-highway.png"),
                 (new Vector3(360f, 1.7f + 1.5f, -16f), 70f, 3f, "strip-canalrow.png"),
                 (new Vector3(-176f, 1.7f, 4f), 170f, 5f, "inside-diner.png"),
+                (new Vector3(-322f, 1.7f, 107.5f), 20f, 8f, "inside-supermarket.png"),
                 (new Vector3(-230f, 30f, -60f), 235f, 22f, "foundry-overview.png"),
                 (new Vector3(-470f, 2f, -150f), 250f, 4f, "foundry-cannery.png"),
                 (new Vector3(-350f, 5f, -236f), 60f, 6f, "foundry-freight.png"),

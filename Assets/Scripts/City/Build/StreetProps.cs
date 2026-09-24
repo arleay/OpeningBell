@@ -75,6 +75,9 @@ namespace OpeningBell.City
             Sidewalks(c, root, rng, clear);
             RoadWear(c, root, rng);
             Alleys(c, root, rng);
+            // The merged road wear spans the town (its bounds would never cull); the standing clutter can go.
+            foreach (Transform group in root)
+                if (group.name.EndsWith(" clutter")) CityLayers.Set(group, CityLayers.Props);
         }
 
         /// <summary>Nothing solid in a box of <paramref name="half"/> extents standing on <paramref name="at"/> (ground and road meshes don't count).</summary>

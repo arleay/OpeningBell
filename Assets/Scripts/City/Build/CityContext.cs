@@ -48,6 +48,8 @@ namespace OpeningBell.City
         public float Night;
         /// <summary>Real lights that only burn at night (street lamps).</summary>
         public readonly List<Light> NightLights = new List<Light>();
+        /// <summary>Every point light the builders placed (rooms, canopies): only those near the player stay on.</summary>
+        public readonly List<Light> RoomLights = new List<Light>();
 
         public void Anchor(string name, Vector3 p) => Anchors[name] = p;
 
@@ -65,6 +67,7 @@ namespace OpeningBell.City
             light.intensity = intensity * 4.5f;
             light.color = color;
             light.shadows = LightShadows.None;
+            RoomLights.Add(light);
             return light;
         }
 
