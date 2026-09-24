@@ -372,7 +372,7 @@ namespace OpeningBell.City
                         if (mesh == null) continue;
                         GameObject wreck = Object.Instantiate(mesh, root, false);
                         wreck.name = "Wreck";
-                        wreck.transform.localPosition = new Vector3(x + (float)(rng.NextDouble() - 0.5), s * 1.2f, z);
+                        wreck.transform.localPosition = new Vector3(x + (float)(rng.NextDouble() - 0.5), s * 1.6f, z);
                         wreck.transform.localRotation = Quaternion.Euler((float)(rng.NextDouble() - 0.5) * 8f, (float)rng.NextDouble() * 360f, (float)(rng.NextDouble() - 0.5) * 10f);
                         wreck.transform.localScale = new Vector3(CarFactory.Scale, CarFactory.Scale * 0.7f, CarFactory.Scale); // crushed a bit
                         foreach (Renderer rend in wreck.GetComponentsInChildren<Renderer>())

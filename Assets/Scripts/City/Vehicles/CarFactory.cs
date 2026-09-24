@@ -75,6 +75,53 @@ namespace OpeningBell.City
             r.sharedMaterials = mats;
         }
 
+        // Everyday paint, weighted like a real car park: mostly white, black, grey and silver.
+        private static readonly (Color Colour, int Weight)[] StreetPaints =
+        {
+            (new Color(0.93f, 0.93f, 0.92f), 22), (new Color(0.08f, 0.08f, 0.09f), 18), (new Color(0.42f, 0.43f, 0.45f), 15),
+            (new Color(0.72f, 0.73f, 0.75f), 14), (new Color(0.16f, 0.26f, 0.5f), 10), (new Color(0.62f, 0.1f, 0.09f), 9),
+            (new Color(0.2f, 0.33f, 0.24f), 4), (new Color(0.76f, 0.7f, 0.58f), 4), (new Color(0.38f, 0.1f, 0.12f), 4),
+        };
+        private static readonly System.Collections.Generic.Dictionary<(Material, int), Material> Resprays =
+            new System.Collections.Generic.Dictionary<(Material, int), Material>();
+
+        /// <summary>
+        /// A random everyday colour for a background car (parked, traffic, driveways): the model's main body paint
+        /// (materials named "body …" that aren't black or grey trim) is swapped for a shared copy in that colour, so
+        /// cars of one model don't all match and batching still works. Liveries (taxi, police, ambulance) keep theirs.
+        /// </summary>
+        public static void Respray(GameObject car, string model, System.Random rng)
+        {
+            if (model.Contains("taxi") || model.Contains("police") || model.Contains("ambulance")) return;
+            int total = 0, pick;
+            foreach (var p in StreetPaints) total += p.Weight;
+            pick = rng.Next(total);
+            int paint = 0;
+            while (pick >= StreetPaints[paint].Weight) pick -= StreetPaints[paint++].Weight;
+            foreach (Renderer r in car.GetComponentsInChildren<Renderer>())
+            {
+                Material[] mats = r.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    Material m = mats[i];
+                    if (m == null) continue;
+                    string n = m.name.ToLowerInvariant();
+                    if (!n.StartsWith("body") || n.Contains("black") || n.Contains("grey") || n.Contains("gray") || n.Contains("chrome")) continue;
+                    if (!Resprays.TryGetValue((m, paint), out Material copy) || copy == null)
+                    {
+                        copy = new Material(m) { name = m.name + " (street paint)" };
+                        if (copy.HasProperty("_BaseColor")) copy.SetColor("_BaseColor", StreetPaints[paint].Colour);
+                        else copy.color = StreetPaints[paint].Colour;
+                        Resprays[(m, paint)] = copy;
+                    }
+                    mats[i] = copy;
+                    changed = true;
+                }
+                if (changed) r.sharedMaterials = mats;
+            }
+        }
+
         /// <summary>Window tint: every glass material swapped for a darker one.</summary>
         public static void Tint(GameObject car, Material dark)
         {

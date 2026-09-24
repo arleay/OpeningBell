@@ -2411,27 +2411,46 @@ MonoBehaviour:
   - {fileID: 919132149155446097, guid: f70c2dac47434011a8236e6116157f37, type: 3}
   - {fileID: 919132149155446097, guid: 011c6eda4b7018249b6e105c7832c4fd, type: 3}
   - {fileID: 919132149155446097, guid: 3cef6418dedf29547ba87efc872664b2, type: 3}
+  - {fileID: 919132149155446097, guid: 162a53854a9081a479c55a9e8c13433f, type: 3}
+  - {fileID: 919132149155446097, guid: 791e7c943feb87845ba8d0cdcc5083ff, type: 3}
+  - {fileID: 919132149155446097, guid: e40a3bfca3840a740b2b228b5b004447, type: 3}
+  - {fileID: 919132149155446097, guid: a41e1a1057e61774aad412caaf990991, type: 3}
+  - {fileID: 919132149155446097, guid: 2b75d1622a933234d99e85e6b5f38a39, type: 3}
+  - {fileID: 919132149155446097, guid: 89109c611f8c62a4e85cfd657facaabc, type: 3}
+  - {fileID: 919132149155446097, guid: a6d9575e2a2745944a04636c77938b57, type: 3}
+  - {fileID: 919132149155446097, guid: f58f64177fdc4cd4d87e85bb8ca000cd, type: 3}
+  - {fileID: 919132149155446097, guid: ba40c4dd38991a8429dd696840b08174, type: 3}
+  - {fileID: 919132149155446097, guid: 4ca0181f2b4d0104089ae05056ac036e, type: 3}
+  - {fileID: 919132149155446097, guid: 4eadddff47796d84ba26695cf7f53858, type: 3}
+  - {fileID: 919132149155446097, guid: ee0a2f7a1428a4f42b7e61f20c06434d, type: 3}
+  - {fileID: 919132149155446097, guid: df13c699d7eca4342b179f76c060c982, type: 3}
   trafficMix:
-  - sedan
-  - sedan
-  - sedan
-  - sedan
-  - suv
-  - suv
-  - suv
-  - taxi
-  - taxi
-  - van
-  - van
-  - hatchback-sports
-  - hatchback-sports
+  - rgs-sedan
+  - rgs-sedan
+  - rgs-sedan
+  - rgs-sedan
+  - rgs-hatchback
+  - rgs-hatchback
+  - rgs-hatchback
+  - rgs-suv
+  - rgs-suv
+  - rgs-suv
+  - rgs-pickup
+  - rgs-pickup
+  - rgs-taxi
+  - rgs-taxi
+  - rgs-muscle
+  - rgs-muscle2
+  - rgs-sports
+  - rgs-roadster
+  - police-rgs-sedan
+  - police-rgs-suv
+  - rgs-ambulance
+  - delivery-rgs-van
+  - delivery-rgs-van
   - delivery
-  - truck
-  - truck
-  - sedan-sports
-  - suv-luxury
-  - police
   - delivery-flat
+  - truck
   - truck-flat
   engineSounds:
   - Name: 2JZ

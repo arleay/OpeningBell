@@ -47,11 +47,13 @@ namespace OpeningBell.City
             var library = c.Game.VehicleLibrary;
             if (library != null && library.TrafficMix.Count > 0 && rng.NextDouble() < 0.55)
             {
-                GameObject mesh = library.CarMesh(library.TrafficMix[rng.Next(library.TrafficMix.Count)]);
+                string model = library.TrafficMix[rng.Next(library.TrafficMix.Count)];
+                GameObject mesh = model.StartsWith("police") || model.Contains("ambulance") || model.StartsWith("delivery") ? null : library.CarMesh(model);
                 if (mesh != null)
                 {
                     GameObject car = Object.Instantiate(mesh, plot, false);
                     car.name = "Parked car";
+                    CarFactory.Respray(car, model, rng);
                     car.transform.localPosition = new Vector3(driveX, 0.02f, Mathf.Min(depth - 3f, setback + 3.2f));
                     car.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
                     car.transform.localScale = Vector3.one * CarFactory.Scale;

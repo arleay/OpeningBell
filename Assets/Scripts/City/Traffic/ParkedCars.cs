@@ -52,7 +52,7 @@ namespace OpeningBell.City
             parked._models = new List<string>();
             if (c.Game.VehicleLibrary != null)
                 foreach (string m in c.Game.VehicleLibrary.TrafficMix)
-                    if (m != "police" && !m.StartsWith("truck-flat") && !m.StartsWith("delivery")) parked._models.Add(m);
+                    if (!m.StartsWith("police") && !m.EndsWith("ambulance") && !m.StartsWith("truck-flat") && !m.StartsWith("delivery")) parked._models.Add(m);
             parked.FindKerbs();
             foreach (var (p, yaw, kind) in c.ParkingSpots) parked.Add(p, yaw, kind);
             parked.Refresh(force: true);
@@ -181,12 +181,15 @@ namespace OpeningBell.City
             s.Car = null;
         }
 
+        private readonly System.Random _paint = new System.Random(8841);
+
         private GameObject Make(string model)
         {
             GameObject mesh = _c.Game.VehicleLibrary.CarMesh(model);
             if (mesh == null) return null;
             GameObject car = Instantiate(mesh, transform, false);
             car.name = "Parked " + model;
+            CarFactory.Respray(car, model, _paint);
             car.transform.localScale = Vector3.one * CarFactory.Scale;
             var box = car.AddComponent<BoxCollider>();
             box.center = new Vector3(0f, 0.55f, 0f);

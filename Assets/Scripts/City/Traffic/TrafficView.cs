@@ -197,6 +197,8 @@ namespace OpeningBell.City
             return false;
         }
 
+        private readonly System.Random _paint = new System.Random(8842);
+
         private TrafficCar Take(string model)
         {
             if (!_byModel.TryGetValue(model, out Stack<TrafficCar> pool)) _byModel[model] = pool = new Stack<TrafficCar>();
@@ -210,6 +212,7 @@ namespace OpeningBell.City
         private TrafficCar FromModel(GameObject mesh, string model)
         {
             GameObject root = CarFactory.Model(transform, mesh, "Traffic " + model, out Transform[] wheels, out float radius, out Bounds body);
+            CarFactory.Respray(root, model, _paint);
             SetLayer(root, CityLayers.Vehicle);
             var box = root.AddComponent<BoxCollider>();
             box.center = body.center;
