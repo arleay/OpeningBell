@@ -138,8 +138,10 @@ namespace OpeningBell.Tests
             yield return WalkTo(At("calder_elevator_hall_L"), "elevator hall");
 
             // 6: elevator to floor 2.
-            Elevator elevator = UnityEngine.Object.FindAnyObjectByType<Elevator>();
-            ElevatorButton[] buttons = UnityEngine.Object.FindObjectsByType<ElevatorButton>(FindObjectsSortMode.None);
+            // Calder's, not Harborview's freight hoist.
+            Elevator elevator = UnityEngine.Object.FindObjectsByType<Elevator>(FindObjectsSortMode.None)
+                .OrderBy(e => Vector3.Distance(e.transform.position, At("calder_elevator_hall_L"))).First();
+            ElevatorButton[] buttons = elevator.GetComponentsInChildren<ElevatorButton>();
             buttons.First(b => b.Prompt == "Call elevator" && b.transform.position.y < 2f).Interact();
             yield return WaitUntil(() => elevator.Logic.State == ElevatorState.Open && elevator.CarFloor == 0, 15f, "car at L, doors open");
             yield return WalkTo(At("calder_elevator_car_L"), "into the car");
@@ -178,7 +180,9 @@ namespace OpeningBell.Tests
             // 10: coffee on the way home.
             yield return Cross(P(142f, -7.25f), P(128f, -7.25f));
             yield return Route("coffee", P(71f, -7.25f), At("coffee_front_out"), P(71f, -3f), At("coffee_counter"));
-            ShopCounter coffee = UnityEngine.Object.FindObjectsByType<ShopCounter>(FindObjectsSortMode.None).First(s => s.Item == "Coffee");
+            // Other places sell coffee too (the diner's is cheaper): Half Past Nine's till is the one by its counter.
+            ShopCounter coffee = UnityEngine.Object.FindObjectsByType<ShopCounter>(FindObjectsSortMode.None).Where(s => s.Item == "Coffee")
+                .OrderBy(s => Vector3.Distance(s.transform.position, At("coffee_counter"))).First();
             Assert.IsTrue(coffee.CanInteract, "barista is in");
             decimal before = game.Economy.Bank.Balance;
             coffee.Interact();
@@ -490,7 +494,7 @@ namespace OpeningBell.Tests
             Assert.IsFalse(game.Economy.Owns(CityContext.OfficeLeaseId));
             Door suite = _doors.First(d => d.Label == "suite 204");
             StringAssert.Contains("lease it in the STORE app", suite.Prompt);
-            ElevatorButton up = UnityEngine.Object.FindObjectsByType<ElevatorButton>(FindObjectsSortMode.None).First(b => b.Prompt.StartsWith("Floor 2"));
+            ElevatorButton up = UnityEngine.Object.FindObjectsByType<ElevatorButton>(FindObjectsSortMode.None).First(b => b.Prompt.StartsWith("Floor 2") && b.transform.position.x < 200f);
             StringAssert.Contains("tenants only", up.Prompt);
 
             // Screenshots for review: street by day, downtown, lobby, coffee shop, and the street at night.

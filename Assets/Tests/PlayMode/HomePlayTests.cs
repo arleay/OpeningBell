@@ -299,11 +299,14 @@ namespace OpeningBell.Tests
             for (int d = 0; d < 5; d++)
             {
                 OwnedItem desk = _game.Belongings.Add("desk_trading", 0, ItemState.Placed);
-                Vector3 p = house.Root.TransformPoint(new Vector3(-5f + d * 2.6f, HouseBuilder.Floor, 2f));
-                desk.X = p.x; desk.Y = p.y; desk.Z = p.z; desk.Yaw = house.Root.eulerAngles.y + 180f; desk.Property = house.Id;
+                Vector3 p = house.Root.TransformPoint(new Vector3(-5f + d * 2.6f, HouseBuilder.Floor, 2.5f));
+                // Facing the player (a desk's user side and its screens are its -z).
+                desk.X = p.x; desk.Y = p.y; desk.Z = p.z; desk.Yaw = house.Root.eulerAngles.y; desk.Property = house.Id;
                 OwnedItem arm = _game.Belongings.Add("arm_6", 0, ItemState.Placed);
+                arm.Boxed = false;
                 arm.MountedOn = desk.Uid;
-                arm.X = p.x; arm.Y = p.y + 0.75f; arm.Z = p.z; arm.Yaw = desk.Yaw;
+                Vector3 back = Quaternion.Euler(0f, desk.Yaw, 0f) * new Vector3(0f, 0.75f, 0.9f / 2f - 0.08f);
+                arm.X = p.x + back.x; arm.Y = p.y + back.y; arm.Z = p.z + back.z; arm.Yaw = desk.Yaw;
                 for (int m = 0; m < 6; m++)
                 {
                     OwnedItem mon = _game.Belongings.Add("mon_24", 0, ItemState.Placed);
@@ -318,13 +321,21 @@ namespace OpeningBell.Tests
             yield return null;
             Assert.AreEqual(30, W.Views.Count(v => v.Spec.IsMonitor));
             _player.PlaceAt(house.Root.TransformPoint(new Vector3(0f, HouseBuilder.Floor + 0.1f, -1.5f)), house.Root.eulerAngles.y, 5f);
+            // Batch mode only renders a camera that has a target: give it one, so screens count as seen.
+            Camera cam = _player.GetComponentInChildren<Camera>();
+            var target = new RenderTexture(1280, 720, 24);
+            cam.targetTexture = target;
+            yield return null;
             int before = MonitorScreen.Redraws;
             float start = Time.realtimeSinceStartup;
             int frames = 0;
             while (Time.realtimeSinceStartup - start < 3f) { frames++; yield return null; }
             int redraws = MonitorScreen.Redraws - before;
+            cam.targetTexture = null;
+            target.Release();
             float ms = (Time.realtimeSinceStartup - start) * 1000f / frames;
             Debug.Log($"PERF 30 screens: {redraws} redraws in 3 s, {frames} frames, {ms:F1} ms/frame, {MonitorScreen.Live} textures live");
+            Assert.Greater(redraws, 10, "the screens in view do redraw");
             Assert.LessOrEqual(redraws, 30 * 4, "each screen at most about once a second");
             Assert.LessOrEqual(MonitorScreen.Live, 30, "textures pooled, one per chart at most");
             yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "home-thirty-screens.png");
