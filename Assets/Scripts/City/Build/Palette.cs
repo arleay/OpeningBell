@@ -118,12 +118,22 @@ namespace OpeningBell.City
 
         /// <summary>
         /// Window glass for the outside-only facades: dark and glossy by day (it picks up the sky), and warm at night
-        /// when <paramref name="litAtNight"/> (someone's home), so a building shows a scatter of lit rooms.
+        /// when <paramref name="litAtNight"/> (someone's home), so a building shows a scatter of lit rooms. With the
+        /// Window Interior shader (Resources/Surfaces/Window) each pane shows a room behind it: its geometry must carry
+        /// the room in its UVs (ModularFacade stamps them). Plain emissive glass where the asset is missing.
         /// </summary>
         public Material Pane(bool litAtNight)
         {
             string key = $"pane{litAtNight}";
             if (_cache.TryGetValue(key, out Material m)) return m;
+            var template = Resources.Load<Material>("Surfaces/Window");
+            if (template != null)
+            {
+                m = new Material(template) { name = litAtNight ? "Pane lit" : "Pane dark" };
+                m.SetColor(EmissionColor, Color.black);
+                if (litAtNight) _windows.Add(m);
+                return _cache[key] = m;
+            }
             m = new Material(_litEmissive) { name = litAtNight ? "Pane lit" : "Pane dark", color = new Color(0.16f, 0.2f, 0.24f) };
             m.SetTexture(BaseMap, Texture2D.whiteTexture);
             m.SetTexture(EmissionMap, Texture2D.whiteTexture);

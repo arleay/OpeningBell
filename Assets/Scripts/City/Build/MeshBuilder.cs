@@ -124,6 +124,13 @@ namespace OpeningBell.City
             Quad(new Vector3(min.x, min.y, min.z), new Vector3(min.x, min.y, max.z), new Vector3(max.x, min.y, max.z), new Vector3(max.x, min.y, min.z));
         }
 
+        /// <summary>Overwrites the UVs of every vertex added since <paramref name="from"/> (a <see cref="VertexCount"/> taken
+        /// before adding them) with one value: per-piece data for a shader rather than texture coordinates.</summary>
+        public void StampUV(int from, Vector2 uv)
+        {
+            for (int i = from; i < _uv.Count; i++) _uv[i] = uv;
+        }
+
         public Mesh ToMesh(string name)
         {
             var mesh = new Mesh { name = name, indexFormat = IndexFormat.UInt32 };

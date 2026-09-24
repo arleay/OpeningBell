@@ -72,6 +72,7 @@ namespace OpeningBell.Tests
             yield return Shot(new Vector3(side.x, 0f, side.z), look, 12f, "art-car.png");
 
             yield return Shot(new Vector3(6f, 0f, -7.25f), 90f, 0f, "art-street.png");
+            yield return Shot(new Vector3(6f, 0f, -9.5f), 90f, 38f, "art-road.png"); // road wear up close: patches, drains, sealed cracks
             yield return Shot(new Vector3(4f, 0f, -12.8f), 10f, -8f, "art-home.png");
             yield return Shot(new Vector3(84f, 0f, -12.8f), -25f, -8f, "art-shops.png");
             yield return Shot(new Vector3(58f, 0f, -11.5f), 60f, -4f, "art-commercial.png");
@@ -90,6 +91,7 @@ namespace OpeningBell.Tests
             yield return ShotOf("Stop sign", Vector3.back, true, 4f, -4f, "art-stop.png");
             yield return ShotOf("Bin bags", Vector3.back, true, 4f, 10f, "art-alley.png");
             yield return ShotOf("chain_curb_straight", Vector3.back, false, 6f, 0f, "art-fence.png");
+            yield return ShotOf("fence_panelstyle_a", Vector3.back, false, 7f, 0f, "art-hoarding.png");
             // Name-searchable: the counter keeps its collider (collider-less props get merged into one mesh).
             yield return ShotOf("Drinks counter", Vector3.left, false, 2.8f, 14f, "art-convenience.png");
 

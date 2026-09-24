@@ -235,6 +235,7 @@ namespace OpeningBell.City
             var patch = new MeshBuilder();
             var stain = new MeshBuilder();
             var litter = new MeshBuilder();
+            var cracks = new MeshBuilder();
             foreach (StreetMap.Segment s in c.Roads.Map.Segments)
             {
                 if (!CityPlan.HasTraffic(s.Class)) continue;
@@ -264,6 +265,11 @@ namespace OpeningBell.City
                     float lateral = ((float)rng.NextDouble() - 0.5f) * s.HalfWidth * 1.4f;
                     OnRoad(patch, s, t, lateral, 0.8f + (float)rng.NextDouble() * 2.2f, 0.5f + (float)rng.NextDouble() * 1.1f, 0.006f);
                 }
+                // Tar-sealed cracks: meandering black lines, along the lanes or across them; more on the
+                // older local streets than on the arterials.
+                float crackEvery = s.Class == RoadClass.Street ? 16f : 30f;
+                for (float t = from + (float)rng.NextDouble() * crackEvery; t < to; t += crackEvery * (0.5f + (float)rng.NextDouble()))
+                    if (!Deck(t)) Crack(cracks, rng, s, t, ((float)rng.NextDouble() - 0.5f) * s.HalfWidth * 1.6f, 8 + rng.Next(10), rng.NextDouble() < 0.5);
                 bool commercial = System.Array.IndexOf(ParkedCars.Commercial, s.Street) >= 0;
                 for (float t = from + 3f; t < to; t += 6.5f)
                     foreach (float side in new[] { -1f, 1f })
@@ -279,7 +285,36 @@ namespace OpeningBell.City
             patch.Build(root, "Road patches", c.P.Wettable(c.P.Lit(new Color(0.165f, 0.165f, 0.172f), 0.08f)), collider: false);
             stain.Build(root, "Oil stains", c.P.Wettable(c.P.Lit(new Color(0.07f, 0.07f, 0.08f), 0.35f)), collider: false);
             litter.Build(root, "Litter", c.P.Lit(new Color(0.85f, 0.83f, 0.76f), 0.05f), collider: false);
+            cracks.Build(root, "Sealed cracks", c.P.Wettable(c.P.Lit(new Color(0.045f, 0.045f, 0.05f), 0.5f)), collider: false);
         }
+
+        /// <summary>
+        /// One crack as a strip of short (30-60 cm), 8 cm wide steps from (t, lateral) on the segment: a random walk
+        /// that keeps roughly its heading (along the road when <paramref name="along"/>, else across), held off the kerbs.
+        /// </summary>
+        private static void Crack(MeshBuilder mb, System.Random rng, StreetMap.Segment s, float t, float lateral, int steps, bool along)
+        {
+            Vector3 P(float at, float side) => To3(s.At(Mathf.Clamp(at, 0f, s.Length)) + s.Left * side, s.GradeAt(Mathf.Clamp(at, 0f, s.Length)) + CityPlan.RoadY + 0.0075f);
+            float heading = (along ? 0f : Mathf.PI / 2f) + ((float)rng.NextDouble() - 0.5f) * 0.8f;
+            if (rng.NextDouble() < 0.5) heading += Mathf.PI;
+            float limit = s.HalfWidth - 0.35f;
+            for (int i = 0; i < steps; i++)
+            {
+                heading += ((float)rng.NextDouble() - 0.5f) * 0.9f;
+                float step = 0.3f + (float)rng.NextDouble() * 0.3f;
+                float dt = Mathf.Cos(heading) * step, dl = Mathf.Sin(heading) * step;
+                float nextL = Mathf.Clamp(lateral + dl, -limit, limit);
+                float w = 0.04f * (1f - 0.5f * i / steps); // 8 cm of tar overband, tapering toward the end
+                // Perpendicular in (t, lateral): the strip's half-width either side of the step.
+                float len = Mathf.Max(0.01f, Mathf.Sqrt(dt * dt + (nextL - lateral) * (nextL - lateral)));
+                float pt = -(nextL - lateral) / len * w, pl = dt / len * w;
+                mb.Quad(P(t - pt, lateral - pl), P(t + dt - pt, nextL - pl), P(t + dt + pt, nextL + pl), P(t + pt, lateral + pl));
+                t += dt;
+                lateral = nextL;
+            }
+        }
+
+        private static Vector3 To3(Vector2 p, float y) => new Vector3(p.x, y, p.y);
 
         /// <summary>A flat rectangle on the road surface, <paramref name="halfL"/> along the street, following its grade.</summary>
         private static void OnRoad(MeshBuilder mb, StreetMap.Segment s, float t, float lateral, float halfL, float halfW, float lift)

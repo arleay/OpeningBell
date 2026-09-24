@@ -185,6 +185,38 @@ namespace OpeningBell.City
             new Color(0.55f, 0.56f, 0.58f), new Color(0.88f, 0.88f, 0.86f), new Color(0.45f, 0.25f, 0.15f),
         };
 
+        /// <summary>
+        /// A solid hoarding: the urban fence pack's corrugated panels (4 m, graffitied, two designs alternating) on
+        /// wooden posts, for yards that keep out prying eyes. Chain-link where the art is missing.
+        /// </summary>
+        private static void Hoarding(CityContext c, Transform parent, Vector3 a, Vector3 b, float gapAt = -1f)
+        {
+            Kit k = c.Kit;
+            if (k.Art == null || k.Art.Model("fence_panelstyle_a") == null)
+            {
+                Fence(c, parent, a, b, 2.6f, gapAt);
+                return;
+            }
+            float len = Vector3.Distance(a, b);
+            Vector3 dir = (b - a).normalized;
+            float yaw = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg - 90f; // the panels' length runs along their x
+            int n = Mathf.Max(1, Mathf.RoundToInt(len / 4f));
+            float bay = len / n;
+            for (int i = 0; i < n; i++)
+            {
+                float s = i * bay, e = s + bay;
+                k.Model(parent, "fence_post_wood", a + dir * s, 0f, Vector3.one);
+                if (gapAt >= 0f && s <= gapAt && gapAt < e) continue; // a panel's missing: a way in
+                k.Model(parent, i % 2 == 0 ? "fence_panelstyle_a" : "fence_panelstyle_b", a + dir * (s + e) / 2f, yaw, new Vector3(bay / 4f, 1f, 1f));
+                var box = new GameObject("Fence collider").AddComponent<BoxCollider>();
+                box.transform.SetParent(parent, false);
+                box.transform.position = a + dir * (s + e) / 2f + Vector3.up * 1.3f;
+                box.transform.rotation = Quaternion.LookRotation(dir);
+                box.size = new Vector3(0.1f, 2.6f, bay);
+            }
+            k.Model(parent, "fence_post_wood", b, 0f, Vector3.one);
+        }
+
         private static void Fence(CityContext c, Transform parent, Vector3 a, Vector3 b, float height = 2.4f, float gapAt = -1f)
         {
             Kit k = c.Kit;
@@ -402,9 +434,9 @@ namespace OpeningBell.City
             c.Kit.Cylinder(root, "Magnet", crane + new Vector3(-8.5f, 6f, 0f), 1.6f, 0.4f, c.P.Lit(new Color(0.15f, 0.15f, 0.16f)));
             c.Kit.Span(root, "Office trailer", new Vector3(r.xMax - 16f, 0f, r.yMax - 6f), new Vector3(r.xMax - 4f, 3f, r.yMax - 2f), c.P.Lit(new Color(0.85f, 0.85f, 0.8f)));
             c.Kit.Text(root, "RUST BUCKET SALVAGE", new Vector3(r.xMax - 10f, 3.6f, r.yMax + 0.1f), 180f, 0.5f, new Color(0.8f, 0.35f, 0.1f));
-            Fence(c, root, new Vector3(r.xMin, 0f, r.yMax), new Vector3(r.xMax, 0f, r.yMax), 2.8f, gapAt: 20f);
-            Fence(c, root, new Vector3(r.xMax, 0f, r.yMax), new Vector3(r.xMax, 0f, r.yMin), 2.8f);
-            Fence(c, root, new Vector3(r.xMin, 0f, r.yMin), new Vector3(r.xMin, 0f, r.yMax), 2.8f);
+            Hoarding(c, root, new Vector3(r.xMin, 0f, r.yMax), new Vector3(r.xMax, 0f, r.yMax), gapAt: 20f);
+            Hoarding(c, root, new Vector3(r.xMax, 0f, r.yMax), new Vector3(r.xMax, 0f, r.yMin));
+            Hoarding(c, root, new Vector3(r.xMin, 0f, r.yMin), new Vector3(r.xMin, 0f, r.yMax));
         }
 
         /// <summary>

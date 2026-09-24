@@ -73,7 +73,10 @@ namespace OpeningBell.City
                         float w = bay * look.WindowWidth, h = storey * look.WindowHeight;
                         float sill = y0 + storey * look.SillHeight;
                         // Roughly a third of the rooms have someone home after dark.
-                        Window(rng.NextDouble() < 0.35 ? lit : dark, frames, trim, look, at, along, outward, w, sill, sill + h);
+                        MeshBuilder glass = rng.NextDouble() < 0.35 ? lit : dark;
+                        int first = glass.VertexCount;
+                        Window(glass, frames, trim, look, at, along, outward, w, sill, sill + h);
+                        glass.StampUV(first, RoomUV(at, outward, y0, storey, bay));
                         // Flats: the odd window air conditioner hung under the sill.
                         if (homes && rng.NextDouble() < 0.12)
                             Box(units, at + outward * 0.25f, along, outward, 0.33f, 0.25f, sill - 0.5f, sill - 0.1f);
@@ -133,7 +136,9 @@ namespace OpeningBell.City
             {
                 Vector2 at = from + along * ((b + 0.5f) * bay);
                 float hw = bay * 0.42f;
+                int first = glass.VertexCount;
                 Box(glass, at + outward * 0.015f, along, outward, hw, 0.015f, y + 0.55f, y + 3.1f);
+                glass.StampUV(first, RoomUV(at, outward, y, ShopStorey, bay));
                 Box(frames, at + outward * 0.06f, along, outward, hw + 0.06f, 0.06f, y + 0.05f, y + 0.55f);
                 Box(frames, at + outward * 0.05f, along, outward, hw, 0.05f, y + 3.1f, y + 3.22f);
                 Box(frames, at + along * hw + outward * 0.05f, along, outward, 0.05f, 0.05f, y + 0.55f, y + 3.1f);
@@ -141,6 +146,17 @@ namespace OpeningBell.City
             }
             Vector2 mid = from + along * (length / 2f);
             Band(trim, mid, along, outward, length / 2f + 0.06f, 0.12f, y + 3.3f, y + 4.05f);
+        }
+
+        /// <summary>
+        /// The room behind a pane, packed for the Window Interior shader: x = floor(floor height × 10) + storey height / 10,
+        /// y = floor(bay centre × 10) + bay width / 10, the centre measured along cross(up, outward) as the shader does.
+        /// </summary>
+        private static Vector2 RoomUV(Vector2 at, Vector2 outward, float floorY, float storey, float bay)
+        {
+            Vector3 t = Vector3.Cross(Vector3.up, new Vector3(outward.x, 0f, outward.y));
+            float centre = at.x * t.x + at.y * t.z;
+            return new Vector2(Mathf.Floor(floorY * 10f) + Mathf.Min(storey, 9.9f) / 10f, Mathf.Floor(centre * 10f) + Mathf.Min(bay, 9.9f) / 10f);
         }
 
         /// <summary>A course running the whole face (string course, cornice, plinth).</summary>
