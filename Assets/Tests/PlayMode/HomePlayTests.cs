@@ -221,10 +221,12 @@ namespace OpeningBell.Tests
             W.Hands.CloseBox(box);
             Assert.IsTrue(box.Closed);
             Assert.AreEqual("yard", box.ClosedAt);
-            // Shut by mistake: a click opens it again, still packing (it hasn't moved).
+            // Shut by mistake: a click opens it again, and a click takes the top thing back out, right there.
             W.Hands.OpenBox(box);
             Assert.IsFalse(box.Closed);
-            Assert.IsFalse(box.Opened, "same place: carry on packing");
+            W.Hands.TakeOut(box);
+            Assert.AreEqual("sofa_mid", W.Hands.Held.Item.ItemId);
+            W.Hands.PackInto(box);
             W.Hands.CloseBox(box);
             yield return null;
             Assert.AreEqual("Carry the box", W.View(box.Uid).Prompt);
@@ -247,7 +249,6 @@ namespace OpeningBell.Tests
             Assert.AreEqual("Open the box", boxView.Prompt);
             boxView.Interact();
             Assert.IsFalse(box.Closed);
-            Assert.IsTrue(box.Opened);
             yield return null;
 
             // The sofa went in last, so it comes out first; then the desk.

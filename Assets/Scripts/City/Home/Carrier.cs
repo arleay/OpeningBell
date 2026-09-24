@@ -12,9 +12,9 @@ namespace OpeningBell.City
     /// if not: [LMB] place, [R] turn 15° ([Shift]+[R] 5°), [G] grid snap on/off, [RMB] cancel (back where it was),
     /// [Ctrl]+[Z] undo the last move, [B] put it away in the home's storage. Things go down at home, in a vehicle's bed or at the store's pickup yard; boxes
     /// are unpacked when they're set down at home. Aiming at an item: [X] sells it (twice to confirm).
-    /// Moving boxes: holding something, [LMB] on an open box packs it (any amount; last in, first out). Empty-handed
-    /// on an open box, [LMB] folds the flaps shut, or, once it's been opened again somewhere else, takes the top thing
-    /// out into your hands; [LMB] on a closed box opens it again; [F] throws an empty box away. [E] carries a box, or opens a closed one set down in another home.
+    /// Moving boxes: holding something, [LMB] on an open box packs it (any amount; last in, first out). Empty-handed,
+    /// [LMB] on an open box takes the top thing out into your hands, [Q] folds the flaps shut, [LMB] on a closed box
+    /// opens it, [F] throws an empty box away. [E] carries a box, or opens a closed one set down in another home.
     /// </summary>
     public sealed class Carrier : MonoBehaviour
     {
@@ -476,15 +476,10 @@ namespace OpeningBell.City
             _w.Show(box);
         }
 
-        /// <summary>
-        /// Opens a closed box's flaps. Still where it was shut, you carry on packing; anywhere else, you're unpacking
-        /// (the next click takes the top thing out).
-        /// </summary>
+        /// <summary>Opens a closed box's flaps.</summary>
         public void OpenBox(OwnedItem box)
         {
-            string here = box.State == ItemState.Placed ? box.Property : "";
             _w.Belongings.SetClosed(box, false, null);
-            box.Opened = here != box.ClosedAt;
             _w.Show(box);
         }
 
@@ -506,10 +501,15 @@ namespace OpeningBell.City
                 Discard(box);
                 return;
             }
+            if (k != null && k.qKey.wasPressedThisFrame && !box.Closed)
+            {
+                CloseBox(box);
+                return;
+            }
             if (!_player.Input.Attack.WasPressedThisFrame()) return;
             if (box.Closed) OpenBox(box);
-            else if (box.Opened && n > 0) TakeOut(box);
-            else CloseBox(box);
+            else if (n > 0) TakeOut(box);
+            else _w.Say("It's empty. [Q] folds it shut, [F] throws it away.");
         }
 
         /// <summary>Puts the held item away in a home's storage (the cupboard by the front door gives it back).</summary>

@@ -55,8 +55,6 @@ namespace OpeningBell.Home
         /// <summary>A box: where its flaps were last closed ("yard", a home id, "" if elsewhere). Set down in a
         /// different home, [E] opens it rather than picking it up.</summary>
         public string ClosedAt = "";
-        /// <summary>A box opened after moving (unpacking): a click takes the top thing out instead of closing it.</summary>
-        public bool Opened;
 
         public HomeItem Item => HomeCatalog.Find(ItemId);
         public bool IsBox => Item?.IsBox == true;
@@ -226,20 +224,11 @@ namespace OpeningBell.Home
             return top;
         }
 
-        /// <summary>Folds the flaps shut (remembering where) or opens them: opened somewhere else means unpacking.</summary>
+        /// <summary>Folds the flaps shut (remembering where) or opens them.</summary>
         public void SetClosed(OwnedItem box, bool closed, string where)
         {
-            if (closed)
-            {
-                box.Variant = 1;
-                box.ClosedAt = where ?? "";
-                box.Opened = false;
-            }
-            else
-            {
-                box.Variant = 0;
-                box.Opened = true;
-            }
+            box.Variant = closed ? 1 : 0;
+            if (closed) box.ClosedAt = where ?? "";
             Touch();
         }
 

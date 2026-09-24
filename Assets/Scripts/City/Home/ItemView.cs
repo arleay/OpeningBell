@@ -54,8 +54,8 @@ namespace OpeningBell.City
                     int n = _world.Belongings.Contents(Item).Count;
                     string inside = n == 0 ? "Empty" : $"{n} thing{(n == 1 ? "" : "s")} inside, {_world.Belongings.Contents(Item)[n - 1].Item.Name} on top";
                     if (Item.Closed) return inside + "\n[LMB] open the flaps";
-                    string click = Item.Opened && n > 0 ? "[LMB] take it out" : "[LMB] fold the flaps shut";
-                    return inside + "\n" + click + (n == 0 ? "  [F] throw it away" : "") + "\nHolding something: [LMB] on the box packs it";
+                    string keys = (n > 0 ? "[LMB] take the top one out  " : "[F] throw it away  ") + "[Q] fold the flaps shut";
+                    return inside + "\n" + keys + "\nHolding something: [LMB] on the box packs it";
                 }
                 string condition = Item.Condition >= 0.99 ? "new" : $"{Item.Condition * 100:0}% condition";
                 string colour = Spec.Variants.Length > 1 ? Spec.Variants[Item.Variant] + " · " : "";

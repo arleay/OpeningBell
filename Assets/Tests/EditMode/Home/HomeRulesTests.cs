@@ -44,7 +44,7 @@ namespace OpeningBell.Tests
             Assert.AreEqual("yard", box.ClosedAt);
             StringAssert.Contains("Open", b.CanPack(b.Add("armchair", 0, ItemState.Carried), box));
             b.SetClosed(box, false, null);
-            Assert.IsTrue(box.Opened, "opened after moving: unpacking");
+            Assert.IsFalse(box.Closed);
 
             Assert.AreSame(sofa, b.Unpack(box), "the couch went in last, so it comes out first");
             Assert.AreEqual(ItemState.Carried, sofa.State);
