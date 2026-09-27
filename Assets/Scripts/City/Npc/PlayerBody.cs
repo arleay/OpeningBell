@@ -1,5 +1,6 @@
 using OpeningBell.Gameplay;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace OpeningBell.City
 {
@@ -40,14 +41,38 @@ namespace OpeningBell.City
         private float _restHeadZ;
 
         public bool Visible => _model != null && _model.activeSelf;
+        /// <summary>The body model (mirrors copy its pose).</summary>
+        public GameObject Model => _model;
+        /// <summary>The prefab the body was made from, and the look applied to it (mirrors build a double from these).</summary>
+        public GameObject Source { get; private set; }
+        public OpeningBell.PlayerLook Look { get; private set; }
+        /// <summary>Holding [Z]: the left wrist comes up into view to read the watch.</summary>
+        public bool CheckingWatch { get; private set; }
+        /// <summary>Holds the watch up without the key (tests, cutscenes).</summary>
+        public bool ForceWatch { get; set; }
+        private float _watchWeight;
+        /// <summary>
+        /// Checking the watch is steered by feedback rather than by the rig's bone conventions: each frame the dial's
+        /// actual facing and position are measured and the IK goal's roll (about the forearm) and offset nudged until
+        /// the dial faces the eyes in the middle of the view.
+        /// </summary>
+        private WatchFace _watch;
+        private float _watchRoll;
+        private Vector3 _watchOffset; // from the dial to the hand, in view space
+        private Vector3 _forearm = Vector3.right; // elbow to hand, in view space (last frame's pose)
+        private CityContext _c;
 
-        public void Configure(FirstPersonController player, CityArt art, OpeningBell.PlayerLook look)
+        public void Configure(FirstPersonController player, CityArt art, OpeningBell.PlayerLook look, CityContext c = null)
         {
             _player = player;
             _controller = player.GetComponent<CharacterController>();
             _art = art;
+            _c = c;
             SetLook(look);
         }
+
+        /// <summary>Puts the body back together with the look's jewellery (measured on a fresh model in its rest pose).</summary>
+        public void RefreshJewelry(OpeningBell.PlayerLook look = null) => SetLook(look ?? Look);
 
         /// <summary>Rebuilds the body as the creator's choice (null: the default casual look).</summary>
         public void SetLook(OpeningBell.PlayerLook look)
@@ -62,6 +87,8 @@ namespace OpeningBell.City
             if (source == null && _art.People.Count > 0) source = _art.People[0];
             if (source == null || _art.PeopleAnimator == null) return;
             if (_model != null) Destroy(_model);
+            Source = source;
+            Look = look;
 
             _model = Instantiate(source, transform, false);
             _model.name = "PlayerBody";
@@ -88,6 +115,24 @@ namespace OpeningBell.City
                     _animator.GetBoneTransform(b).localScale = Vector3.one * 0.6f; // humanoid clips never animate scale
             foreach (SkinnedMeshRenderer r in _model.GetComponentsInChildren<SkinnedMeshRenderer>())
                 r.updateWhenOffscreen = true; // the camera sits inside the bounds, which can cull limbs at the edges
+            // Jewellery last: it's measured on this rest pose, hands already shrunk.
+            if (look != null) Adornments.Apply(_c, _model, look.Worn);
+            _watch = _model.GetComponentInChildren<WatchFace>(true);
+            _watchRoll = 0f;
+            _watchOffset = Vector3.zero;
+            SetLayer(_model.transform, OwnBodyLayer);
+        }
+
+        /// <summary>
+        /// The first-person body's layer: the main camera draws it, mirrors don't (they show a double with a head, see
+        /// <see cref="Mirror"/>).
+        /// </summary>
+        public const int OwnBodyLayer = 14;
+
+        private static void SetLayer(Transform t, int layer)
+        {
+            t.gameObject.layer = layer;
+            foreach (Transform child in t) SetLayer(child, layer);
         }
 
         /// <summary>Plays a punch on the upper body; returns seconds until the fist lands.</summary>
@@ -107,7 +152,12 @@ namespace OpeningBell.City
             if (_model == null) return;
             bool show = (_player.ControlEnabled || _player.Browsing) && !_player.Suspended;
             if (_model.activeSelf != show) _model.SetActive(show);
-            if (!show) return;
+            if (!show)
+            {
+                _watchWeight = 0f;
+                _player.GlanceWeight = 0f;
+                return;
+            }
 
             // A real head pivots at the neck, so looking down carries the eyes forward over the chest. The camera
             // pivots in place instead, so the body slides back to match: looking at your feet shows chest, belly and
@@ -141,11 +191,41 @@ namespace OpeningBell.City
             }
             _animator.SetFloat(SpeedParam, rate);
 
+            Keyboard k = Keyboard.current;
+            CheckingWatch = (ForceWatch || (k != null && k.zKey.isPressed && !k.ctrlKey.isPressed)) && _player.ControlEnabled && Time.time >= _upperUntil;
+            _watchWeight = Mathf.MoveTowards(_watchWeight, CheckingWatch ? 1f : 0f, Time.deltaTime * 5f);
+            // Short arms can't lift a wrist to eye level: the eyes go down to meet it.
+            _player.GlanceWeight = Mathf.SmoothStep(0f, 1f, _watchWeight);
             _upperWeight = Mathf.MoveTowards(_upperWeight, Time.time < _upperUntil ? 1f : 0f, Time.deltaTime * (Time.time < _upperUntil ? 20f : 4f));
             _animator.SetLayerWeight(1, _upperWeight);
+            SteerWatch();
             // The head (hair especially) sits in front of the eyes; collapse it so it never fills the view. The cost
             // is a headless shadow, which reads fine.
             if (_head != null) _head.localScale = Vector3.one * 0.001f;
+        }
+
+        /// <summary>
+        /// Measures this frame's pose (IK already applied) and corrects the watch goal for the next: roll the hand about
+        /// the forearm until the dial faces the eyes, and remember where the hand sits relative to the dial so the dial,
+        /// not the hand, is put at the aim point.
+        /// </summary>
+        private void SteerWatch()
+        {
+            if (_watch == null || _watchWeight < 0.3f)
+            {
+                if (_watchWeight <= 0f) _watchRoll = Mathf.MoveTowards(_watchRoll, 0f, 360f * Time.deltaTime);
+                return;
+            }
+            Transform view = _player.CameraPivot;
+            Transform hand = _animator.GetBoneTransform(HumanBodyBones.LeftHand);
+            Transform elbow = _animator.GetBoneTransform(HumanBodyBones.LeftLowerArm);
+            Transform dialCentre = _watch.transform.Find("Hour hand") ?? _watch.transform;
+            _forearm = view.InverseTransformDirection((hand.position - elbow.position).normalized);
+            Vector3 axis = hand.position - elbow.position;
+            Vector3 dial = Vector3.ProjectOnPlane(_watch.transform.up, axis), want = Vector3.ProjectOnPlane(-view.forward, axis);
+            if (dial.sqrMagnitude > 1e-4f && want.sqrMagnitude > 1e-4f)
+                _watchRoll = Mathf.Repeat(_watchRoll + Vector3.SignedAngle(dial, want, axis) * 0.5f + 180f, 360f) - 180f;
+            _watchOffset = Vector3.Lerp(_watchOffset, view.InverseTransformVector(hand.position - dialCentre.position), 0.5f);
         }
 
         /// <summary>
@@ -154,6 +234,27 @@ namespace OpeningBell.City
         /// </summary>
         internal void OnIK()
         {
+            if (_watchWeight > 0f)
+            {
+                // Checking the watch: with the view tipped down (GlanceWeight), the left forearm comes across in front of
+                // the chest, back of the wrist turned to the eyes, the hand off to the right so the wrist (and the dial)
+                // sits in the middle of the view. Close enough for short Tiny arms to reach.
+                Transform view = _player.CameraPivot;
+                float w = Mathf.SmoothStep(0f, 1f, _watchWeight);
+                Vector3 dialAt = view.position + view.forward * (_tiny ? 0.38f : 0.34f) + view.right * 0.04f;
+                _animator.SetIKPosition(AvatarIKGoal.LeftHand, dialAt + view.TransformVector(_watchOffset));
+                _animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, w);
+                // Wrist straight (fingers carry on along the forearm, so the strap stays round it), back of the hand
+                // toward the eyes, then the measured roll correction about the forearm.
+                Vector3 along = view.TransformDirection(_forearm);
+                Vector3 back = Vector3.ProjectOnPlane(-view.forward, along);
+                Quaternion straight = Quaternion.LookRotation(along, back.sqrMagnitude > 1e-4f ? back : view.up) * Quaternion.Euler(0f, 90f, 0f);
+                _animator.SetIKRotation(AvatarIKGoal.LeftHand, Quaternion.AngleAxis(_watchRoll, along) * straight);
+                _animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, w);
+                // Elbow out to the left and forward: the forearm lies across the view, as when you glance at a watch.
+                _animator.SetIKHintPosition(AvatarIKHint.LeftElbow, view.position - view.right * 0.5f + view.forward * 0.3f - view.up * 0.1f);
+                _animator.SetIKHintPositionWeight(AvatarIKHint.LeftElbow, w);
+            }
             float t = Time.time - _punchStart;
             if (t < 0f || t > _punchLand + 0.25f) return;
             float weight = t < _punchLand ? Mathf.SmoothStep(0f, 1f, t / _punchLand) : 1f - Mathf.SmoothStep(0f, 1f, (t - _punchLand) / 0.25f);

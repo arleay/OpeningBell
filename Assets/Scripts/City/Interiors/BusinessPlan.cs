@@ -70,7 +70,7 @@ namespace OpeningBell.City
             all.AddRange(Row(-133.5f, -5.5f, true, 14f, FacadeStyle.Townhouse,
                 S("Harlow Hardware", Trade.Hardware, 18f, 1, Orange, "KEYS CUT · PAINT MIXED"), S("Ink Tide", Trade.Tattoo, 9f, 2, Purple, "TATTOO"),
                 Gap(3f), S("Crumb Bakery", Trade.Bakery, 10f, 1, Cream), S("Smoke Signals", Trade.SmokeShop, 8f, 1, Grey),
-                S("Kell Auto Parts", Trade.AutoParts, 16f, 0, Red), S("For Lease", Trade.Vacant, 16f, 1, Grey, "FOR LEASE · 555-0142")));
+                S("Kell Auto Parts", Trade.AutoParts, 16f, 0, Red), S("Lustre", Trade.Jeweler, 16f, 1, Gold, "FINE JEWELLERY · WATCHES")));
             // Maple St, south side (the alley behind at z -48, then Rail Row under the viaduct).
             all.AddRange(Row(-241.5f, -22.5f, false, 14f, FacadeStyle.Stucco,
                 S("Kell Valley Credit Union", Trade.Bank, 18f, 1, Blue, "ATM INSIDE"), S("Golden Wok", Trade.Restaurant, 14f, 1, Red, "CHINESE"),

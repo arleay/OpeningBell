@@ -130,14 +130,27 @@ namespace OpeningBell.City
             switch (item.Id)
             {
                 case "wall_clock":
+                {
                     GameObject face = k.Cylinder(r, "Face", new Vector3(0f, h / 2f, 0f), w, 0.04f, c.P.Lit(new Color(0.95f, 0.94f, 0.9f)));
                     face.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                    k.Box(r, "Hour hand", new Vector3(0f, h / 2f + 0.04f, -0.025f), new Vector3(0.015f, 0.09f, 0.005f), c.P.Lit(Color.black), collider: false);
-                    k.Box(r, "Minute hand", new Vector3(0.05f, h / 2f, -0.026f), new Vector3(0.11f, 0.01f, 0.005f), c.P.Lit(Color.black), collider: false);
+                    // Hour ticks, and hands on pivots at the centre that keep the game's time (ClockHands).
+                    for (int i = 0; i < 12; i++)
+                    {
+                        float a = i * 30f * Mathf.Deg2Rad;
+                        Vector3 at = new Vector3(Mathf.Sin(a), Mathf.Cos(a), 0f) * (w * 0.42f) + new Vector3(0f, h / 2f, -0.022f);
+                        k.Box(r, "Tick", at, new Vector3(0.008f, i % 3 == 0 ? 0.03f : 0.016f, 0.004f), c.P.Lit(Color.black), collider: false, yaw: 0f)
+                            .transform.localRotation = Quaternion.Euler(0f, 0f, -i * 30f);
+                    }
+                    Transform hour = Kit.Group(r, "Hour hand", new Vector3(0f, h / 2f, -0.025f));
+                    Transform minute = Kit.Group(r, "Minute hand", new Vector3(0f, h / 2f, -0.027f));
+                    k.Box(hour, "Hand", new Vector3(0f, w * 0.13f, 0f), new Vector3(0.014f, w * 0.3f, 0.004f), c.P.Lit(Color.black), collider: false);
+                    k.Box(minute, "Hand", new Vector3(0f, w * 0.19f, 0f), new Vector3(0.01f, w * 0.42f, 0.004f), c.P.Lit(Color.black), collider: false);
+                    r.gameObject.AddComponent<ClockHands>().Configure(c, hour, minute);
                     break;
+                }
                 case "mirror":
                     k.Box(r, "Frame", new Vector3(0f, h / 2f, 0f), new Vector3(w, h, 0.03f), c.P.Lit(new Color(0.35f, 0.25f, 0.18f)), collider: false);
-                    k.Box(r, "Glass", new Vector3(0f, h / 2f, -0.017f), new Vector3(w - 0.08f, h - 0.08f, 0.004f), c.P.Lit(new Color(0.75f, 0.8f, 0.82f), 0.95f), collider: false);
+                    Mirror.Create(c, r, "Glass", new Vector3(0f, h / 2f, -0.017f), Vector3.back, new Vector2(w - 0.08f, h - 0.08f));
                     break;
                 default:
                     k.Box(r, "Frame", new Vector3(0f, h / 2f, 0f), new Vector3(w, h, 0.03f), c.P.Lit(new Color(0.1f, 0.1f, 0.1f)), collider: false);

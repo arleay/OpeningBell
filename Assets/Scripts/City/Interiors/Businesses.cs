@@ -7,7 +7,7 @@ namespace OpeningBell.City
     {
         Laundromat, Pawn, Liquor, Barber, Thrift, Diner, Pharmacy, Hardware, Tattoo, Bakery, AutoParts, SmokeShop,
         Bank, Restaurant, Books, Repair, UsedFurniture, Bar, Discount, Florist, Gym, Vacant, Arcade, Nightclub,
-        FastFood, Pizza, MotelOffice, Supermarket, CarWash, Moto, FishMarket, Police,
+        FastFood, Pizza, MotelOffice, Supermarket, CarWash, Moto, FishMarket, Police, Jeweler,
     }
 
     /// <summary>One storefront: where it stands (front centre on the sidewalk edge, facing out of <see cref="Inward"/>), its size and trade.</summary>
@@ -101,6 +101,7 @@ namespace OpeningBell.City
             [Trade.Supermarket] = ("Casual", "Hi, find everything okay?", new[] { "Produce is fresh on Mondays.", "The deli closes at eight." }, new[] { ("Groceries", 38m, "Paper or plastic?"), ("Sandwich", 6.5m, "Enjoy.") }),
             [Trade.CarWash] = ("Worker", "Basic or deluxe?", new[] { "Pull in when the light's green.", "Deluxe includes the wax." }, new[] { ("Car wash", 12m, "Pull on through.") }),
             [Trade.Moto] = ("Punk", "Looking at bikes?", new[] { "Helmets are on the back wall.", "New models in the spring." }, new[] { ("Riding gloves", 40m, "Stay safe out there.") }),
+            [Trade.Jeweler] = ("Suit", "Welcome to Lustre. Anything catching your eye?", new[] { "Everything in the cases is real, I promise.", "Try it on, the mirror's by the window.", "Watches on the left, diamonds on the right." }, new (string, decimal, string)[0]),
             [Trade.FishMarket] = ("Worker", "Came in on the boats this morning.", new[] { "Salmon's running. Get it while it's cheap.", "We close when it's gone." }, new[] { ("Fresh salmon", 14m, "Keep it cold."), ("Crab", 18m, "Watch the claws.") }),
         };
 
@@ -219,6 +220,7 @@ namespace OpeningBell.City
             Trade.Bank => "Teller",
             Trade.Police => "Desk officer",
             Trade.Nightclub => "Bouncer",
+            Trade.Jeweler => "Jeweller",
             _ => "Clerk",
         };
 
@@ -237,12 +239,13 @@ namespace OpeningBell.City
             Trade.Bar or Trade.Nightclub or Trade.Arcade => new Color(0.18f, 0.16f, 0.18f),
             Trade.Diner => new Color(0.86f, 0.82f, 0.72f),
             Trade.Tattoo or Trade.SmokeShop => new Color(0.25f, 0.23f, 0.26f),
+            Trade.Jeweler => new Color(0.17f, 0.2f, 0.28f),
             _ => new Color(0.88f, 0.87f, 0.83f),
         };
 
         private static Finish FloorFinish(Trade t) => t switch
         {
-            Trade.Diner or Trade.Laundromat or Trade.Pharmacy => Finish.Tiles,
+            Trade.Diner or Trade.Laundromat or Trade.Pharmacy or Trade.Jeweler => Finish.Tiles,
             Trade.Gym => Finish.Concrete,
             _ => Finish.WoodFloor,
         };
@@ -253,6 +256,7 @@ namespace OpeningBell.City
             Trade.Bar or Trade.Nightclub => new Color(0.25f, 0.18f, 0.12f),
             Trade.Gym => new Color(0.15f, 0.15f, 0.16f),
             Trade.Laundromat or Trade.Pharmacy => new Color(0.8f, 0.8f, 0.78f),
+            Trade.Jeweler => new Color(0.9f, 0.88f, 0.84f),
             _ => new Color(0.5f, 0.42f, 0.32f),
         };
 
@@ -439,6 +443,9 @@ namespace OpeningBell.City
                     k.Box(r, "Key board", new Vector3(0f, 1.8f, d - 0.05f), new Vector3(1.4f, 0.9f, 0.05f), counter, collider: false);
                     k.Fit(r, "loungeChair", new Vector3(-hw + 0.8f, 0f, front), new Vector3(0.9f, 0f, 0f), 90f);
                     k.Box(r, "Ice machine", new Vector3(hw - 0.6f, 0.8f, front), new Vector3(0.8f, 1.6f, 0.8f), c.P.Lit(new Color(0.85f, 0.85f, 0.88f), 0.5f));
+                    break;
+                case Trade.Jeweler:
+                    Jeweler.Dress(c, r, hw, d, front, back);
                     break;
                 case Trade.CarWash:
                 case Trade.Moto:

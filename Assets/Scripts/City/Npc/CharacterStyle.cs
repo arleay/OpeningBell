@@ -41,10 +41,16 @@ namespace OpeningBell.City
             return 0;
         }
 
-        /// <summary>Tints a character instance (its own material copies) to the look.</summary>
+        /// <summary>
+        /// The skin "the model's own colour" stands for when the model has none: the Tiny set's re-rig left its Skin
+        /// material near black (0.013), which drew every Tiny face and hand black.
+        /// </summary>
+        public static readonly Color DefaultSkin = new Color(0.94f, 0.76f, 0.62f);
+
+        /// <summary>Tints a character instance (its own material copies) to the look (null: just fixes a missing skin).</summary>
         public static void Apply(GameObject character, OpeningBell.PlayerLook look)
         {
-            if (look == null) return;
+            look ??= new OpeningBell.PlayerLook();
             foreach (SkinnedMeshRenderer r in character.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 Material[] mats = r.materials; // instances: this character only
@@ -52,6 +58,7 @@ namespace OpeningBell.City
                 for (int i = 0; i < mats.Length; i++)
                 {
                     string n = mats[i].name;
+                    if (n.Contains("Skin") && look.Skin == 0 && mats[i].color.maxColorComponent < 0.05f) mats[i].color = DefaultSkin;
                     if (n.Contains("Skin") && look.Skin > 0) mats[i].color = Skins[look.Skin % Skins.Length];
                     else if (n.Contains("Hair") && look.Hair > 0) mats[i].color = Hairs[look.Hair % Hairs.Length];
                     else if (i == main && look.Top > 0) mats[i].color = Tops[look.Top % Tops.Length];

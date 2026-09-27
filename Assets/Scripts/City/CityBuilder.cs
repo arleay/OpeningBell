@@ -180,7 +180,7 @@ namespace OpeningBell.City
             if (art != null && art.HasPeople)
             {
                 body = player.gameObject.AddComponent<PlayerBody>();
-                body.Configure(player, art, game.Look);
+                body.Configure(player, art, game.Look, _c);
             }
             player.gameObject.AddComponent<PlayerFists>().Configure(player, body, Pedestrians);
             Minimap = gameObject.AddComponent<Minimap>();

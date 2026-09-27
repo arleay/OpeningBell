@@ -90,6 +90,8 @@ namespace OpeningBell.City
             GameObject model = Instantiate(matches[rng.Next(matches.Count)], transform, false);
             model.name = "Body";
             _animator = model.GetComponent<Animator>();
+            // A skin tone and hair colour of their own (the creator's palette), so a crowd isn't one person repeated.
+            CharacterStyle.Apply(model, new OpeningBell.PlayerLook { Skin = 1 + rng.Next(CharacterStyle.Skins.Length - 1), Hair = rng.Next(3) == 0 ? 0 : 1 + rng.Next(6) });
             // Sized by the head rather than a fixed factor: the costume set varies (a pug, a wizard), while seats, cups
             // and colliders assume a head at about 1.5–1.65 m.
             Transform headBone = _animator.GetBoneTransform(HumanBodyBones.Head);

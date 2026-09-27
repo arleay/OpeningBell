@@ -53,6 +53,14 @@ namespace OpeningBell.Gameplay
         private float _dip, _dipVelocity; // landing spring, metres
 
         public Transform CameraPivot => cameraPivot;
+
+        /// <summary>
+        /// Something the player is looking at below them for a moment (their watch): the view tips down to at least
+        /// <see cref="GlanceDownTo"/> degrees, by <see cref="GlanceWeight"/> (0 none, 1 fully). Mouse look is untouched
+        /// underneath, so letting go returns the view to where it was.
+        /// </summary>
+        public float GlanceDownTo { get; set; } = 66f;
+        public float GlanceWeight { get; set; }
         public GameInput Input => input;
         public float LookSensitivity => lookSensitivity * GameSettings.MouseSensitivity;
 
@@ -182,7 +190,8 @@ namespace OpeningBell.Gameplay
 
             float lean = -strafe * strafeLean + Mathf.Sin(_stepPhase) * 0.35f * _bobWeight;
             _roll = Mathf.Lerp(_roll, lean, 1f - Mathf.Exp(-10f * dt));
-            cameraPivot.localRotation = Quaternion.Euler(_pitch, 0f, _roll);
+            float pitch = Mathf.Lerp(_pitch, Mathf.Max(_pitch, GlanceDownTo), Mathf.Clamp01(GlanceWeight));
+            cameraPivot.localRotation = Quaternion.Euler(pitch, 0f, _roll);
 
             if (_camera != null)
             {

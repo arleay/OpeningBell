@@ -20,6 +20,7 @@ namespace OpeningBell.City
         private static readonly int BaseMap = Shader.PropertyToID("_BaseMap");
         private static readonly int EmissionMap = Shader.PropertyToID("_EmissionMap");
         private static readonly int Smoothness = Shader.PropertyToID("_Smoothness");
+        private static readonly int Metallic = Shader.PropertyToID("_Metallic");
 
         public Font Font { get; }
 
@@ -50,6 +51,35 @@ namespace OpeningBell.City
             if (_cache.TryGetValue(key, out Material m)) return m;
             m = new Material(_lit) { name = "City Lit", color = color };
             m.SetFloat(Smoothness, smoothness);
+            return _cache[key] = m;
+        }
+
+        /// <summary>Polished metal (jewellery, watch cases): fully metallic, so its colour comes from what it reflects.</summary>
+        public Material Metal(Color color, float smoothness = 0.88f)
+        {
+            string key = $"metal{color}{smoothness}";
+            if (_cache.TryGetValue(key, out Material m)) return m;
+            m = new Material(_lit) { name = "City Metal", color = color };
+            m.SetFloat(Smoothness, smoothness);
+            m.SetFloat(Metallic, 1f);
+            return _cache[key] = m;
+        }
+
+        /// <summary>
+        /// A cut stone: mirror-smooth, and a faint glow of its own colour standing in for light bouncing about inside it
+        /// (the renderer has no refraction), so a ruby still reads red in a dim room.
+        /// </summary>
+        public Material Gem(Color color, float fire = 0.55f)
+        {
+            string key = $"gem{color}{fire}";
+            if (_cache.TryGetValue(key, out Material m)) return m;
+            m = new Material(_litEmissive) { name = "City Gem", color = color };
+            m.SetTexture(BaseMap, Texture2D.whiteTexture);
+            m.SetTexture(EmissionMap, Texture2D.whiteTexture);
+            m.SetColor(EmissionColor, color * fire);
+            // Smooth but not a mirror: a mirror-smooth facet only shows what it reflects, which in a dim shop is black.
+            m.SetFloat(Smoothness, 0.86f);
+            m.SetFloat(Metallic, 0f);
             return _cache[key] = m;
         }
 

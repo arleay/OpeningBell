@@ -53,8 +53,17 @@ namespace OpeningBell
         public int Model;
         public string ModelLabel = "";
         public int Skin, Hair, Top;
+        /// <summary>Jewellery bought (catalog ids) and the pieces being worn, at most one per slot. Additive: older saves own none.</summary>
+        public List<string> Jewelry = new List<string>();
+        public List<string> Worn = new List<string>();
 
-        public PlayerLook Copy() => (PlayerLook)MemberwiseClone();
+        public PlayerLook Copy()
+        {
+            var copy = (PlayerLook)MemberwiseClone();
+            copy.Jewelry = new List<string>(Jewelry ?? new List<string>());
+            copy.Worn = new List<string>(Worn ?? new List<string>());
+            return copy;
+        }
     }
 
     [Serializable]
