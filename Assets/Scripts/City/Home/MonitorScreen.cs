@@ -9,10 +9,11 @@ using UnityEngine;
 namespace OpeningBell.City
 {
     /// <summary>
-    /// What a placed monitor shows, drawn from the live simulation: a symbol's 5-minute chart, the watchlist, your
+    /// What a placed monitor shows, drawn from the live simulation: a symbol's 1-minute chart, the watchlist, your
     /// positions, the news, the market's movers, or nothing. Charts are painted into a small texture from a shared
-    /// pool; lists are a text overlay. Screens only redraw when seen: every second up close, less often further
-    /// away, never beyond <see cref="FarDistance"/>, so a room of thirty screens costs a few a frame at most.
+    /// pool; lists are a text overlay. Screens only redraw when seen: four times a second up close (so prices visibly
+    /// tick), less often further away, never beyond <see cref="FarDistance"/>. A chart redraw is one 256×160 fill,
+    /// so a room of thirty screens stays well under a millisecond a frame.
     /// </summary>
     public sealed class MonitorScreen : MonoBehaviour
     {
@@ -102,7 +103,7 @@ namespace OpeningBell.City
             Camera cam = Camera.main;
             float d = cam != null ? Vector3.Distance(cam.transform.position, transform.position) : 0f;
             if (d > FarDistance) { _next = Time.time + 2f; return; }
-            _next = Time.time + (d < 6f ? 1f : d < 15f ? 3f : 8f);
+            _next = Time.time + (d < 6f ? 0.25f : d < 15f ? 1f : 4f);
             Draw(i);
         }
 
@@ -157,14 +158,17 @@ namespace OpeningBell.City
             for (int x = x0; x < x1; x++) _pixels[y * Width + x] = c;
         }
 
-        /// <summary>The last 48 five-minute candles, scaled to the screen, with the last price as a line.</summary>
+        /// <summary>
+        /// The last 48 one-minute candles, scaled to the screen, with the last price as a line. One-minute candles so
+        /// the chart moves while you walk about (at 30× game speed a new candle every two seconds).
+        /// </summary>
         private void Chart(MarketSimulation market, string symbol)
         {
             Fill(0, 0, Width, Height, new Color32(12, 15, 22, 255));
             SecurityRuntimeState sec = null;
             foreach (SecurityRuntimeState s in market.Securities) if (s.Ticker == symbol) sec = s;
             if (sec == null) { Apply(); _text.text = Shown = symbol + "\nno data"; return; }
-            CandleSeries series = sec.Candles.Get(Timeframe.Minute5);
+            CandleSeries series = sec.Candles.Get(Timeframe.Minute1);
             int n = Mathf.Min(48, series.Count), first = series.Count - n;
             decimal lo = decimal.MaxValue, hi = decimal.MinValue;
             for (int k = first; k < series.Count; k++) { lo = System.Math.Min(lo, series[k].Low); hi = System.Math.Max(hi, series[k].High); }
@@ -190,7 +194,7 @@ namespace OpeningBell.City
                 Fill(0, last, Width, last + 1, new Color32(240, 200, 80, 255));
             }
             Apply();
-            _text.text = Shown = $"{symbol}  {sec.Last.ToString("0.00", C)}  {Signed(sec.ChangePercent)}%";
+            _text.text = Shown = $"{symbol}  {sec.Last.ToString("0.00", C)}  {Signed(sec.ChangePercent)}%" + SessionTag(market);
         }
 
         private string TextFor(MonitorView view, MarketSimulation market)
@@ -199,7 +203,7 @@ namespace OpeningBell.City
             switch (view)
             {
                 case MonitorView.Watchlist:
-                    sb.AppendLine("WATCHLIST");
+                    sb.AppendLine("WATCHLIST" + SessionTag(market));
                     foreach (SecurityRuntimeState s in market.Securities)
                         sb.AppendLine($"{s.Ticker,-6}{s.Last.ToString("0.00", C),9}  {Signed(s.ChangePercent),6}%");
                     break;
@@ -219,7 +223,7 @@ namespace OpeningBell.City
                     if (news.Count == 0) sb.AppendLine("Quiet so far");
                     break;
                 case MonitorView.Market:
-                    sb.AppendLine("MOVERS");
+                    sb.AppendLine("MOVERS" + SessionTag(market));
                     var list = new List<SecurityRuntimeState>(market.Securities);
                     list.Sort((x, y) => y.ChangePercent.CompareTo(x.ChangePercent));
                     foreach (SecurityRuntimeState s in list) sb.AppendLine($"{s.Ticker,-6}{Signed(s.ChangePercent),7}%");
@@ -227,6 +231,16 @@ namespace OpeningBell.City
             }
             return sb.ToString().TrimEnd();
         }
+
+        /// <summary>Outside regular hours prices barely move (or not at all), so the screen says why.</summary>
+        private static string SessionTag(MarketSimulation market) =>
+            market.Session switch
+            {
+                MarketSession.Closed => "  CLOSED",
+                MarketSession.Premarket => "  PRE-MARKET",
+                MarketSession.AfterHours => "  AFTER HOURS",
+                _ => "",
+            };
 
         private static string Signed(decimal d) => (d >= 0 ? "+" : "") + d.ToString("0.00", C);
         private static string Clip(string s, int n) => s.Length <= n ? s : s.Substring(0, n - 1) + "…";

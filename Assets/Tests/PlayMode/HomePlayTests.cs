@@ -358,6 +358,18 @@ namespace OpeningBell.Tests
             StringAssert.Contains("6 screens", Why(seventh), "no seventh screen");
             W.Hands.Stow(house);
 
+            // Taking a screen down leaves a gap: aiming at a screen still hanging puts the next one in the gap, not on top.
+            ItemView down = W.Views.First(v => v.Spec.IsMonitor && v.Item.MountedOn == armView.Item.Uid);
+            Vector3 gap = down.transform.position;
+            W.Hands.PickUp(down);
+            yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "home-carrying-monitor.png");
+            ItemView hanging = W.Views.First(v => v != down && v.Spec.IsMonitor && v.Item.MountedOn == armView.Item.Uid);
+            Vector3 face = hanging.transform.position + Vector3.up * 0.2f;
+            Carrier.Target back = W.Hands.Evaluate(new Ray(face - hanging.transform.forward * 1.5f, hanging.transform.forward));
+            Assert.IsTrue(back.Valid, back.Why);
+            Assert.Less(Vector3.Distance(back.At, gap), 0.05f, "into the gap");
+            W.Hands.Place(back);
+
             // Real data on the screens.
             var screens = W.Views.Where(v => v != null && v.Spec.IsMonitor && v.Item.MountedOn != 0).Select(v => v.GetComponent<MonitorScreen>()).ToArray();
             Assert.AreEqual(6, screens.Length);
@@ -449,7 +461,7 @@ namespace OpeningBell.Tests
             float ms = (Time.realtimeSinceStartup - start) * 1000f / frames;
             Debug.Log($"PERF 30 screens: {redraws} redraws in 3 s, {frames} frames, {ms:F1} ms/frame, {MonitorScreen.Live} textures live");
             Assert.Greater(redraws, 10, "the screens in view do redraw");
-            Assert.LessOrEqual(redraws, 30 * 4, "each screen at most about once a second");
+            Assert.LessOrEqual(redraws, 30 * 3 * 5, "each screen at most about four times a second");
             Assert.LessOrEqual(MonitorScreen.Live, 30, "textures pooled, one per chart at most");
             yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "home-thirty-screens.png");
         }
@@ -540,6 +552,49 @@ namespace OpeningBell.Tests
         /// that comes with it, the rooms and the terrace, and the view by day, at dusk and at night (home-penthouse-*.png).
         /// </summary>
         [UnityTest]
+        public IEnumerator Penthouse_LiftDownToTheGarage_RampUpToTheStreet()
+        {
+            yield return Setup();
+            HomeSpec ph = W.Find(HomeSales.PenthouseId);
+            _game.Economy.DevDeposit(20000000m, _game.Clock.Now);
+            Assert.IsNull(W.Buy(ph));
+            Elevator lift = Object.FindObjectsByType<Elevator>(FindObjectsSortMode.None).First(e => e.name == "Harborview lift");
+            float lobbyY = lift.transform.position.y;
+
+            // Into the car at the lobby, P1.
+            lift.Logic.Request(0);
+            yield return WaitUntil(() => lift.Logic.DoorOpen > 0.95f, 15f, "the lift at the lobby");
+            _player.PlaceAt(lift.transform.position + Vector3.up * 0.05f, 180f, 0f);
+            yield return null;
+            ElevatorButton p1 = lift.GetComponentsInChildren<ElevatorButton>().First(b => b.name == "Button P1" && Mathf.Abs(b.transform.position.y - lobbyY - 1.2f) < 1f);
+            Assert.IsNull(p1.LockReason?.Invoke(), "residents ride down");
+            float asked = Time.time;
+            p1.Interact();
+            yield return WaitUntil(() => lift.CarFloor == 2 && lift.Logic.DoorOpen > 0.95f, 15f, "down to the garage");
+            Assert.Less(Time.time - asked, 13f, "doors, 3 s down, doors: not the 88 m ride (~21 s)");
+            Assert.AreEqual(HarborviewTower.Grade + HarborviewTower.GarageFloor, _player.transform.position.y, 0.3f, "standing on the garage floor");
+
+            // Out through the lift lobby: bays either side of the aisle, cars in some of them.
+            Vector3 garage = _city.Anchors["harborview_garage"];
+            _player.PlaceAt(garage + new Vector3(4f, 0.05f, 2f), 300f, 4f);
+            for (int i = 0; i < 6; i++) yield return null;
+            yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "home-garage.png");
+            Assert.IsNotNull(GameObject.Find("Bay lines"), "marked bays");
+
+            // The ramp: solid all the way up, and open to the sky over the cut.
+            float g = HarborviewTower.Grade;
+            for (float x = 231f; x < 252f; x += 3f)
+            {
+                Assert.IsTrue(Physics.Raycast(new Vector3(x, g + 6f, 133f), Vector3.down, out RaycastHit hit, 20f), "ramp under x " + x);
+                float expected = g + HarborviewTower.GarageFloor * (x - 228.5f) / 24f;
+                if (x < 246f) Assert.AreEqual(expected, hit.point.y, 0.15f, "the ramp's the first thing down from the sky at x " + x);
+            }
+            _player.PlaceAt(new Vector3(250f, g + HarborviewTower.GarageFloor + 0.05f, 133f), 270f, -6f);
+            for (int i = 0; i < 6; i++) yield return null;
+            yield return CaptureCamera(_player.GetComponentInChildren<Camera>(), "home-garage-ramp.png");
+        }
+
+        [UnityTest]
         public IEnumerator Penthouse_LiftToTheTop_FurnishedWithAView()
         {
             yield return Setup();
@@ -567,7 +622,7 @@ namespace OpeningBell.Tests
             yield return WaitUntil(() => lift.Logic.DoorOpen > 0.95f, 15f, "the lift at the lobby");
             _player.PlaceAt(lift.transform.position + Vector3.up * 0.05f, 180f, 0f);
             yield return null;
-            lift.GetComponentsInChildren<ElevatorButton>().First(b => b.name == "Button PH" && b.transform.position.y < lift.transform.position.y + 3f).Interact();
+            lift.GetComponentsInChildren<ElevatorButton>().First(b => b.name == "Button PH" && Mathf.Abs(b.transform.position.y - lift.transform.position.y - 1.2f) < 1f).Interact();
             yield return WaitUntil(() => _player.transform.position.y > HarborviewTower.Grade + 80f, 40f, "the ride up");
             Assert.AreEqual(1, lift.CarFloor);
 

@@ -50,6 +50,10 @@ namespace OpeningBell.City
         private FirstPersonController _player;
         private PlayerInteractor _interactor;
         private ItemView _held;
+        private Vector3 _heldScale = Vector3.one;
+        /// <summary>Camera-space centre of a held item, and the largest it's drawn (m): the bottom-right corner of the view.</summary>
+        private static readonly Vector3 HeldAt = new Vector3(0.3f, -0.24f, 0.6f);
+        private const float HeldSize = 0.22f;
         private Record? _from; // where the held item was picked up from
         private readonly Stack<Record> _undo = new Stack<Record>();
         private GameObject _ghost;
@@ -107,10 +111,20 @@ namespace OpeningBell.City
             SetLayer(v.transform, 2); // Ignore Raycast: the aim looks past what you're holding
             HomeItem spec = v.Spec;
             bool large = spec.Large && !v.Item.Boxed;
-            // Small things in front of you; big ones out of the way (the preview shows where they're going).
+            // Big furniture is carried out of view (the preview shows where it's going); anything else sits small in
+            // the bottom-right corner, shrunk to fit a HeldSize cube, so it never blocks where you're walking or aiming.
+            _heldScale = v.transform.localScale;
             v.transform.SetParent(View, false);
-            v.transform.localPosition = large ? new Vector3(0f, -3f, 0f) : spec.IsBox ? new Vector3(0f, -0.62f, 0.8f) : new Vector3(0.18f, -0.42f, 0.55f); // a box in both arms, low
-            v.transform.localRotation = Quaternion.identity;
+            if (large) v.transform.localPosition = new Vector3(0f, -3f, 0f);
+            else
+            {
+                float pad = v.Item.Boxed ? 0.08f : 0f;
+                float h = spec.Height + pad;
+                float k = Mathf.Min(1f, HeldSize / Mathf.Max(spec.Width + pad, h, spec.Depth + pad));
+                v.transform.localScale = _heldScale * k;
+                v.transform.localPosition = HeldAt - new Vector3(0f, h * k / 2f, 0f); // the pivot is the item's base
+            }
+            v.transform.localRotation = Quaternion.Euler(0f, -20f, 0f); // turned a little towards the middle of the view
             foreach (Renderer r in v.GetComponentsInChildren<Renderer>()) r.enabled = !large;
             _player.HandsFull = true;
             _yaw = _player.transform.eulerAngles.y + 180f; // facing you
@@ -121,6 +135,7 @@ namespace OpeningBell.City
         {
             if (_held == null) return;
             _held.Solid.enabled = true;
+            _held.transform.localScale = _heldScale;
             SetLayer(_held.transform, 0);
             foreach (Renderer r in _held.GetComponentsInChildren<Renderer>()) r.enabled = true;
             _held = null;
@@ -262,11 +277,21 @@ namespace OpeningBell.City
                 any = true;
                 break;
             }
+            // A screen in hand snaps to the free arm slot nearest the aim (see ArmSnap), whatever the ray hit first.
+            int armSlot = -1;
+            Vector3 slotAt = default;
+            ItemView snapArm = spec.IsMonitor ? ArmSnap(ray, any ? hit.distance : Reach, out armSlot, out slotAt) : null;
+            if (snapArm != null)
+            {
+                hit.point = slotAt;
+                any = true;
+            }
             if (!any) return t;
 
             Vector3 n = hit.normal;
-            t.Onto = hit.collider.GetComponentInParent<ItemView>();
-            t.Bed = hit.collider.GetComponentInParent<CargoBed>();
+            t.Onto = snapArm != null ? snapArm : hit.collider.GetComponentInParent<ItemView>();
+            t.Bed = snapArm != null ? null : hit.collider.GetComponentInParent<CargoBed>();
+            if (snapArm != null) n = Vector3.up;
             if (t.Onto != null && t.Onto == _held) t.Onto = null;
             // Aiming at a screen already on an arm means that arm.
             if (spec.IsMonitor && t.Onto != null && t.Onto.Spec.IsMonitor && _w.Belongings.Get(t.Onto.Item.MountedOn) is OwnedItem holder
@@ -326,8 +351,8 @@ namespace OpeningBell.City
                     if (t.Why != null) return t;
                     if (t.Onto.Spec.IsArm)
                     {
-                        int slot = 0;
-                        foreach (OwnedItem o in _w.Belongings.MountedOn(onto.Uid)) if (o.Item.IsMonitor) slot++;
+                        int slot = armSlot >= 0 ? armSlot : NearestFreeSlot(t.Onto, hit.point);
+                        if (slot < 0) { t.Why = $"The {t.Onto.Spec.Name.ToLowerInvariant()} is full."; return t; }
                         t.At = t.Onto.transform.TransformPoint(HomeModels.ArmSlot(t.Onto.Spec.Arms, slot));
                         t.Yaw = t.Onto.transform.eulerAngles.y;
                     }
@@ -375,6 +400,76 @@ namespace OpeningBell.City
             t.Valid = true;
             t.Why = null;
             return t;
+        }
+
+        /// <summary>Screens within this far of the aim ray snap to an arm slot (slots are 0.66 m apart).</summary>
+        private const float SnapRadius = 0.4f;
+
+        /// <summary>
+        /// The arm slot a held screen should go to: of every free slot on every arm in reach, the one whose screen
+        /// centre lies closest to the aim ray, within <see cref="SnapRadius"/>, and not behind whatever the ray hit
+        /// (a wall between you and the arm wins). Null if none.
+        /// </summary>
+        private ItemView ArmSnap(Ray ray, float hitDistance, out int slot, out Vector3 at)
+        {
+            slot = -1;
+            at = default;
+            ItemView best = null;
+            float bestOff = SnapRadius;
+            float centre = _held.Spec.Height / 2f;
+            foreach (ItemView arm in _w.Views)
+            {
+                if (arm == null || arm == _held || !arm.Spec.IsArm || arm.Item.State != ItemState.Placed || arm.Item.MountedOn == 0) continue;
+                foreach (int s in FreeSlots(arm))
+                {
+                    Vector3 p = arm.transform.TransformPoint(HomeModels.ArmSlot(arm.Spec.Arms, s)) + Vector3.up * centre;
+                    Vector3 v = p - ray.origin;
+                    float along = Vector3.Dot(v, ray.direction);
+                    if (along < 0f || along > Reach || along > hitDistance + 0.6f) continue;
+                    float off = (v - ray.direction * along).magnitude;
+                    if (off >= bestOff) continue;
+                    bestOff = off;
+                    best = arm;
+                    slot = s;
+                    at = p;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Slots on an arm with no screen hanging in them. Screens don't store their slot, so a screen claims whichever
+        /// slot it sits nearest; that way a gap left by taking one screen down is filled first, not doubled up.
+        /// </summary>
+        private List<int> FreeSlots(ItemView arm)
+        {
+            int arms = arm.Spec.Arms;
+            var taken = new bool[arms];
+            foreach (OwnedItem m in _w.Belongings.MountedOn(arm.Item.Uid))
+            {
+                if (m.Item?.IsMonitor != true) continue;
+                Vector3 local = arm.transform.InverseTransformPoint(new Vector3(m.X, m.Y, m.Z));
+                int nearest = 0;
+                for (int s = 1; s < arms; s++)
+                    if ((HomeModels.ArmSlot(arms, s) - local).sqrMagnitude < (HomeModels.ArmSlot(arms, nearest) - local).sqrMagnitude) nearest = s;
+                taken[nearest] = true;
+            }
+            var free = new List<int>();
+            for (int s = 0; s < arms; s++) if (!taken[s]) free.Add(s);
+            return free;
+        }
+
+        /// <summary>The free slot on <paramref name="arm"/> nearest a world point, or -1 when it's full.</summary>
+        private int NearestFreeSlot(ItemView arm, Vector3 point)
+        {
+            int best = -1;
+            float bestD = float.MaxValue;
+            foreach (int s in FreeSlots(arm))
+            {
+                float d = (arm.transform.TransformPoint(HomeModels.ArmSlot(arm.Spec.Arms, s)) - point).sqrMagnitude;
+                if (d < bestD) { bestD = d; best = s; }
+            }
+            return best;
         }
 
         private static bool BlocksDoor(Bounds item)

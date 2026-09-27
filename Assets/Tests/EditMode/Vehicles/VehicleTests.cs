@@ -23,12 +23,12 @@ namespace OpeningBell.Tests
 
         /// <summary>Rides for <paramref name="seconds"/> and returns the state.</summary>
         private static RideState Ride(VehicleModel m, double seconds, RideInput input, RideGround ground, RideSpec spec = null,
-            double startSpeed = 0, double battery = double.NaN, double gameSpeed = 30)
+            double startSpeed = 0, double battery = double.NaN)
         {
             var s = new RideState { Speed = startSpeed };
             double wh = double.IsNaN(battery) ? m.Spec.BatteryWh : battery;
             for (double t = 0; t < seconds; t += 0.02)
-                RideDynamics.Step(m.Kind, spec ?? m.Spec, s, input, ground, 0.02, gameSpeed, 1, 1, ref wh);
+                RideDynamics.Step(m.Kind, spec ?? m.Spec, s, input, ground, 0.02, 1, 1, ref wh);
             return s;
         }
 
@@ -119,7 +119,7 @@ namespace OpeningBell.Tests
         }
 
         [Test]
-        public void EBike_AssistsToItsCutoff_DrainsByGameTime_AndIsHeavyWhenFlat()
+        public void EBike_AssistsToItsCutoff_DrainsByRealTime_AndIsHeavyWhenFlat()
         {
             VehicleModel e = Model("ebike_commuter");
             double commuter = Ride(Model("bike_commuter"), 8, Pedal, Asphalt).Speed;
@@ -129,18 +129,12 @@ namespace OpeningBell.Tests
             Assert.Less(Ride(e, 90, Pedal, Asphalt, battery: 0).Speed, Ride(Model("bike_commuter"), 90, Pedal, Asphalt).Speed + 0.2,
                 "flat battery: just a heavy bike");
 
-            // Energy follows game time: a minute of riding at 30× is half an hour of motor use.
-            double wh = e.Spec.BatteryWh, whFast = e.Spec.BatteryWh;
+            // Energy follows the ride's real seconds (game speed plays no part): a full charge lasts a long session.
+            double wh = e.Spec.BatteryWh;
             var s = new RideState();
-            var s2 = new RideState();
-            for (int i = 0; i < 3000; i++)
-            {
-                RideDynamics.Step(e.Kind, e.Spec, s, Pedal, Asphalt, 0.02, 1, 1, 1, ref wh);
-                RideDynamics.Step(e.Kind, e.Spec, s2, Pedal, Asphalt, 0.02, 30, 1, 1, ref whFast);
-            }
-            double used = e.Spec.BatteryWh - wh, usedFast = e.Spec.BatteryWh - whFast;
-            Assert.AreEqual(30, usedFast / used, 0.01);
-            Assert.That(usedFast / e.Spec.BatteryWh, Is.InRange(0.08, 0.35), "a minute's ride at game speed: a noticeable, not brutal, bite");
+            for (int i = 0; i < 3000; i++) RideDynamics.Step(e.Kind, e.Spec, s, Pedal, Asphalt, 0.02, 1, 1, ref wh);
+            double minutesPerCharge = e.Spec.BatteryWh / (e.Spec.BatteryWh - wh);
+            Assert.That(minutesPerCharge, Is.InRange(60.0, 400.0), "an hour or more of real riding per charge");
         }
 
         [Test]

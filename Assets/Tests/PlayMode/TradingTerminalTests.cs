@@ -15,6 +15,38 @@ namespace OpeningBell.Tests
     /// <summary>Phase 3 acceptance: trade the simulated market entirely through the terminal UI.</summary>
     public class TradingTerminalTests : SceneTestBase
     {
+        /// <summary>Standing up, the desk monitors still show the market moving (the world texture keeps repainting).</summary>
+        [UnityTest]
+        public IEnumerator WorldTexture_KeepsMoving_WhileStanding()
+        {
+            yield return LoadMain();
+            var game = Find<GameBootstrap>();
+            var terminal = Find<TradingTerminal>();
+            Assert.IsFalse(terminal.IsOnScreen, "standing: terminal renders into the monitor texture");
+            game.SpeedMultiplier = 2000f;
+            yield return WaitUntil(() => game.Market.Session == MarketSession.Regular, 60f, "regular session");
+            game.SpeedMultiplier = 1f;
+            for (int i = 0; i < 5; i++) yield return null;
+            int before = Hash(terminal.WorldTexture);
+            float until = Time.realtimeSinceStartup + 2f;
+            while (Time.realtimeSinceStartup < until) yield return null;
+            Assert.AreNotEqual(before, Hash(terminal.WorldTexture), "the monitor image changed as the market moved");
+        }
+
+        private static int Hash(RenderTexture source)
+        {
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = source;
+            var t = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+            t.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+            t.Apply();
+            RenderTexture.active = previous;
+            int h = 17;
+            foreach (Color32 c in t.GetPixels32()) h = h * 31 + (c.r | c.g << 8 | c.b << 16);
+            UnityEngine.Object.Destroy(t);
+            return h;
+        }
+
         [UnityTest]
         public IEnumerator Developer_CanTradeThroughTheTerminal()
         {

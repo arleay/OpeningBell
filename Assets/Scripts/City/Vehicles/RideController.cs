@@ -189,7 +189,7 @@ namespace OpeningBell.City
             };
             Ground = Probe();
             double battery = _vehicle.BatteryWh;
-            RideDynamics.Step(_vehicle.Kind, _spec, _state, input, Ground, dt, _game.Clock.TimeScale, _vehicle.Condition, _vehicle.TireCondition, ref battery);
+            RideDynamics.Step(_vehicle.Kind, _spec, _state, input, Ground, dt, _vehicle.Condition, _vehicle.TireCondition, ref battery);
             if (_vehicle.BatteryCapacityWh > 0) _game.Vehicles.SetBattery(_vehicle, battery);
 
             // Move the body; walls and curbs push back.

@@ -40,7 +40,7 @@ namespace OpeningBell.Vehicles
     /// by spinning out the highest gear; rolling resistance (worse on rough ground, worn tyres); air drag;
     /// gravity on slopes; brakes. Turning rate follows lean (g·tan(lean)/v), capped by the steering angle at
     /// low speed. E-bikes add a motor that multiplies rider effort per assist level up to a cutoff speed and
-    /// drains the battery by game time.</item>
+    /// drains the battery by real riding time.</item>
     /// </list>
     /// Pure and deterministic; the Unity controller supplies grade and roughness from the ground under it.
     /// </summary>
@@ -59,18 +59,18 @@ namespace OpeningBell.Vehicles
         public static readonly double[] AssistRatio = { 0, 0.6, 1.3, 2.6 };
         public static readonly string[] AssistNames = { "OFF", "ECO", "TOUR", "TURBO" };
 
-        /// <param name="gameSecondsPerSecond">Game-clock speed: battery energy follows game time, like the world.</param>
-        /// <param name="battery">E-bike battery (Wh), updated in place.</param>
+        /// <param name="battery">E-bike battery (Wh), updated in place. Drains by the ride's own (real) seconds, not
+        /// game time: at 30× game speed a battery lasted a few minutes of riding.</param>
         public static void Step(VehicleKind kind, RideSpec spec, RideState s, RideInput input, RideGround ground, double dt,
-            double gameSecondsPerSecond, double condition, double tireCondition, ref double battery)
+            double condition, double tireCondition, ref double battery)
         {
             s.MotorPower = 0;
-            StepBike(kind, spec, s, input, ground, dt, gameSecondsPerSecond, condition, tireCondition, ref battery);
+            StepBike(kind, spec, s, input, ground, dt, condition, tireCondition, ref battery);
             s.Distance += s.Speed * dt;
         }
 
         private static void StepBike(VehicleKind kind, RideSpec spec, RideState s, RideInput input, RideGround ground, double dt,
-            double gameSpeed, double condition, double tireCondition, ref double battery)
+            double condition, double tireCondition, ref double battery)
         {
             double mass = spec.Mass + RiderMass;
             double v = s.Speed;
@@ -91,7 +91,7 @@ namespace OpeningBell.Vehicles
                 double motorPower = Math.Min(spec.MotorPower, AssistRatio[Math.Max(0, Math.Min(AssistRatio.Length - 1, s.Assist))] * power) * fade;
                 motor = Math.Min(motorPower / Math.Max(v, 1.0), 110);
                 s.MotorPower = motor * Math.Max(v, 1.0);
-                battery = Math.Max(0, battery - s.MotorPower / MotorEfficiency * dt * gameSpeed / 3600.0);
+                battery = Math.Max(0, battery - s.MotorPower / MotorEfficiency * dt / 3600.0);
             }
 
             // Pavement of any kind rolls about the same on bike tyres; soft ground (grass) adds drag that slicks
@@ -101,7 +101,7 @@ namespace OpeningBell.Vehicles
             double cos = 1 / Math.Sqrt(1 + ground.Grade * ground.Grade), sin = ground.Grade * cos;
             double resist = crr * mass * G * cos + 0.5 * AirDensity * spec.DragArea * v * v + mass * G * sin;
             double brake = Clamp01(input.Brake) * spec.BrakeDecel * (0.6 + 0.4 * Clamp01(tireCondition)) * mass;
-            if (kind == VehicleKind.EBike && brake > 0 && v > 2) battery += 0.1 * brake * v * dt * gameSpeed / 3600.0; // light regen
+            if (kind == VehicleKind.EBike && brake > 0 && v > 2) battery += 0.1 * brake * v * dt / 3600.0; // light regen
 
             double accel = (rider + motor - resist - brake) / (mass * 1.04);
             s.Speed = Math.Max(0, v + accel * dt);
