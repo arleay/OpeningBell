@@ -54,6 +54,8 @@ namespace OpeningBell.City
             _body = body;
             _pause = FindAnyObjectByType<PauseMenu>();
             _look = game.Look != null ? game.Look.Copy() : DefaultLook();
+            // A save from before everyone went Tiny: start the creator on the default Tiny body, keeping the colours.
+            if (art != null && art.People.Count > 0 && !art.IsTiny(CharacterStyle.ModelIndex(art, _look))) _look.Model = DefaultLook().Model;
         }
 
         private void Start()
@@ -196,40 +198,40 @@ namespace OpeningBell.City
         {
             var look = new OpeningBell.PlayerLook();
             for (int i = 0; i < _art.People.Count; i++)
-                if (_art.PeopleLabel(i).EndsWith("/Casual2") || _art.People[i].name == "Casual2") { look.Model = i; break; }
+                if (_art.PeopleLabel(i) == "Tiny/Casual2_Male") { look.Model = i; break; }
             return look;
         }
 
+        /// <summary>Body type of a Tiny character, from its name: Men, Women, or Other (the wizard, the pug...).</summary>
         private string BodyOf(int person)
         {
-            string label = _art.PeopleLabel(person);
-            int slash = label.IndexOf('/');
-            return slash > 0 ? label.Substring(0, slash) : "";
+            string name = _art.People[person].name;
+            return name.Contains("_Female") ? "Women" : name.Contains("_Male") ? "Men" : "Other";
         }
 
-        /// <summary>The first person of each body type (Men, Women).</summary>
+        /// <summary>The first Tiny person of each body type, in the order Men, Women, Other.</summary>
         private List<int> BodyTypes()
         {
             var first = new List<int>();
             var seen = new HashSet<string>();
             for (int i = 0; i < _art.People.Count; i++)
-                if (seen.Add(BodyOf(i))) first.Add(i);
-            // The costume set goes last, after the realistic bodies (folders sort Men, Tiny, Women).
-            return first.OrderBy(i => _art.IsTownsperson(i) ? 0 : 1).ThenBy(i => i).ToList();
+                if (_art.IsTiny(i) && seen.Add(BodyOf(i))) first.Add(i);
+            string[] order = { "Men", "Women", "Other" };
+            return first.OrderBy(i => System.Array.IndexOf(order, BodyOf(i))).ToList();
         }
 
         private List<int> Outfits(string body)
         {
             var list = new List<int>();
             for (int i = 0; i < _art.People.Count; i++)
-                if (BodyOf(i) == body) list.Add(i);
+                if (_art.IsTiny(i) && BodyOf(i) == body) list.Add(i);
             return list;
         }
 
         private void RefreshCreator()
         {
             string body = BodyOf(_look.Model);
-            if (_bodyLabel != null) _bodyLabel.text = body == "Women" ? "Feminine" : body == "Men" ? "Masculine" : body;
+            if (_bodyLabel != null) _bodyLabel.text = body == "Women" ? "Feminine" : body == "Men" ? "Masculine" : "Oddballs";
             if (_outfitLabel != null) _outfitLabel.text = _art.People[_look.Model].name.Replace('_', ' ');
             foreach (var (swatch, index, group) in _swatches)
             {

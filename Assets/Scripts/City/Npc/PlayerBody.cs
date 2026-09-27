@@ -17,7 +17,7 @@ namespace OpeningBell.City
         private const float FistReach = 0.45f;
         /// <summary>Extra metres the body slides back when looking straight down (see LateUpdate).</summary>
         private const float LookDownShift = 0.24f;
-        private const string DefaultLook = "Casual2";
+        private const string DefaultLook = "Casual2_Male";
 
         private static readonly int SpeedParam = Animator.StringToHash("Speed");
         private static readonly int Idle = Animator.StringToHash("Idle"), Walk = Animator.StringToHash("Walk"), Jog = Animator.StringToHash("Jog");
@@ -53,7 +53,9 @@ namespace OpeningBell.City
         public void SetLook(OpeningBell.PlayerLook look)
         {
             GameObject source = null;
-            if (look != null && _art.People.Count > 0) source = _art.People[CharacterStyle.ModelIndex(_art, look)];
+            // Only the Tiny set: an old save's realistic look falls back to the default.
+            int index = look != null && _art.People.Count > 0 ? CharacterStyle.ModelIndex(_art, look) : -1;
+            if (index >= 0 && _art.IsTiny(index)) source = _art.People[index];
             if (source == null)
                 foreach (GameObject p in _art.People)
                     if (p.name == DefaultLook) { source = p; break; }
@@ -80,7 +82,7 @@ namespace OpeningBell.City
             _state = Idle;
             _model.AddComponent<IKRelay>().Body = this;
             _head = _animator.GetBoneTransform(HumanBodyBones.Head);
-            _tiny = look != null && !_art.IsTownsperson(CharacterStyle.ModelIndex(_art, look));
+            _tiny = source.name != "Pug" && source.name != "Cow"; // Tiny bodies: big mitts (the animals have paws)
             if (_tiny)
                 foreach (HumanBodyBones b in new[] { HumanBodyBones.LeftHand, HumanBodyBones.RightHand })
                     _animator.GetBoneTransform(b).localScale = Vector3.one * 0.6f; // humanoid clips never animate scale

@@ -80,15 +80,21 @@ namespace OpeningBell.City
             var matches = new List<GameObject>();
             var town = new List<GameObject>();
             for (int i = 0; i < people.Count; i++)
-                if (art.IsTownsperson(i)) town.Add(people[i]);
+                if (art.IsTiny(i)) town.Add(people[i]);
+            if (town.Count == 0) town.AddRange(people);
+            // Staff ask for an outfit by its realistic-set name ("Suit"); the Tiny set has "Suit_Male", "Suit_Female".
+            string want = look == "Formal" ? "OldClassy" : look;
             foreach (GameObject p in town)
-                if (look == null || p.name == look) matches.Add(p);
+                if (want == null || p.name == want || p.name.StartsWith(want + "_")) matches.Add(p);
             if (matches.Count == 0) matches.AddRange(town);
             GameObject model = Instantiate(matches[rng.Next(matches.Count)], transform, false);
             model.name = "Body";
-            // The Quaternius people stand about 1.87 m; scale to a believable 1.66–1.80 m spread.
-            model.transform.localScale = Vector3.one * (0.89f + 0.075f * (float)rng.NextDouble());
             _animator = model.GetComponent<Animator>();
+            // Sized by the head rather than a fixed factor: the costume set varies (a pug, a wizard), while seats, cups
+            // and colliders assume a head at about 1.5–1.65 m.
+            Transform headBone = _animator.GetBoneTransform(HumanBodyBones.Head);
+            float headY = headBone != null ? model.transform.InverseTransformPoint(headBone.position).y : 1.62f;
+            model.transform.localScale = Vector3.one * ((1.5f + 0.15f * (float)rng.NextDouble()) / Mathf.Max(0.3f, headY));
             _animator.runtimeAnimatorController = art.PeopleAnimator;
             _animator.applyRootMotion = false;
             _animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;

@@ -23,7 +23,7 @@ namespace OpeningBell.Tests
             var body = player.GetComponent<PlayerBody>();
             Camera cam = player.GetComponentInChildren<Camera>();
 
-            foreach (string person in new[] { "Men/Casual2", "Tiny/Suit_Male", "Tiny/Wizard" })
+            foreach (string person in new[] { "Tiny/Casual2_Male", "Tiny/Suit_Male", "Tiny/Wizard" })
             {
                 int index = -1;
                 for (int i = 0; i < city.Art.People.Count; i++)
