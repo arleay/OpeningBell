@@ -35,6 +35,25 @@ namespace OpeningBell.Tests
                 shots++;
             }
             Assert.Greater(shots, 30, "most businesses photographed");
+
+            // The hand-built places: a free camera from a fixed spot near each.
+            var city = Find<CityBuilder>();
+            var free = new GameObject("Gallery camera").AddComponent<Camera>();
+            free.fieldOfView = 60f;
+            foreach (var (anchor, offset, look, file) in new[]
+            {
+                ("coffee_counter", new Vector3(0f, 1.6f, -3f), new Vector3(0f, 1.1f, 4f), "shop-halfpastnine.png"),
+                ("mart_counter", new Vector3(2f, 1.7f, -1f), new Vector3(5f, 1f, 6f), "shop-cornermart.png"),
+                ("fuel_pump_west", new Vector3(3f, 1.7f, -3f), new Vector3(0f, 1f, 0f), "shop-fuel.png"),
+                ("mechanic_bay1", new Vector3(0f, 1.8f, -4f), new Vector3(0f, 1f, 8f), "shop-mechanic.png"),
+            })
+            {
+                if (!city.Anchors.TryGetValue(anchor, out Vector3 at)) continue;
+                free.transform.position = at + offset;
+                free.transform.LookAt(at + look);
+                yield return CaptureCamera(free, file);
+            }
+            Object.Destroy(free.gameObject);
         }
     }
 }

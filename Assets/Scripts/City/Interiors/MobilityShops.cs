@@ -48,7 +48,7 @@ namespace OpeningBell.City
             door.LockReason = () => BikeHours.Contains(c.Game.Clock.Now) ? null : "closed (opens 9 AM)";
 
             k.Span(root, "Service counter", new Vector3(98.5f, 0f, 6.1f), new Vector3(108.5f, 1.02f, 6.8f), c.P.Lit(new Color(0.2f, 0.22f, 0.24f), 0.4f));
-            k.Box(root, "Work stand", new Vector3(110.2f, 0.6f, 7.8f), new Vector3(0.1f, 1.2f, 0.1f), c.P.Lit(new Color(0.8f, 0.2f, 0.15f), 0.4f));
+            ShopStock.RepairStand(c, root, new Vector3(110.2f, 0f, 7.8f));
             c.PointLight(root, new Vector3(99f, 3.8f, 1.5f), 10f, 1.1f, Color.white);
             c.PointLight(root, new Vector3(107f, 3.8f, 1.5f), 10f, 1.1f, Color.white);
 
@@ -82,13 +82,13 @@ namespace OpeningBell.City
             {
                 (SaleKind.TuneUp, "tuneup", 100.5f), (SaleKind.NewTires, "tires", 103.5f), (SaleKind.Part, "battery_extended", 106.5f),
             };
-            Material dark = c.P.Lit(new Color(0.08f, 0.08f, 0.09f));
             foreach (var (kind, id, x) in services)
             {
                 Vector3 at = new Vector3(x, 1.02f, 6.25f);
-                if (kind == SaleKind.NewTires) k.Cylinder(root, "Tyre", at + new Vector3(0f, 0.33f, 0f), 0.66f, 0.05f, dark).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                else k.Box(root, kind == SaleKind.TuneUp ? "Toolbox" : "Battery", at + new Vector3(0f, 0.08f, 0f), new Vector3(0.45f, 0.16f, 0.22f),
-                    kind == SaleKind.TuneUp ? c.P.Lit(new Color(0.75f, 0.12f, 0.1f), 0.4f) : dark, collider: false);
+                if (kind == SaleKind.NewTires) ShopStock.BikeWheel(c, root, at);
+                else if (kind == SaleKind.Part) ShopStock.BikeBattery(c, root, at);
+                else if (k.Real(root, "metal_toolbox", at, 180f) == null)
+                    k.Box(root, "Toolbox", at + new Vector3(0f, 0.08f, 0f), new Vector3(0.45f, 0.16f, 0.22f), c.P.Lit(new Color(0.75f, 0.12f, 0.1f), 0.4f), collider: false);
                 Display(c, mechanic, kind, id, at + new Vector3(0f, 0.15f, 0f), new Vector3(0.9f, 0.5f, 0.6f), pickup, 90f, shopCentre);
             }
             Charger(c, "Fast charger", new Vector3(99.5f, 0f, f.yMin - 0.4f), 600f);

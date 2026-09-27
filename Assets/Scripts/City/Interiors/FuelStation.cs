@@ -65,24 +65,76 @@ namespace OpeningBell.City
             {
                 k.Span(root, "Island", new Vector3(x - 0.6f, 0f, 25f), new Vector3(x + 0.6f, 0.15f, 31f), c.P.Lit(new Color(0.62f, 0.6f, 0.56f)));
                 Transform pump = Kit.Group(dyn, "Pump", new Vector3(x, 0.15f, 28f));
-                k.Box(pump, "Body", new Vector3(0f, 0.85f, 0f), new Vector3(0.7f, 1.7f, 0.45f), white);
-                k.Box(pump, "Band", new Vector3(0f, 1.45f, 0f), new Vector3(0.72f, 0.35f, 0.47f), brand, collider: false);
-                k.Box(pump, "Screen", new Vector3(0.36f, 1.1f, 0f), new Vector3(0.02f, 0.25f, 0.3f), c.P.Unlit(new Color(0.2f, 0.6f, 0.4f)), collider: false);
-                k.Box(pump, "Screen", new Vector3(-0.36f, 1.1f, 0f), new Vector3(0.02f, 0.25f, 0.3f), c.P.Unlit(new Color(0.2f, 0.6f, 0.4f)), collider: false);
+                Dispenser(c, pump, white, brand);
                 pump.gameObject.AddComponent<FuelPump>().Configure(c.Game, c.Hud);
             }
 
             // The jerry can rack at the end of the west island.
             Transform rack = Kit.Group(dyn, "Jerry can rack", new Vector3(114f, 0.15f, 32.2f));
-            Material red = c.P.Lit(new Color(0.75f, 0.1f, 0.08f), 0.35f);
             k.Box(rack, "Shelf", new Vector3(0f, 0.45f, 0f), new Vector3(0.9f, 0.9f, 0.4f), c.P.Lit(new Color(0.3f, 0.3f, 0.32f), 0.3f))
                 .AddComponent<JerryCanRack>().Configure(c.Game);
-            for (int i = 0; i < 3; i++)
-                k.Box(rack, "Jerry can", new Vector3(-0.28f + i * 0.28f, 1.05f, 0f), new Vector3(0.12f, 0.3f, 0.26f), red, collider: false);
+            for (int i = 0; i < 2; i++)
+                if (k.Real(rack, i == 0 ? "metal_jerrycan" : "plastic_jerrycan", new Vector3(-0.2f + i * 0.4f, 0.9f, 0f), 90f) == null)
+                    k.Box(rack, "Jerry can", new Vector3(-0.28f + i * 0.28f, 1.05f, 0f), new Vector3(0.12f, 0.3f, 0.26f), c.P.Lit(new Color(0.75f, 0.1f, 0.08f), 0.35f), collider: false);
 
             c.Anchor("fuel_pump_west", new Vector3(114f, 0f, 28f));
             c.Anchor("fuel_bay_west", new Vector3(116.4f, 0f, 28f));
             c.Anchor("fuel_driveway", new Vector3(128f, 0f, 29f));
+        }
+
+        /// <summary>
+        /// A modern fuel dispenser, both faces (±x) alike: a plinth, the steel cabinet with a lit brand header, on each
+        /// face a price/litre display with its digits, a card reader and keypad, and a nozzle in its holster on a hose
+        /// that loops down to the ground and back up. The cabinet is the solid (and what you aim at).
+        /// </summary>
+        private static void Dispenser(CityContext c, Transform pump, Material white, Material brand)
+        {
+            Kit k = c.Kit;
+            Material steel = c.P.Metal(new Color(0.75f, 0.76f, 0.78f), 0.6f);
+            Material black = c.P.Lit(new Color(0.05f, 0.05f, 0.06f), 0.5f);
+            Material rubber = c.P.Lit(new Color(0.03f, 0.03f, 0.03f), 0.25f);
+            k.Box(pump, "Plinth", new Vector3(0f, 0.08f, 0f), new Vector3(0.8f, 0.16f, 0.55f), steel, collider: false);
+            k.Box(pump, "Body", new Vector3(0f, 0.95f, 0f), new Vector3(0.66f, 1.6f, 0.45f), white);
+            k.Box(pump, "Header", new Vector3(0f, 1.95f, 0f), new Vector3(0.72f, 0.36f, 0.5f), brand, collider: false);
+            k.Box(pump, "Header glow", new Vector3(0f, 1.95f, 0f), new Vector3(0.74f, 0.08f, 0.52f), c.P.Glow(new Color(1f, 1f, 1f), 1.2f), collider: false);
+            k.Box(pump, "Kick plate", new Vector3(0f, 0.3f, 0f), new Vector3(0.68f, 0.24f, 0.47f), steel, collider: false);
+            string price = FuelStation.PricePerLiter.ToString("0.00", CultureInfo.InvariantCulture);
+            foreach (float side in new[] { -1f, 1f })
+            {
+                float face = side * 0.335f;
+                float yaw = side > 0f ? -90f : 90f; // text faces out of each side (TextMesh reads toward its -z)
+                // Display: dark glass with lit readouts.
+                k.Box(pump, "Display", new Vector3(face, 1.45f, 0f), new Vector3(0.012f, 0.34f, 0.36f), black, collider: false);
+                k.Text(pump, "$  0.00", new Vector3(face + side * 0.008f, 1.54f, 0f), yaw, 0.05f, new Color(1f, 0.55f, 0.2f));
+                k.Text(pump, "L  0.000", new Vector3(face + side * 0.008f, 1.46f, 0f), yaw, 0.04f, new Color(1f, 0.55f, 0.2f));
+                k.Text(pump, "$" + price + "/L", new Vector3(face + side * 0.008f, 1.37f, 0f), yaw, 0.035f, new Color(0.4f, 1f, 0.5f));
+                // Card reader and keypad.
+                k.Box(pump, "Card reader", new Vector3(face, 1.15f, 0.1f), new Vector3(0.03f, 0.14f, 0.12f), black, collider: false);
+                for (int i = 0; i < 12; i++)
+                    k.Box(pump, "Key", new Vector3(face + side * 0.016f, 1.12f - (i / 3) * 0.028f, -0.06f + (i % 3) * 0.028f), new Vector3(0.006f, 0.02f, 0.02f), steel, collider: false);
+                // Holster, nozzle, and the hose looping to the ground.
+                Vector3 holster = new Vector3(face + side * 0.03f, 0.95f, -0.12f);
+                k.Box(pump, "Holster", holster, new Vector3(0.06f, 0.12f, 0.08f), black, collider: false);
+                var f = new Forge(2);
+                f.Use(1).Block(holster + new Vector3(side * 0.05f, 0.03f, 0f), Vector3.forward, Vector3.up, new Vector3(0.05f, 0.07f, 0.14f));
+                f.Use(1).Sweep(new System.Collections.Generic.List<Vector3>
+                {
+                    holster + new Vector3(side * 0.06f, 0.08f, 0.05f), holster + new Vector3(side * 0.07f, 0.13f, 0.14f),
+                }, 0.01f, 0.01f, false, 6);
+                var hose = new System.Collections.Generic.List<Vector3>();
+                Vector3 from = new Vector3(face + side * 0.02f, 1.7f, 0.18f), to = holster + new Vector3(side * 0.06f, 0f, -0.05f);
+                for (int i = 0; i <= 16; i++)
+                {
+                    float t = i / 16f;
+                    Vector3 p0 = Vector3.Lerp(from, to, t);
+                    p0.y = Mathf.Lerp(from.y, to.y, t) - Mathf.Sin(t * Mathf.PI) * 1.3f;
+                    p0.y = Mathf.Max(0.2f, p0.y);
+                    p0 += Vector3.right * (side * Mathf.Sin(t * Mathf.PI) * 0.12f);
+                    hose.Add(p0);
+                }
+                f.Use(0).Sweep(hose, 0.016f, 0.016f, false, 8);
+                f.Build(pump, "Nozzle and hose", rubber, c.P.Lit(new Color(0.1f, 0.35f, 0.15f), 0.5f));
+            }
         }
     }
 

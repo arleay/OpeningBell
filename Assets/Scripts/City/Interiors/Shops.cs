@@ -42,8 +42,8 @@ namespace OpeningBell.City
             k.Span(root, "Counter", new Vector3(66f, 0f, 3.2f), new Vector3(76f, 1.02f, 3.9f), wood);
             k.Span(root, "Counter top", new Vector3(65.9f, 1.02f, 3.1f), new Vector3(76.1f, 1.07f, 4f), counterTop, collider: false);
             k.Span(root, "Back counter", new Vector3(65.5f, 0f, 6.9f), new Vector3(76.5f, 0.95f, 7.6f), wood);
-            k.Box(root, "Espresso machine", new Vector3(70f, 1.2f, 7.25f), new Vector3(0.8f, 0.5f, 0.5f), c.P.Lit(new Color(0.7f, 0.7f, 0.72f), 0.8f), collider: false);
-            k.Box(root, "Grinder", new Vector3(71.1f, 1.18f, 7.25f), new Vector3(0.25f, 0.45f, 0.3f), c.P.Lit(new Color(0.12f, 0.12f, 0.13f), 0.5f), collider: false);
+            // On the back counter, facing the barista's side (-z); the back counter top is at 0.95.
+            ShopStock.EspressoMachine(c, root, new Vector3(69.8f, 0.95f, 7.25f), 0f);
             k.Box(root, "Menu board", new Vector3(71f, 2.5f, 7.72f), new Vector3(3.2f, 1.1f, 0.05f), c.P.Lit(new Color(0.1f, 0.1f, 0.1f)), collider: false);
             // Pastries on plates at the end of the counter.
             string[][] plates = { new[] { "Donut1", "Donut2" }, new[] { "Croissant", "Croissant" }, new[] { "Cupcake", "Donut3" } };
@@ -61,7 +61,9 @@ namespace OpeningBell.City
                 k.Cylinder(root, "Table", p + new Vector3(0f, 0.74f, 0f), 0.7f, 0.04f, table);
                 k.Cylinder(root, "Table leg", p + new Vector3(0f, 0.37f, 0f), 0.08f, 0.74f, c.P.Lit(new Color(0.2f, 0.2f, 0.2f)), collider: true);
                 foreach (float dx in new[] { -0.55f, 0.55f })
-                    k.Box(root, "Stool", p + new Vector3(dx, 0.23f, 0f), new Vector3(0.35f, 0.46f, 0.35f), wood);
+                    if (k.Fit(root, "dining_chair_02", p + new Vector3(dx, 0f, 0f), new Vector3(0.45f, 0f, 0f), dx < 0f ? 270f : 90f) == null)
+                        k.Box(root, "Stool", p + new Vector3(dx, 0.23f, 0f), new Vector3(0.35f, 0.46f, 0.35f), wood);
+                k.Prop(root, "Plate", p + new Vector3(0.1f, 0.76f, 0.05f), 0.02f, 0f, 0.2f);
             }
             c.PointLight(root, new Vector3(68f, 3.6f, 1f), 9f, 1f, new Color(1f, 0.85f, 0.65f));
             c.PointLight(root, new Vector3(74f, 3.6f, 1f), 9f, 1f, new Color(1f, 0.85f, 0.65f));
@@ -77,8 +79,8 @@ namespace OpeningBell.City
                 new Rotation("Pre-market crowd comes in around nine. It's a zoo.", "Oat milk's back, if you care.", "We close at eight.").Next,
                 c.Game, c.Hud, c.Player, look: "Casual2");
 
-            Counter(c, root, new Vector3(69.2f, 1.07f, 3.4f), "Coffee", 4.50m, barista, "Here you go. Careful, it's hot.", cup: true);
-            Counter(c, root, new Vector3(73f, 1.07f, 3.4f), "Pastry", 3.75m, barista, "Good choice. Fresh this morning.", cup: false);
+            Counter(c, root, new Vector3(69.2f, 1.07f, 3.4f), "Coffee", 4.50m, barista, "Here you go. Careful, it's hot.");
+            Counter(c, root, new Vector3(73f, 1.07f, 3.4f), "Pastry", 3.75m, barista, "Good choice. Fresh this morning.");
 
             c.Place(new Vector3(doorX, 0f, f.yMin - 0.8f), PlaceKind.Door, "Half Past Nine");
             c.Anchor("coffee_front_out", new Vector3(doorX, 0f, f.yMin - 2f));
@@ -144,7 +146,7 @@ namespace OpeningBell.City
             k.Pane(root, "Fridge doors", new Vector3(116.2f, 0.25f, 5.68f), new Vector3(126f, 2.05f, 5.7f), new Color(0.75f, 0.85f, 0.95f, 0.2f));
             k.Span(root, "Counter", new Vector3(112.5f, 0f, -2.6f), new Vector3(116.5f, 1f, -1.9f), c.P.Lit(new Color(0.3f, 0.3f, 0.32f), 0.3f));
             k.Solid(k.Fit(root, "gas_fridge", new Vector3(115.8f, 0f, 2.5f), new Vector3(0f, 0.9f, 0f), 270f)); // ice-cream chest, lids to the till
-            k.Box(root, "Register", new Vector3(114f, 1.12f, -2.2f), new Vector3(0.4f, 0.25f, 0.35f), c.P.Lit(new Color(0.12f, 0.12f, 0.13f), 0.4f), collider: false);
+            ShopStock.Register(k, root, new Vector3(114f, 1f, -2.2f));
             c.PointLight(root, new Vector3(116f, 4.4f, 0.5f), 10f, 1.2f, new Color(0.95f, 0.98f, 1f));
             c.PointLight(root, new Vector3(123f, 4.4f, 2.5f), 10f, 1.2f, new Color(0.95f, 0.98f, 1f));
 
@@ -159,8 +161,8 @@ namespace OpeningBell.City
                 new Rotation("Let me know if you need anything.", "Energy drinks are two for six on Fridays.", "Cash or card? Card. Everybody's card.").Next,
                 c.Game, c.Hud, c.Player, look: "Casual");
 
-            Counter(c, root, new Vector3(113.2f, 1f, -2.4f), "Energy drink", 3.25m, clerk, "That'll keep you up through the close.", cup: true);
-            Counter(c, root, new Vector3(115.6f, 1f, -2.4f), "Sandwich", 6.50m, clerk, "Want a bag? No? Cool.", cup: false);
+            Counter(c, root, new Vector3(113.2f, 1f, -2.4f), "Energy drink", 3.25m, clerk, "That'll keep you up through the close.");
+            Counter(c, root, new Vector3(115.6f, 1f, -2.4f), "Sandwich", 6.50m, clerk, "Want a bag? No? Cool.");
 
             c.Place(new Vector3(doorX, 0f, f.yMin - 0.8f), PlaceKind.Door, "Corner Mart");
             c.Anchor("mart_front_out", new Vector3(doorX, 0f, f.yMin - 2f));
@@ -189,11 +191,9 @@ namespace OpeningBell.City
             k.Span(root, "Inner east", new Vector3(f.xMax - t - 0.02f, 0f, f.yMin + t), new Vector3(f.xMax - t, top - 0.6f, f.yMax - t), inside, collider: false);
         }
 
-        private static void Counter(CityContext c, Transform root, Vector3 at, string item, decimal price, StaffNpc staff, string thanks, bool cup)
+        private static void Counter(CityContext c, Transform root, Vector3 at, string item, decimal price, StaffNpc staff, string thanks)
         {
-            GameObject display = cup
-                ? c.Kit.Cylinder(root, item, at + new Vector3(0f, 0.08f, 0f), 0.09f, 0.16f, c.P.Lit(new Color(0.92f, 0.9f, 0.86f)), collider: true)
-                : c.Kit.Box(root, item, at + new Vector3(0f, 0.05f, 0f), new Vector3(0.25f, 0.1f, 0.18f), c.P.Lit(new Color(0.8f, 0.6f, 0.35f)));
+            ShopStock.CounterItem(c, root, at, item);
             // A generous trigger around the item so it's easy to aim at.
             var aim = new GameObject(item + " (buy)");
             aim.transform.SetParent(c.Dynamic, false);

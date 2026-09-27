@@ -94,8 +94,20 @@ namespace OpeningBell.City
                 foreach (float side in new[] { -1f, 1f })
                     k.Box(lift, "Arm", new Vector3(side * 1.1f, 0.12f, 0f), new Vector3(0.25f, 0.12f, 3.6f), steel, collider: false);
                 shop._lifts.Add(lift);
-                k.Box(root, "Tool chest", new Vector3(x1 - 1f, 0.6f, 20.5f), new Vector3(1.2f, 1.2f, 0.6f), red);
-                k.Box(root, "Tool chest top", new Vector3(x1 - 1f, 1.5f, 20.5f), new Vector3(1.2f, 0.6f, 0.5f), red);
+                // Each bay: a roller tool chest against the back, a tool cart by the lift, tyres waiting to go on.
+                if (k.Fit(root, "metal_tool_chest", new Vector3(x1 - 1f, 0f, 20.5f), new Vector3(1.2f, 0f, 0f), 180f) == null)
+                {
+                    k.Box(root, "Tool chest", new Vector3(x1 - 1f, 0.6f, 20.5f), new Vector3(1.2f, 1.2f, 0.6f), red);
+                    k.Box(root, "Tool chest top", new Vector3(x1 - 1f, 1.5f, 20.5f), new Vector3(1.2f, 0.6f, 0.5f), red);
+                }
+                k.Real(root, "tool_cart", new Vector3(cx + 2.6f, 0f, 13.5f), 200f);
+                k.Real(root, "metal_toolbox", new Vector3(cx - 2.5f, 0f, 16f), 30f);
+                for (int t = 0; t < 3; t++)
+                {
+                    // Placed upright (centre 0.3 m up), then laid flat about its centre: a stack of three.
+                    GameObject tyre = k.Real(root, "old_tyre", new Vector3(x0 + 0.8f, -0.215f + t * 0.17f, 18.5f), 0f);
+                    if (tyre != null) tyre.transform.localRotation *= Quaternion.Euler(90f, 0f, 0f);
+                }
                 // Roll-up door: up while the shop's open.
                 GameObject rollup = k.Span(dyn, "Roll-up door", new Vector3(x0, 0f, 0.05f), new Vector3(x1, 4.6f, 0.2f), c.P.Lit(new Color(0.7f, 0.72f, 0.74f), 0.3f));
                 shop._doors.Add(rollup);
@@ -107,13 +119,22 @@ namespace OpeningBell.City
                 c.PointLight(root, new Vector3(cx, 6f, 11f), 12f, 1.1f, new Color(0.95f, 0.97f, 1f));
                 k.Text(root, "BAY " + (i + 1), new Vector3(cx, 5.05f, 0.35f), 0f, 0.25f, new Color(0.95f, 0.95f, 0.9f));
             }
-            // Parts room at the back: shelving with boxes and tyres.
-            for (float x = -8f; x < 20f; x += 3f)
+            // Parts room at the back: steel racking with boxed parts, oil and cans, tyres along the wall.
+            var parts = new System.Random(9301);
+            string[] onRack = { "cardboard_box_01", "cardboard_box_01", "oil_tin", "multi_cleaner_5_litre", "plastic_jerrycan", "cardboard_box_01" };
+            for (float x = -8f; x < 20f; x += 1.2f)
             {
-                k.Span(root, "Parts shelf", new Vector3(x, 0f, 26.5f), new Vector3(x + 2.4f, 2.4f, 29.5f), steel);
-                for (float yy = 0.5f; yy < 2.4f; yy += 0.8f)
-                    k.Box(root, "Parts box", new Vector3(x + 1.2f, yy, 26.4f), new Vector3(2f, 0.4f, 0.1f), c.P.Lit(new Color(0.2f, 0.35f, 0.65f)), collider: false);
+                if (k.Real(root, "steel_frame_shelves_01", new Vector3(x + 0.55f, 0f, 29f), 180f) == null)
+                {
+                    k.Span(root, "Parts shelf", new Vector3(x, 0f, 26.5f), new Vector3(x + 1.1f, 2.4f, 29.5f), steel);
+                    continue;
+                }
+                foreach (float yy in new[] { 0.05f, 0.73f, 1.41f })
+                    ShopStock.Spread(k, root, onRack, new Vector3(x + 0.55f, yy, 29f), 1f, 180f, parts, 2);
             }
+            for (float x = -8f; x < 20f; x += 0.7f)
+                k.Real(root, "old_tyre", new Vector3(x, 0.3f, 27.2f), 0f);
+            k.Real(root, "hand_truck", new Vector3(19f, 0f, 25.5f), 250f);
 
             Vector3 station = new Vector3(-17f, 0f, 10.8f);
             shop._staff = StaffNpc.Create(k, dyn, "Mechanic", 9301, new Color(0.2f, 0.3f, 0.45f), new WorkSchedule { Shift = ShopHours },

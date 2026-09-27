@@ -63,6 +63,8 @@ namespace OpeningBell.City
                 "Groceries" => ("wicker_basket_01", -1f),
                 "Riding gloves" => ("garden_gloves_01", -1f),
                 "Fresh salmon" or "Crab" => ("Fish", 0.08f),
+                "Pastry" => ("Croissant", 0.06f),
+                "Energy drink" => ("Soda", 0.14f),
                 "Dinner" => ("Steak", 0.05f),
                 "Soup" => ("CookingPot", 0.14f),
                 _ => (null, 0f),
@@ -127,6 +129,96 @@ namespace OpeningBell.City
             f.Build(r, "Phone charger", c.P.Lit(new Color(0.95f, 0.95f, 0.94f), 0.5f), c.P.Metal(new Color(0.8f, 0.8f, 0.8f)));
         }
 
+        /// <summary>
+        /// A two-group espresso machine, its working side toward -z (where the barista stands): polished steel body
+        /// with a cup warmer and cups on top, two group heads with portafilters, pressure gauges, a steam wand, a drip
+        /// tray, and the grinder beside it.
+        /// </summary>
+        public static void EspressoMachine(CityContext c, Transform r, Vector3 at, float yaw)
+        {
+            Kit k = c.Kit;
+            Transform g = Kit.Group(r, "Espresso machine", at, yaw);
+            Material steel = c.P.Metal(new Color(0.82f, 0.83f, 0.85f), 0.85f);
+            Material black = c.P.Lit(new Color(0.05f, 0.05f, 0.06f), 0.5f);
+            k.Box(g, "Body", new Vector3(0f, 0.22f, 0f), new Vector3(0.78f, 0.44f, 0.52f), steel, collider: false);
+            k.Box(g, "Side panels", new Vector3(0f, 0.22f, 0.01f), new Vector3(0.8f, 0.36f, 0.48f), c.P.Lit(new Color(0.55f, 0.1f, 0.08f), 0.7f), collider: false);
+            k.Box(g, "Cup rail", new Vector3(0f, 0.46f, 0f), new Vector3(0.76f, 0.02f, 0.5f), steel, collider: false);
+            k.Box(g, "Drip tray", new Vector3(0f, 0.02f, -0.3f), new Vector3(0.7f, 0.04f, 0.14f), steel, collider: false);
+            var f = new Forge(3); // 0 steel, 1 black, 2 cup
+            foreach (float x in new[] { -0.18f, 0.18f })
+            {
+                // Group head and its portafilter handle sticking out toward the customer.
+                f.Use(0).Lathe(new Vector3(x, 0.2f, -0.28f), Vector3.up, new[] { new Vector2(0.045f, 0f), new Vector2(0.05f, 0.03f), new Vector2(0.04f, 0.07f), new Vector2(0f, 0.07f) }, 20);
+                f.Use(0).Lathe(new Vector3(x, 0.16f, -0.28f), Vector3.up, new[] { new Vector2(0f, 0f), new Vector2(0.038f, 0.005f), new Vector2(0.04f, 0.04f), new Vector2(0f, 0.04f) }, 20);
+                f.Use(1).Sweep(new System.Collections.Generic.List<Vector3> { new Vector3(x, 0.18f, -0.32f), new Vector3(x, 0.17f, -0.46f) }, 0.014f, 0.014f, false, 8);
+                // A cup under it.
+                f.Use(2).Lathe(new Vector3(x, 0.04f, -0.3f), Vector3.up, new[] { new Vector2(0f, 0f), new Vector2(0.025f, 0f), new Vector2(0.032f, 0.055f), new Vector2(0.028f, 0.055f), new Vector2(0.022f, 0.006f), new Vector2(0f, 0.006f) }, 18);
+                // Gauges on the front panel.
+                f.Use(0).Lathe(new Vector3(x * 0.5f, 0.36f, -0.262f), Vector3.back, new[] { new Vector2(0f, 0f), new Vector2(0.03f, 0f), new Vector2(0.03f, 0.008f), new Vector2(0f, 0.008f) }, 18);
+            }
+            // Steam wand from the side, bent down.
+            f.Use(0).Sweep(new System.Collections.Generic.List<Vector3> { new Vector3(0.36f, 0.3f, -0.2f), new Vector3(0.42f, 0.28f, -0.27f), new Vector3(0.44f, 0.12f, -0.3f) }, 0.006f, 0.006f, false, 8);
+            // Cups warming on top.
+            for (int i = 0; i < 5; i++)
+                f.Use(2).Lathe(new Vector3(-0.28f + i * 0.14f, 0.47f, 0.05f), Vector3.up, new[] { new Vector2(0f, 0f), new Vector2(0.025f, 0f), new Vector2(0.032f, 0.055f), new Vector2(0f, 0.055f) }, 16);
+            f.Build(g, "Details", steel, black, c.P.Lit(new Color(0.95f, 0.94f, 0.9f), 0.7f));
+            // The grinder beside it: black body, a smoked hopper full of beans.
+            Transform grinder = Kit.Group(g, "Grinder", new Vector3(0.62f, 0f, 0f));
+            k.Box(grinder, "Body", new Vector3(0f, 0.2f, 0f), new Vector3(0.2f, 0.4f, 0.28f), black, collider: false);
+            var h = new Forge(2);
+            h.Use(0).Lathe(new Vector3(0f, 0.4f, 0f), Vector3.up, new[] { new Vector2(0.03f, 0f), new Vector2(0.1f, 0.2f), new Vector2(0.105f, 0.2f), new Vector2(0.035f, 0f) }, 20);
+            h.Use(1).Lathe(new Vector3(0f, 0.41f, 0f), Vector3.up, new[] { new Vector2(0f, 0f), new Vector2(0.03f, 0f), new Vector2(0.085f, 0.15f), new Vector2(0f, 0.16f) }, 20);
+            h.Build(grinder, "Hopper", c.P.Glass(new Color(0.3f, 0.25f, 0.2f, 0.45f)), c.P.Lit(new Color(0.24f, 0.13f, 0.06f), 0.6f));
+        }
+
+        /// <summary>A bicycle wheel standing on its edge: knobbly tyre, alloy rim, hub and 32 spokes. Faces ±z.</summary>
+        public static void BikeWheel(CityContext c, Transform r, Vector3 bottom)
+        {
+            const float R = 0.33f;
+            Vector3 hub = bottom + Vector3.up * R;
+            var f = new Forge(3); // 0 tyre, 1 rim and hub, 2 spokes
+            f.Use(0).Torus(hub, Vector3.forward, R - 0.022f, 0.024f, 48, 10);
+            f.Use(1).Sweep(Forge.Circle(hub, Vector3.forward, R - 0.05f, 48), 0.008f, 0.013f, true, 6, Vector3.forward);
+            f.Use(1).Lathe(hub - Vector3.forward * 0.05f, Vector3.forward, new[] { new Vector2(0.02f, 0f), new Vector2(0.02f, 0.1f) }, 12);
+            for (int i = 0; i < 32; i++)
+            {
+                float a = i / 32f * Mathf.PI * 2f;
+                float side = i % 2 == 0 ? 0.045f : -0.045f;
+                Vector3 rim = hub + new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0f) * (R - 0.055f);
+                f.Use(2).Sweep(new List<Vector3> { hub + Vector3.forward * side, rim }, 0.0012f, 0.0012f, false, 3);
+            }
+            f.Build(r, "Bike wheel", c.P.Lit(new Color(0.06f, 0.06f, 0.06f), 0.2f), c.P.Metal(new Color(0.7f, 0.71f, 0.73f), 0.7f), c.P.Metal(new Color(0.85f, 0.85f, 0.85f), 0.8f));
+        }
+
+        /// <summary>An e-bike frame battery: a long rounded pack, a charge port and a row of level LEDs.</summary>
+        public static void BikeBattery(CityContext c, Transform r, Vector3 bottom)
+        {
+            var f = new Forge(3);
+            f.Use(0).Lathe(bottom + new Vector3(-0.19f, 0.045f, 0f), Vector3.right, new[]
+            {
+                new Vector2(0f, 0f), new Vector2(0.03f, 0.004f), new Vector2(0.045f, 0.02f), new Vector2(0.045f, 0.36f), new Vector2(0.03f, 0.376f), new Vector2(0f, 0.38f),
+            }, 20, 1f, 0.75f);
+            for (int i = 0; i < 4; i++)
+                f.Use(i < 3 ? 1 : 2).Block(bottom + new Vector3(0.1f + i * 0.018f, 0.09f, 0f), Vector3.right, Vector3.up, new Vector3(0.01f, 0.003f, 0.006f));
+            f.Use(2).Block(bottom + new Vector3(-0.12f, 0.09f, 0f), Vector3.right, Vector3.up, new Vector3(0.02f, 0.004f, 0.02f));
+            f.Build(r, "E-bike battery", c.P.Lit(new Color(0.12f, 0.13f, 0.14f), 0.55f), c.P.Glow(new Color(0.2f, 1f, 0.4f), 1.5f), c.P.Lit(new Color(0.05f, 0.05f, 0.05f), 0.4f));
+        }
+
+        /// <summary>A bike repair stand: tripod base, a mast, an arm with a clamp.</summary>
+        public static void RepairStand(CityContext c, Transform r, Vector3 bottom)
+        {
+            var f = new Forge(2);
+            for (int i = 0; i < 3; i++)
+            {
+                float a = i / 3f * Mathf.PI * 2f;
+                f.Use(0).Sweep(new List<Vector3> { bottom + new Vector3(0f, 0.25f, 0f), bottom + new Vector3(Mathf.Cos(a) * 0.4f, 0.01f, Mathf.Sin(a) * 0.4f) }, 0.012f, 0.012f, false, 6);
+            }
+            f.Use(0).Sweep(new List<Vector3> { bottom + Vector3.up * 0.2f, bottom + Vector3.up * 1.35f }, 0.018f, 0.018f, false, 8);
+            f.Use(0).Sweep(new List<Vector3> { bottom + Vector3.up * 1.3f, bottom + new Vector3(0f, 1.38f, -0.3f) }, 0.014f, 0.014f, false, 8);
+            f.Use(1).Block(bottom + new Vector3(0f, 1.38f, -0.33f), Vector3.right, Vector3.up, new Vector3(0.08f, 0.1f, 0.08f));
+            f.Build(r, "Repair stand", c.P.Lit(new Color(0.8f, 0.2f, 0.15f), 0.5f), c.P.Lit(new Color(0.08f, 0.08f, 0.08f), 0.4f));
+        }
+
         // ---------------------------------------------------------------- trades
 
         public static readonly string[] Tools =
@@ -183,8 +275,7 @@ namespace OpeningBell.City
             // A tyre rack along the right wall: tyres standing on edge in a steel frame.
             for (float z = front; z < back; z += 0.24f)
             {
-                GameObject t = k.Real(r, "old_tyre", new Vector3(hw - 0.4f, 0f, z), 90f);
-                if (t != null) t.transform.localPosition += Vector3.up * 0.3f; // the scan's origin is its centre
+                k.Real(r, "old_tyre", new Vector3(hw - 0.4f, 0f, z), 90f);
             }
             k.Box(r, "Tyre rack rail", new Vector3(hw - 0.4f, 0.02f, (front + back) / 2f), new Vector3(0.3f, 0.04f, back - front), c.P.Lit(new Color(0.3f, 0.3f, 0.32f), 0.5f), collider: false);
             k.Real(r, "metal_jerrycan", new Vector3(-hw + 0.5f, 0f, front - 0.7f), 90f);
