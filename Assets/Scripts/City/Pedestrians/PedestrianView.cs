@@ -100,10 +100,7 @@ namespace OpeningBell.City
         /// <summary>People are simulated within this distance of the player.</summary>
         public const float Radius = 360f;
 
-        /// <summary>Weather keeps people in (1 = fair; the weather sets it lower in rain).</summary>
-        public float Outdoors = 1f;
-
-        private int Target() => Mathf.RoundToInt(TargetCount(_c.Game.Clock.Now.TimeOfDay.TotalHours) * Outdoors);
+        private int Target() => Mathf.RoundToInt(TargetCount(_c.Game.Clock.Now.TimeOfDay.TotalHours));
 
         private bool NearPlayer(Vector2 door)
         {

@@ -163,7 +163,8 @@ namespace OpeningBell.City
             return terrain;
         }
 
-        /// <summary>Opens the hillside where a tunnel tube passes through the ground (the tube's own mesh shows there).</summary>
+        /// <summary>Opens the hillside where a tunnel tube passes through the ground (the tube's own mesh shows there), and the
+        /// ground over the ramp down to Harborview's garage.</summary>
         private static void Holes(TerrainData data, float[,] height, Rect e, float dx, float dz)
         {
             int res = data.holesResolution;
@@ -179,6 +180,8 @@ namespace OpeningBell.City
                     float ground = Mathf.Max(height[z, x], height[Mathf.Min(z + 1, res), Mathf.Min(x + 1, res)]);
                     if (ground < t.Floor + t.Height + 2f) solid[z, x] = false;
                 }
+                // The open cut down to Harborview's garage.
+                if (HarborviewTower.RampCut.Contains(p)) solid[z, x] = false;
             }
             data.SetHoles(0, 0, solid);
         }

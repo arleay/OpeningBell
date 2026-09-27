@@ -157,7 +157,7 @@ namespace OpeningBell.City
                 Fleet?.ParkedCarPositions(cars);
             });
 
-            Weather = WeatherSystem.Build(_c, daylight, Pedestrians, Traffic, viewCamera);
+            Weather = WeatherSystem.Build(_c, daylight);
 
             // Owned bikes: parked ones in the world, riding on the player.
             Fleet = new GameObject("Fleet").AddComponent<FleetView>();

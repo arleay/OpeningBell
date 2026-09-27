@@ -155,7 +155,7 @@ namespace OpeningBell.City
             float y0 = StreetMap.Plan.StreetGrade(r.center);
             Transform g = Kit.Group(root, "Lantern Parkade", new Vector3(r.xMin, y0, r.yMin));
             Material concrete = c.P.Lit(new Color(0.62f, 0.61f, 0.58f), 0.08f);
-            Material deck = c.P.Wettable(c.P.Lit(new Color(0.46f, 0.46f, 0.45f), 0.1f));
+            Material deck = c.P.Lit(new Color(0.46f, 0.46f, 0.45f), 0.1f);
             Material paint = c.P.Lit(new Color(0.9f, 0.9f, 0.88f), 0.1f);
             Material stripe = c.P.Lit(new Color(0.95f, 0.75f, 0.15f), 0.2f);
             Material light = c.P.Lamp(new Color(0.7f, 0.7f, 0.68f), new Color(1f, 0.95f, 0.85f));

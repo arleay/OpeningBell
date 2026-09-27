@@ -222,28 +222,6 @@ namespace OpeningBell.City
         }
 
         /// <summary>0 = day, 1 = night: lamps switch on and some windows light up.</summary>
-        private readonly List<(Material Material, Color Dry, float Smooth)> _wet = new List<(Material, Color, float)>();
-        private float _wetness = -1f;
-
-        /// <summary>Marks a ground material to darken and shine when it rains (roads, sidewalks, paving).</summary>
-        public Material Wettable(Material m)
-        {
-            if (!_wet.Exists(x => x.Material == m)) _wet.Add((m, m.color, m.GetFloat(Smoothness)));
-            return m;
-        }
-
-        /// <summary>0 dry … 1 soaked: darker and glossier (puddle sheen), smoothly.</summary>
-        public void ApplyWetness(float wetness)
-        {
-            if (Mathf.Abs(wetness - _wetness) < 0.01f) return;
-            _wetness = wetness;
-            foreach (var (m, dry, smooth) in _wet)
-            {
-                m.color = Color.Lerp(dry, dry * 0.6f, wetness);
-                m.SetFloat(Smoothness, Mathf.Lerp(smooth, 0.78f, wetness));
-            }
-        }
-
         public void ApplyNight(float night)
         {
             foreach (var (material, off, on) in _lamps) material.color = Color.Lerp(off, on, night);

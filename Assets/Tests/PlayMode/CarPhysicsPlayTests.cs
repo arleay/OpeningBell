@@ -26,7 +26,6 @@ namespace OpeningBell.Tests
         public void DryRoads()
         {
             WeatherSystem.Forced = Weather.Clear;
-            CarController.WeatherGrip = 1f;
         }
 
         [TearDown]

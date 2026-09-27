@@ -23,6 +23,13 @@ namespace OpeningBell.City
         public float HoldSeconds = 4.5f;
         public float TravelBase = 2.5f;
         public float TravelPerFloor = 2.2f;
+        /// <summary>
+        /// Optional: each stop's height in metres (in stop order, not necessarily sorted). With it, travel takes
+        /// <see cref="SecondsPerMetre"/> for the real distance (a garage one level down next to a stop 88 m up), and
+        /// "nearest request" means nearest in metres.
+        /// </summary>
+        public float[] StopHeights;
+        public float SecondsPerMetre = 0.7f;
 
         private readonly HashSet<int> _requests = new HashSet<int>();
         private float _timer;
@@ -102,14 +109,17 @@ namespace OpeningBell.City
             }
         }
 
-        public float TravelSeconds(int from, int to) => TravelBase + TravelPerFloor * Math.Abs(to - from);
+        public float TravelSeconds(int from, int to) =>
+            StopHeights != null ? TravelBase + SecondsPerMetre * Math.Abs(StopHeights[to] - StopHeights[from]) : TravelBase + TravelPerFloor * Math.Abs(to - from);
+
+        private float Distance(int from, int to) => StopHeights != null ? Math.Abs(StopHeights[to] - StopHeights[from]) : Math.Abs(to - from);
 
         private void Depart()
         {
-            // Nearest request first (two floors today; keeps the rule simple for more).
+            // Nearest request first.
             int best = -1;
             foreach (int f in _requests)
-                if (best < 0 || Math.Abs(f - CarFloor) < Math.Abs(best - CarFloor)) best = f;
+                if (best < 0 || Distance(CarFloor, f) < Distance(CarFloor, best)) best = f;
             TargetFloor = best;
             _timer = TravelSeconds(CarFloor, best);
             SetState(ElevatorState.Moving);

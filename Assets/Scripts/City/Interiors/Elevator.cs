@@ -17,9 +17,10 @@ namespace OpeningBell.City
             public float Y;
             public Transform DoorLeft, DoorRight;
             public TextMesh HallIndicator, CarIndicator;
-            public Renderer HallLamp, CarLamp;
-            /// <summary>The floor whose request the car lamp shows.</summary>
-            public int CarLampFloor;
+            public Renderer HallLamp;
+            /// <summary>The car panel's lamps at this stop, and the floor each one's request shows.</summary>
+            public Renderer[] CarLamps = new Renderer[0];
+            public int[] CarLampFloors = new int[0];
             internal Vector3 ClosedLeft, ClosedRight;
         }
 
@@ -132,9 +133,12 @@ namespace OpeningBell.City
                 if (s.CarIndicator.text != shown) s.CarIndicator.text = shown;
                 Material hall = _logic.IsRequested(i) ? _lampOn : _lampOff;
                 if (s.HallLamp.sharedMaterial != hall) s.HallLamp.sharedMaterial = hall;
-                bool carLit = _logic.IsRequested(s.CarLampFloor) || (moving && _logic.TargetFloor == s.CarLampFloor);
-                Material car = carLit ? _lampOn : _lampOff;
-                if (s.CarLamp != null && s.CarLamp.sharedMaterial != car) s.CarLamp.sharedMaterial = car;
+                for (int j = 0; j < s.CarLamps.Length; j++)
+                {
+                    int to = s.CarLampFloors[j];
+                    Material car = _logic.IsRequested(to) || (moving && _logic.TargetFloor == to) ? _lampOn : _lampOff;
+                    if (s.CarLamps[j] != null && s.CarLamps[j].sharedMaterial != car) s.CarLamps[j].sharedMaterial = car;
+                }
             }
             _hum.transform.localPosition = new Vector3(0f, _stops[_logic.CarFloor].Y + 1.5f, 0f);
         }

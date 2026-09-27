@@ -51,8 +51,6 @@ namespace OpeningBell.City
         /// <summary>0–1: frame/engine condition; a battered engine makes less power.</summary>
         public float Condition { get; set; } = 1f;
         public float TireCondition { get; set; } = 1f;
-        /// <summary>Wet roads grip less (set by the weather: 1 dry, ~0.82 soaked).</summary>
-        public static float WeatherGrip { get; set; } = 1f;
 
         // Telemetry.
         public float SpeedKmh => ForwardSpeed * 3.6f;
@@ -140,7 +138,7 @@ namespace OpeningBell.City
             double frontShare = CarPhysics.FrontDriveShare(_spec);
 
             // Suspension, anti-roll and tyres, wheel by wheel.
-            float grip = (float)_spec.TireGrip * (0.75f + 0.25f * TireCondition) * WeatherGrip;
+            float grip = (float)_spec.TireGrip * (0.75f + 0.25f * TireCondition);
             Wheelspin = false;
             for (int axle = 0; axle < 2; axle++)
             {

@@ -270,8 +270,8 @@ namespace OpeningBell.City
                     if (b != f)
                     {
                         // Lit while the car is on its way to the other floor.
-                        stop.CarLamp = k.Box(board, "Lamp", new Vector3(0.09f, 1.05f + b * 0.25f, -0.03f), new Vector3(0.03f, 0.03f, 0.02f), lampOff, collider: false).GetComponent<Renderer>();
-                        stop.CarLampFloor = b;
+                        stop.CarLamps = new[] { k.Box(board, "Lamp", new Vector3(0.09f, 1.05f + b * 0.25f, -0.03f), new Vector3(0.03f, 0.03f, 0.02f), lampOff, collider: false).GetComponent<Renderer>() };
+                        stop.CarLampFloors = new[] { b };
                     }
                 }
                 stops[f] = stop;

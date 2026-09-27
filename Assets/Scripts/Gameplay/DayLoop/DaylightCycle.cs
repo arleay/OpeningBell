@@ -86,8 +86,6 @@ namespace OpeningBell.Gameplay
         public float FogScale { get; set; } = 1f;
         public float SunScale { get; set; } = 1f;
         public float Grey { get; set; }
-        /// <summary>A lightning flash (0–1, decays): the ambient spikes.</summary>
-        public float Flash { get; set; }
 
         private void Apply()
         {
@@ -116,7 +114,7 @@ namespace OpeningBell.Gameplay
             Color ambient = Color.Lerp(nightAmbient, dayAmbient, daylight);
             // Overcast: flatter, greyer light (a little brighter in the shadows, much less sun).
             float lum = ambient.grayscale;
-            ambient = Color.Lerp(ambient, new Color(lum, lum * 1.02f, lum * 1.06f) * 1.08f, Grey) + Color.white * Flash * 0.8f;
+            ambient = Color.Lerp(ambient, new Color(lum, lum * 1.02f, lum * 1.06f) * 1.08f, Grey);
             RenderSettings.ambientSkyColor = ambient * 1.15f;
             RenderSettings.ambientEquatorColor = ambient * 0.9f;
             RenderSettings.ambientGroundColor = new Color(ambient.r * 0.62f, ambient.g * 0.58f, ambient.b * 0.52f);

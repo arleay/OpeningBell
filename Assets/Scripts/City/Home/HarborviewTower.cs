@@ -28,6 +28,14 @@ namespace OpeningBell.City
 
         public static float Grade => StreetMap.Plan.StreetGrade(Landmarks.HarborviewLot.center);
 
+        // The residents' garage, one level under the lot (plan x/z; heights from the lobby floor).
+        public const float GarageFloor = -3.6f;
+        private const float GX0 = 228.5f, GX1 = 275.5f, GZ0 = 106f, GZ1 = 136f, Soffit = -0.05f;
+        /// <summary>The ramp lane along the north edge: down from Harbor Ave's side (west) to the garage floor at RampEnd.</summary>
+        private const float LaneZ0 = 130.5f, RampEnd = 252.5f;
+        /// <summary>Where the ramp is open to the sky (the terrain has a hole here: <see cref="TerrainBuilder"/>).</summary>
+        public static readonly Rect RampCut = Rect.MinMaxRect(GX0, LaneZ0, 246.5f, GZ1);
+
         private static Vector3 V(float x, float y, float z) => new Vector3(x, y, z);
 
         // ------------------------------------------------------------------ the building
@@ -40,7 +48,11 @@ namespace OpeningBell.City
             Transform t = Kit.Group(root, "Harborview Tower", V(0f, g, 0f));
             Material roof = c.P.Lit(new Color(0.22f, 0.23f, 0.25f));
             Material concrete = c.P.Facade(FacadeStyle.Concrete, true);
-            k.Span(t, "Forecourt", V(lot.xMin, -0.05f, lot.yMin), V(lot.xMax, 0.01f, lot.yMax), c.P.Lit(new Color(0.5f, 0.5f, 0.49f), 0.06f));
+            // The forecourt, round the open cut of the garage ramp (its underside is the garage's ceiling).
+            Material paving = c.P.Lit(new Color(0.5f, 0.5f, 0.49f), 0.06f);
+            k.Span(t, "Forecourt", V(lot.xMin, -0.05f, lot.yMin), V(lot.xMax, 0.01f, RampCut.yMin), paving);
+            k.Span(t, "Forecourt", V(RampCut.xMax, -0.05f, RampCut.yMin), V(lot.xMax, 0.01f, lot.yMax), paving);
+            Garage(c, t);
             // The podium wraps the lobby on three sides; the tower rises from it.
             k.Facade(t, "Podium W", V(234f, 0f, 96f), V(244f, PodiumTop, 128f), concrete, roof);
             k.Facade(t, "Podium E", V(260f, 0f, 96f), V(270f, PodiumTop, 128f), concrete, roof);
@@ -189,6 +201,121 @@ namespace OpeningBell.City
             }
         }
 
+        /// <summary>
+        /// P1, the residents' garage under the lot: a ramp down from the Harbor Ave side in an open cut along the north
+        /// edge, a lane along the north wall, a cross aisle, 24 marked bays (lot parking spots, so ambient cars and
+        /// "bring my car here" use them), board-marked concrete, columns, fluorescent strips, and the lift's lowest stop
+        /// in a small lobby.
+        /// </summary>
+        private static void Garage(CityContext c, Transform t)
+        {
+            Kit k = c.Kit;
+            const float f = GarageFloor;
+            Material wall = c.P.Surface(Finish.Concrete, new Color(0.66f, 0.66f, 0.64f), 0.05f);
+            Material slab = c.P.Surface(Finish.Concrete, new Color(0.44f, 0.44f, 0.45f), 0.2f);
+            Material paint = c.P.Lit(new Color(0.92f, 0.92f, 0.88f), 0.3f);
+            Material yellow = c.P.Lit(new Color(0.95f, 0.75f, 0.15f), 0.3f);
+            Material strip = c.P.Glow(new Color(0.9f, 0.95f, 1f), 1.8f);
+
+            k.Span(t, "Garage floor", V(GX0, f - 0.25f, GZ0), V(GX1, f, GZ1), slab).AddComponent<SurfaceTag>().Roughness = 0.15f;
+            // Walls: the lane opens west (the ramp comes in there); a wall between the ramp and the bays below it.
+            k.Span(t, "Garage wall S", V(GX0 - 0.3f, f, GZ0 - 0.3f), V(GX1 + 0.3f, Soffit, GZ0), wall);
+            k.Span(t, "Garage wall N", V(GX0 - 0.3f, f, GZ1), V(GX1 + 0.3f, Soffit, GZ1 + 0.3f), wall);
+            k.Span(t, "Garage wall W", V(GX0 - 0.3f, f, GZ0), V(GX0, Soffit, LaneZ0 - 0.25f), wall);
+            k.Span(t, "Garage wall E", V(GX1, f, GZ0), V(GX1 + 0.3f, Soffit, GZ1), wall);
+            k.Span(t, "Ramp wall", V(GX0, f, LaneZ0 - 0.25f), V(RampEnd, Soffit, LaneZ0), wall);
+            // Parapets round the cut, where it's open to the forecourt.
+            k.Span(t, "Parapet", V(GX0, -0.05f, LaneZ0 - 0.25f), V(RampCut.xMax, 1f, LaneZ0), wall);
+            k.Span(t, "Parapet", V(GX0, -0.05f, GZ1), V(RampCut.xMax, 1f, GZ1 + 0.3f), wall);
+            // The slab edge where the ramp goes under cover: 2.3 m clear above the ramp there.
+            k.Span(t, "Cut end", V(RampCut.xMax, f * (RampCut.xMax - GX0) / (RampEnd - GX0) + 2.3f, LaneZ0), V(RampCut.xMax + 0.3f, Soffit, GZ1), wall, collider: false);
+
+            // The ramp: 24 m at 15 %, one sloped slab.
+            var ramp = new MeshBuilder();
+            ramp.Quad(V(GX0 - 0.1f, 0f, LaneZ0), V(RampEnd, f, LaneZ0), V(RampEnd, f, GZ1), V(GX0 - 0.1f, 0f, GZ1));
+            ramp.Build(t, "Garage ramp", slab, collider: true).AddComponent<SurfaceTag>().Roughness = 0.15f;
+            var ribs = new MeshBuilder(); // anti-slip grooves across it
+            for (float x = GX0 + 1f; x < RampEnd - 0.5f; x += 0.6f)
+            {
+                float y = f * (x - GX0) / (RampEnd - GX0) + 0.012f;
+                ribs.Quad(V(x, y, LaneZ0 + 0.4f), V(x + 0.08f, y - 0.012f, LaneZ0 + 0.4f), V(x + 0.08f, y - 0.012f, GZ1 - 0.4f), V(x, y, GZ1 - 0.4f));
+            }
+            ribs.Build(t, "Ramp grooves", c.P.Lit(new Color(0.3f, 0.3f, 0.31f), 0.1f), collider: false);
+
+            // Bays, 2.6 m by 5.2: a row each side of the cross aisle (z 112-118), and one along the lane past the lift.
+            var lines = new MeshBuilder();
+            var bays = new List<(float X0, float Z0, float Z1, float Yaw)>();
+            for (float x = 232f; x + 2.6f <= 266.7f; x += 2.6f)
+            {
+                bays.Add((x, 106.8f, 112f, 180f));
+                if (x + 2.6f <= 249f || x >= 255f) bays.Add((x, 118f, 123.2f, 0f));
+            }
+            for (float x = 255.5f; x + 2.6f <= 268.5f; x += 2.6f) bays.Add((x, 125.1f, 130.25f, 180f));
+            foreach (var (x0, z0, z1, yaw) in bays)
+            {
+                float y = f + 0.006f;
+                foreach (float x in new[] { x0, x0 + 2.6f })
+                    lines.Quad(V(x - 0.05f, y, z0), V(x + 0.05f, y, z0), V(x + 0.05f, y, z1), V(x - 0.05f, y, z1));
+                c.ParkingSpots.Add((V(x0 + 1.3f, Grade + f, (z0 + z1) / 2f), yaw, ParkingKind.Lot));
+            }
+            lines.Build(t, "Bay lines", paint, collider: false);
+            // Aisle arrows: yellow chevrons down the middle of the lane and the cross aisle, pointing the way round.
+            var arrows = new MeshBuilder();
+            for (float x = 256f; x < 272f; x += 5f) Chevron(arrows, V(x, f + 0.007f, 133.1f), Vector3.right);
+            for (float z = 128f; z > 114f; z -= 5f) Chevron(arrows, V(271.5f, f + 0.007f, z), Vector3.back);
+            for (float x = 266f; x > 234f; x -= 6f) Chevron(arrows, V(x, f + 0.007f, 115f), Vector3.left);
+            arrows.Build(t, "Arrows", yellow, collider: false);
+
+            // Columns behind the bay rows, with yellow-striped feet.
+            foreach (float z in new[] { 106.5f, 123.6f })
+                for (float x = 234.6f; x < 268f; x += 7.8f)
+                {
+                    if (z > 120f && x > 247f && x < 257f) continue; // the lift core's there
+                    k.Box(t, "Column", V(x, (f + Soffit) / 2f, z), V(0.5f, Soffit - f, 0.5f), wall);
+                    k.Box(t, "Column foot", V(x, f + 0.4f, z), V(0.54f, 0.8f, 0.54f), yellow, collider: false);
+                }
+
+            // The lift core: walls round the shaft, doors south onto the bays' walkway.
+            k.WallX(t, "Lift core", 249f, 255f, 121f, f, Soffit, 0.2f, wall, new Opening(252f, 1.3f, f, f + 2.3f));
+            k.Span(t, "Lift core W", V(248.8f, f, 121f), V(249f, Soffit, 124f), wall);
+            k.Span(t, "Lift core E", V(255f, f, 121f), V(255.2f, Soffit, 124f), wall);
+            k.Span(t, "Lift core N", V(248.8f, f, 123.8f), V(255.2f, Soffit, 124f), wall);
+            k.Text(t, "P1  RESIDENTS", V(252f, f + 3.1f, 120.88f), 0f, 0.16f, new Color(0.95f, 0.75f, 0.15f));
+            k.Span(t, "Walkway", V(250.6f, f + 0.006f, 112f), V(253.4f, f + 0.008f, 121f), c.P.Lit(new Color(0.25f, 0.45f, 0.3f), 0.2f), collider: false);
+
+            // Signs hung from the ceiling, and the strip lights.
+            Material sign = c.P.Lit(new Color(0.12f, 0.35f, 0.2f), 0.3f);
+            k.Box(t, "Exit sign", V(262f, Soffit - 0.45f, 133.1f), V(0.05f, 0.35f, 1.8f), sign, collider: false);
+            k.Text(t, "EXIT  HARBOR AVE", V(261.97f, Soffit - 0.45f, 133.1f), 90f, 0.06f, Color.white);
+            k.Text(t, "EXIT  HARBOR AVE", V(262.03f, Soffit - 0.45f, 133.1f), -90f, 0.06f, Color.white);
+            k.Box(t, "Height bar", V(GX0 + 0.5f, 2.3f, (LaneZ0 + GZ1) / 2f), V(0.12f, 0.12f, GZ1 - LaneZ0), yellow, collider: false);
+            k.Text(t, "CLEARANCE 2.3 M", V(GX0 + 0.43f, 2.3f, (LaneZ0 + GZ1) / 2f), 90f, 0.05f, new Color(0.1f, 0.1f, 0.1f));
+            foreach (float z in new[] { 109.4f, 115f, 120.6f, 127.7f, 133.1f })
+                for (float x = 234f; x < 272f; x += 6f)
+                {
+                    if (z > 120f && z < 125f && x > 247f && x < 257f) continue;
+                    if (z > 132f && x < RampEnd) continue; // over the ramp, which the cut lights
+                    k.Box(t, "Strip light", V(x, Soffit - 0.06f, z), V(1.4f, 0.05f, 0.14f), strip, collider: false);
+                }
+            foreach (Vector3 at in new[] { V(238f, f + 2f, 112f), V(252f, f + 2f, 112f), V(264f, f + 2f, 112f), V(262f, f + 2f, 128f), V(252f, f + 2f, 119f) })
+                c.PointLight(t, at, 13f, 0.75f, new Color(0.92f, 0.96f, 1f));
+            c.Anchor("harborview_garage", V(252f, Grade + f, 116f));
+        }
+
+        /// <summary>A painted chevron on the floor at <paramref name="at"/>, pointing along <paramref name="dir"/> (1.2 m long).</summary>
+        private static void Chevron(MeshBuilder mb, Vector3 at, Vector3 dir)
+        {
+            Vector3 side = Vector3.Cross(Vector3.up, dir) * 0.55f;
+            Vector3 tip = at + dir * 0.6f, back = at - dir * 0.6f;
+            foreach (float s in new[] { -1f, 1f })
+            {
+                Vector3 wing = back + side * s;
+                Vector3 w = Vector3.Cross(Vector3.up, (tip - wing).normalized) * 0.09f * s;
+                if (s > 0f) mb.Quad(wing - w, tip - w, tip + w, wing + w);
+                else mb.Quad(wing + w, tip + w, tip - w, wing - w);
+            }
+        }
+
         /// <summary>A planter: a dark pot with a clump of leaves.</summary>
         private static void Plant(CityContext c, Transform t, Vector3 at, float height)
         {
@@ -220,12 +347,12 @@ namespace OpeningBell.City
             Terrace(c, p, m);
             c.SwingDoor(p, "Penthouse", V(-0.55f, 0f, 5.5f), 1.1f, 2.4f, m.Walnut);
 
-            Elevator lift = Lift(c, dyn, V(X, g + 0.02f, Z + LiftZ), PenthouseFloor - 0.02f);
-            // Only residents (or open-house visitors) ride up; anyone can come down.
+            Elevator lift = Lift(c, dyn, V(X, g + 0.02f, Z + LiftZ), PenthouseFloor - 0.02f, GarageFloor - 0.02f);
+            // Only residents (or open-house visitors) ride up or down to the garage; anyone can come back to the lobby.
             foreach (ElevatorButton button in lift.GetComponentsInChildren<ElevatorButton>())
             {
                 bool inCar = button.name.StartsWith("Button");
-                if ((inCar && button.Floor == 1) || (!inCar && button.Floor == 0))
+                if ((inCar && button.Floor != 0) || (!inCar && button.Floor != 1))
                     button.LockReason = () => world.Estate.Owns(HomeSales.PenthouseId) || HomeSales.OpenHouse.Contains(world.Game.Clock.Now) ? null : "residents only";
             }
 
@@ -593,10 +720,11 @@ namespace OpeningBell.City
         }
 
         /// <summary>
-        /// The residents' lift: lobby (L) and penthouse (PH), a walnut-and-brass car with a mirror at each stop, doors
-        /// south into the lobby and the penthouse foyer.
+        /// The residents' lift: lobby (L), penthouse (PH) and garage (P1), a walnut-and-brass car with a mirror at each
+        /// stop, doors south into the lobby, the penthouse foyer and the garage's lift lobby. Stops keep the order the
+        /// save and the buttons know (L 0, PH 1, P1 2); the panel shows them bottom to top.
         /// </summary>
-        private static Elevator Lift(CityContext c, Transform dyn, Vector3 at, float rise)
+        private static Elevator Lift(CityContext c, Transform dyn, Vector3 at, float rise, float garage)
         {
             Kit k = c.Kit;
             Material walnut = c.P.Lit(new Color(0.3f, 0.19f, 0.12f), 0.4f);
@@ -607,12 +735,14 @@ namespace OpeningBell.City
             Material lampOn = c.P.Unlit(new Color(1f, 0.75f, 0.35f));
             Transform shaft = Kit.Group(dyn, "Harborview lift", at);
             var elevator = shaft.gameObject.AddComponent<Elevator>();
-            var stops = new Elevator.FloorStop[2];
-            string[] labels = { "L", "PH" };
+            string[] labels = { "L", "PH", "P1" };
+            float[] heights = { 0f, rise, garage };
+            int[] row = { 1, 2, 0 }; // panel position, bottom up
+            var stops = new Elevator.FloorStop[labels.Length];
             const float doorZ = -1.2f;
-            for (int f = 0; f < 2; f++)
+            for (int f = 0; f < labels.Length; f++)
             {
-                float y = f == 0 ? 0f : rise;
+                float y = heights[f];
                 k.Span(shaft, "Car floor", V(-1.4f, y - 0.1f, -1.2f), V(1.4f, y, 1.2f), c.P.Lit(new Color(0.2f, 0.19f, 0.18f), 0.5f));
                 k.Span(shaft, "Car ceiling", V(-1.4f, y + 2.6f, -1.2f), V(1.4f, y + 2.7f, 1.2f), steel);
                 k.Span(shaft, "Car back", V(-1.4f, y, 1.17f), V(1.4f, y + 2.6f, 1.23f), walnut);
@@ -633,22 +763,26 @@ namespace OpeningBell.City
                 stop.HallLamp = k.Box(shaft, "Call lamp", V(1.05f, y + 1.1f, doorZ - 0.18f), V(0.06f, 0.06f, 0.02f), lampOff, collider: false).GetComponent<Renderer>();
                 call.AddComponent<ElevatorButton>().Configure(elevator, f, inCar: false);
                 Transform board = Kit.Group(shaft, "Car panel", V(1.37f, y, 0f), 90f);
-                for (int b = 0; b < 2; b++)
+                var lamps = new List<Renderer>();
+                var lampFloors = new List<int>();
+                for (int b = 0; b < labels.Length; b++)
                 {
-                    GameObject button = k.Box(board, "Button " + labels[b], V(0f, 1.05f + b * 0.25f, -0.02f), V(0.12f, 0.12f, 0.03f), brass);
+                    float by = 1.0f + row[b] * 0.22f;
+                    GameObject button = k.Box(board, "Button " + labels[b], V(0f, by, -0.02f), V(0.12f, 0.12f, 0.03f), brass);
                     button.AddComponent<ElevatorButton>().Configure(elevator, b, inCar: true);
-                    k.Text(board, labels[b], V(-0.11f, 1.05f + b * 0.25f, -0.03f), 0f, 0.05f, new Color(0.1f, 0.1f, 0.1f));
-                    if (b != f)
-                    {
-                        stop.CarLamp = k.Box(board, "Lamp", V(0.09f, 1.05f + b * 0.25f, -0.03f), V(0.03f, 0.03f, 0.02f), lampOff, collider: false).GetComponent<Renderer>();
-                        stop.CarLampFloor = b;
-                    }
+                    k.Text(board, labels[b], V(-0.12f, by, -0.03f), 0f, 0.05f, new Color(0.1f, 0.1f, 0.1f));
+                    if (b == f) continue;
+                    lamps.Add(k.Box(board, "Lamp", V(0.09f, by, -0.03f), V(0.03f, 0.03f, 0.02f), lampOff, collider: false).GetComponent<Renderer>());
+                    lampFloors.Add(b);
                 }
+                stop.CarLamps = lamps.ToArray();
+                stop.CarLampFloors = lampFloors.ToArray();
                 stops[f] = stop;
             }
             elevator.Configure(stops, new Vector2(1.4f, 1.2f), 1.3f, c.Player, lampOn, lampOff);
-            // One stop is 88 m: about 12 s at an express lift's pace, not one storey's hop.
-            elevator.Logic.TravelPerFloor = 9.5f;
+            // Travel by distance: 88 m up is about 12 s at an express lift's pace; the garage, one level down, 3 s.
+            elevator.Logic.StopHeights = heights;
+            elevator.Logic.SecondsPerMetre = 9.5f / 88f;
             return elevator;
         }
 

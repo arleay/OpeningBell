@@ -142,7 +142,7 @@ namespace OpeningBell.City
             Transform root = Kit.Group(c.Static, "Timberline yard");
             Transform dyn = Kit.Group(c.Dynamic, "Timberline yard");
             Rect y = Yard;
-            k.Span(root, "Yard", new Vector3(y.xMin, -0.05f, y.yMin), new Vector3(y.xMax, 0.01f, y.yMax), c.P.Wettable(c.P.Lit(new Color(0.3f, 0.3f, 0.31f), 0.1f)))
+            k.Span(root, "Yard", new Vector3(y.xMin, -0.05f, y.yMin), new Vector3(y.xMax, 0.01f, y.yMax), c.P.Lit(new Color(0.3f, 0.3f, 0.31f), 0.1f))
                 .AddComponent<SurfaceTag>().Roughness = 0.3f;
             // Driveway out to Grove St.
             float grove = StreetMap.Plan.StreetGrade(new Vector2(-288f, 70f));

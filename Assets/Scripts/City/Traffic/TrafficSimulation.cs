@@ -142,8 +142,6 @@ namespace OpeningBell.City
         /// <param name="otherCars">Cars outside the simulation (the player's, parked ones): followed like traffic.</param>
         private float _dt;
 
-        /// <summary>Drivers slow down in the rain (set by the weather; 1 = normal).</summary>
-        public float SpeedFactor { get; set; } = 1f;
 
         public void Step(float dt, IReadOnlyList<Vector2> people, IReadOnlyList<Vector2> otherCars = null)
         {
@@ -162,7 +160,7 @@ namespace OpeningBell.City
 
         private float TargetSpeed(Car car, IReadOnlyList<Vector2> people)
         {
-            float cs = car.CruiseSpeed * SpeedFactor;
+            float cs = car.CruiseSpeed;
             float cruise = car.Move != null ? Mathf.Min(cs, car.Move.Turn == RoadNetwork.Turn.Straight ? cs : TurnSpeed) : cs;
             float free = float.MaxValue;
 

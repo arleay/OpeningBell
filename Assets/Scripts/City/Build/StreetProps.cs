@@ -282,10 +282,10 @@ namespace OpeningBell.City
                     }
             }
             iron.Build(root, "Manholes and drains", c.P.Lit(new Color(0.16f, 0.16f, 0.17f), 0.45f), collider: false);
-            patch.Build(root, "Road patches", c.P.Wettable(c.P.Lit(new Color(0.165f, 0.165f, 0.172f), 0.08f)), collider: false);
-            stain.Build(root, "Oil stains", c.P.Wettable(c.P.Lit(new Color(0.07f, 0.07f, 0.08f), 0.35f)), collider: false);
+            patch.Build(root, "Road patches", c.P.Lit(new Color(0.165f, 0.165f, 0.172f), 0.08f), collider: false);
+            stain.Build(root, "Oil stains", c.P.Lit(new Color(0.07f, 0.07f, 0.08f), 0.35f), collider: false);
             litter.Build(root, "Litter", c.P.Lit(new Color(0.85f, 0.83f, 0.76f), 0.05f), collider: false);
-            cracks.Build(root, "Sealed cracks", c.P.Wettable(c.P.Lit(new Color(0.045f, 0.045f, 0.05f), 0.5f)), collider: false);
+            cracks.Build(root, "Sealed cracks", c.P.Lit(new Color(0.045f, 0.045f, 0.05f), 0.5f), collider: false);
         }
 
         /// <summary>

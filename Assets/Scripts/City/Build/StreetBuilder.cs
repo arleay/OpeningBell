@@ -39,7 +39,7 @@ namespace OpeningBell.City
             Roads(c, root, map);
             Driveways(c, root, map);
             foreach (Rect r in CityPlan.Paved)
-                Tag(c.Kit.Span(root, "Paving", new Vector3(r.xMin, -0.05f, r.yMin), new Vector3(r.xMax, 0.005f, r.yMax), c.P.Wettable(c.P.Surface(Finish.Paving, new Color(0.46f, 0.46f, 0.45f), 0.04f))), 0.25f);
+                Tag(c.Kit.Span(root, "Paving", new Vector3(r.xMin, -0.05f, r.yMin), new Vector3(r.xMax, 0.005f, r.yMax), c.P.Surface(Finish.Paving, new Color(0.46f, 0.46f, 0.45f), 0.04f)), 0.25f);
             Water(c, root);
             Markings(c, root, map);
             CurbRamps(c, root, walks);
@@ -112,8 +112,8 @@ namespace OpeningBell.City
                 }
             }
 
-            road.Build(root, "Road surface", c.P.Wettable(c.P.Surface(Finish.Asphalt, Asphalt, 0.05f)), collider: true, roughness: 0.3f);
-            walk.Build(root, "Sidewalks", c.P.Wettable(c.P.Surface(Finish.Paving, Concrete, 0.08f)), collider: true, roughness: 0.2f);
+            road.Build(root, "Road surface", c.P.Surface(Finish.Asphalt, Asphalt, 0.05f), collider: true, roughness: 0.3f);
+            walk.Build(root, "Sidewalks", c.P.Surface(Finish.Paving, Concrete, 0.08f), collider: true, roughness: 0.2f);
             deck.Build(root, "Bridge decks", c.P.Surface(Finish.Concrete, new Color(0.55f, 0.54f, 0.51f), 0.05f), collider: true);
         }
 
@@ -205,7 +205,7 @@ namespace OpeningBell.City
                     mb.Quad(V(a - left, ga), V(b + ext - left, gb), V(b + ext + left, gb), V(a + left, ga));
                 }
             }
-            alley.Build(root, "Alleys", c.P.Wettable(c.P.Surface(Finish.Asphalt, new Color(0.25f, 0.25f, 0.25f), 0.05f)), collider: true, roughness: 0.35f);
+            alley.Build(root, "Alleys", c.P.Surface(Finish.Asphalt, new Color(0.25f, 0.25f, 0.25f), 0.05f), collider: true, roughness: 0.35f);
             dirt.Build(root, "Dirt roads", c.P.Lit(new Color(0.42f, 0.36f, 0.28f), 0.02f), collider: true, roughness: 0.75f);
             Material concrete = c.P.Surface(Finish.Concrete, new Color(0.58f, 0.57f, 0.54f), 0.08f);
             foreach (var (p, dir, width, g) in ramps) Ramp(c.Kit, root, p, dir, width, g, concrete);
