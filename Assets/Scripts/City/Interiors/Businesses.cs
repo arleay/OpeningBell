@@ -262,10 +262,10 @@ namespace OpeningBell.City
 
         private static void Counter(CityContext c, Transform root, Vector3 at, string item, decimal price, StaffNpc staff, string thanks)
         {
-            GameObject display = c.Kit.Box(root, item, at + new Vector3(0f, 0.06f, 0f), new Vector3(0.28f, 0.12f, 0.2f), c.P.Lit(new Color(0.8f, 0.62f, 0.35f)), collider: false);
+            ShopStock.CounterItem(c, root, at + new Vector3(0f, 0.02f, 0f), item);
             var aim = new GameObject(item + " (buy)");
             aim.transform.SetParent(c.Dynamic, false);
-            aim.transform.position = display.transform.position + Vector3.up * 0.1f;
+            aim.transform.position = root.TransformPoint(at + new Vector3(0f, 0.16f, 0f));
             var box = aim.AddComponent<BoxCollider>();
             box.isTrigger = true;
             box.size = new Vector3(0.7f, 0.45f, 0.7f);
@@ -286,7 +286,7 @@ namespace OpeningBell.City
             float cz = d - 2.3f;
             k.Span(r, "Counter", new Vector3(-hw + 1.2f, 0f, cz - 0.35f), new Vector3(hw - 1.6f, 1f, cz + 0.35f), counter);
             k.Span(r, "Counter top", new Vector3(-hw + 1.1f, 1f, cz - 0.4f), new Vector3(hw - 1.5f, 1.04f, cz + 0.4f), top, collider: false);
-            k.Box(r, "Register", new Vector3(hw * 0.4f + 0.5f, 1.17f, cz), new Vector3(0.4f, 0.25f, 0.35f), c.P.Lit(new Color(0.12f, 0.12f, 0.13f), 0.4f), collider: false);
+            ShopStock.Register(k, r, new Vector3(hw * 0.4f + 0.5f, 1.04f, cz));
             float front = 2.2f, back = cz - 1.3f; // floor space between the windows and the counter
 
             switch (b.Trade)
@@ -298,23 +298,24 @@ namespace OpeningBell.City
                         k.Fit(r, "dryer", new Vector3(hw - 0.45f, 0f, z), new Vector3(0.85f, 0f, 0.85f), 270f);
                     }
                     k.Span(r, "Folding table", new Vector3(-1.2f, 0f, (front + back) / 2f - 1f), new Vector3(1.2f, 0.9f, (front + back) / 2f + 1f), metal);
+                    k.Real(r, "wicker_basket_02", new Vector3(-0.6f, 0.9f, (front + back) / 2f - 0.4f), 20f);
+                    k.Real(r, "wicker_basket_02", new Vector3(0.5f, 0.9f, (front + back) / 2f + 0.5f), 200f);
+                    k.Real(r, "WetFloorSign_01", new Vector3(0.9f, 0f, front + 0.3f), 30f);
                     k.Fit(r, "bench", new Vector3(0f, 0f, front - 0.8f), new Vector3(2f, 0f, 0f));
                     break;
                 case Trade.Pawn:
                 case Trade.SmokeShop:
-                    // Glass cases in a U, guitars and TVs on the walls.
-                    for (float z = front; z < back; z += 2.2f)
+                {
+                    // Glass cases in a U; the pawn shop adds electronics shelves, guitars on the back wall and a safe.
+                    string[] caseStock = b.Trade == Trade.Pawn ? ShopStock.PawnCase : ShopStock.SmokeCase;
+                    for (float z = front; z < back - 1f; z += 2.2f)
                     {
-                        GlassCase(c, r, new Vector3(-hw + 1.4f, 0f, z + 1f), 2f, 0.8f);
-                        GlassCase(c, r, new Vector3(hw - 1.4f, 0f, z + 1f), 2f, 0.8f);
+                        GlassCase(c, r, new Vector3(-hw + 1.4f, 0f, z + 1f), 2f, 0.8f, caseStock, rng);
+                        GlassCase(c, r, new Vector3(hw - 1.4f, 0f, z + 1f), 2f, 0.8f, caseStock, rng);
                     }
-                    for (float x = -hw + 1f; x < hw - 1f; x += 1.4f)
-                    {
-                        k.Box(r, "Guitar", new Vector3(x, 2.2f, d - 0.15f), new Vector3(0.35f, 1f, 0.08f), c.P.Lit(new Color(0.55f + (float)rng.NextDouble() * 0.3f, 0.3f, 0.15f), 0.5f), collider: false);
-                    }
-                    k.Fit(r, "televisionVintage", new Vector3(-hw + 0.6f, 1.2f, back), new Vector3(0.8f, 0f, 0f), 90f);
-                    k.Box(r, "Safe", new Vector3(hw - 0.6f, 0.5f, d - 0.6f), new Vector3(0.8f, 1f, 0.8f), c.P.Lit(new Color(0.2f, 0.22f, 0.2f), 0.4f));
+                    if (b.Trade == Trade.Pawn) ShopStock.Pawn(c, r, hw, d, back, rng);
                     break;
+                }
                 case Trade.Liquor:
                 case Trade.Discount:
                 case Trade.Pharmacy:
@@ -324,6 +325,8 @@ namespace OpeningBell.City
                 case Trade.FishMarket:
                     Aisles(c, r, b.Trade, hw, front, back, rng);
                     if (b.Trade == Trade.Discount) Convenience(c, r, hw, d, front, back);
+                    if (b.Trade == Trade.Hardware) ShopStock.Hardware(c, r, hw, front, back, rng);
+                    if (b.Trade == Trade.Supermarket) ShopStock.Produce(c, r, hw, front, rng);
                     if (b.Trade == Trade.Hardware || b.Trade == Trade.AutoParts)
                     {
                         // Stock room behind the till: a steel rack against the back wall and a pile of boxes.
@@ -334,8 +337,11 @@ namespace OpeningBell.City
                 case Trade.Barber:
                     for (float x = -hw + 1.2f; x < hw - 1f; x += 2f)
                     {
-                        k.Fit(r, "chairDesk", new Vector3(x, 0f, back - 0.4f), new Vector3(0.7f, 0f, 0f), 180f);
-                        k.Fit(r, "bathroomMirror", new Vector3(x, 1.2f, cz - 0.45f), new Vector3(0.8f, 0f, 0f), 180f);
+                        if (k.Real(r, "BarberShopChair_01", new Vector3(x, 0f, back - 0.5f), 180f) == null)
+                            k.Fit(r, "chairDesk", new Vector3(x, 0f, back - 0.4f), new Vector3(0.7f, 0f, 0f), 180f);
+                        // A real mirror in front of each chair (the nearest one you face reflects; see Mirror).
+                        k.Box(r, "Mirror frame", new Vector3(x, 1.6f, cz - 0.4f), new Vector3(0.8f, 1.0f, 0.04f), c.P.Lit(new Color(0.12f, 0.1f, 0.09f), 0.5f), collider: false);
+                        Mirror.Create(c, r, "Barber mirror", new Vector3(x, 1.6f, cz - 0.425f), Vector3.back, new Vector2(0.7f, 0.9f));
                     }
                     for (float x = -hw + 0.8f; x < 0f; x += 0.8f) k.Fit(r, "chair", new Vector3(x, 0f, front - 0.6f), new Vector3(0.6f, 0f, 0f));
                     break;
@@ -347,14 +353,39 @@ namespace OpeningBell.City
                     {
                         k.Fit(r, "bookcaseOpen", new Vector3(-hw + 0.3f, 0f, z), new Vector3(0f, 2f, 1.2f), 90f);
                         k.Fit(r, "bookcaseOpen", new Vector3(hw - 0.3f, 0f, z), new Vector3(0f, 2f, 1.2f), 270f);
+                        if (b.Trade == Trade.Books)
+                        {
+                            ShopStock.FillBookcase(k, r, new Vector3(-hw + 0.3f, 0f, z), 90f, rng);
+                            ShopStock.FillBookcase(k, r, new Vector3(hw - 0.3f, 0f, z), 270f, rng);
+                        }
+                        else if (b.Trade != Trade.UsedFurniture)
+                        {
+                            string[] wares = b.Trade == Trade.Florist ? ShopStock.Flowers : ShopStock.Thrift;
+                            foreach (float y in new[] { 0.42f, 0.8f, 1.18f })
+                            {
+                                ShopStock.Spread(k, r, wares, new Vector3(-hw + 0.35f, y, z), 0.9f, 90f, rng, 2);
+                                ShopStock.Spread(k, r, wares, new Vector3(hw - 0.35f, y, z), 0.9f, 270f, rng, 2);
+                            }
+                        }
                     }
                     string[] middle = b.Trade == Trade.UsedFurniture ? new[] { "loungeChair", "loungeSofa", "tableCoffee", "sideTableDrawers", "lampRoundFloor" }
-                        : b.Trade == Trade.Florist ? new[] { "pottedPlant", "plantSmall1", "plantSmall2", "plantSmall3" }
-                        : b.Trade == Trade.Books ? new[] { "bookcaseClosedWide", "table", "books" }
-                        : new[] { "coatRackStanding", "table", "chairCushion", "lampSquareFloor" };
+                        : b.Trade == Trade.Books ? new[] { "table" }
+                        : new[] { "table" };
                     for (float z = front + 0.8f; z < back - 0.5f; z += 2f)
                     for (float x = -hw + 2.4f; x < hw - 2.4f; x += 2.2f)
-                        k.Fit(r, middle[rng.Next(middle.Length)], new Vector3(x, 0f, z), new Vector3(1.4f, 0f, 0f), rng.Next(4) * 90f);
+                    {
+                        string piece = middle[rng.Next(middle.Length)];
+                        k.Fit(r, piece, new Vector3(x, 0f, z), new Vector3(1.4f, 0f, 0f), piece == "table" ? 0f : rng.Next(4) * 90f);
+                        // Display tables: flowers, odds and ends, or a pile of books.
+                        if (piece != "table") continue;
+                        string[] onTable = b.Trade == Trade.Florist ? ShopStock.Flowers : b.Trade == Trade.Books ? new[] { "book_encyclopedia_set_01", "books" } : ShopStock.Thrift;
+                        ShopStock.Spread(k, r, onTable, new Vector3(x, 0.75f, z), 1.1f, 0f, rng, b.Trade == Trade.Books ? 2 : 3);
+                    }
+                    if (b.Trade == Trade.Thrift)
+                    {
+                        k.Real(r, "vintage_suitcase", new Vector3(-hw + 1.4f, 0f, front - 0.9f), 0f, 0.6f);
+                        k.Real(r, "rubber_boots", new Vector3(hw - 1.4f, 0f, front - 0.9f), 180f, 0.6f);
+                    }
                     break;
                 case Trade.Diner:
                 case Trade.Restaurant:
@@ -367,6 +398,15 @@ namespace OpeningBell.City
                     for (float x = -hw + 1.6f; x < hw - 1.2f; x += 3.6f)
                     {
                         k.Fit(r, "table", new Vector3(x, 0f, z + 0.9f), new Vector3(1.1f, 0f, 0f));
+                        if (rng.NextDouble() < 0.5)
+                        {
+                            // A meal on the table: plate, food, the drink.
+                            Vector3 plateAt = new Vector3(x + 0.15f, 0.76f, z + 0.9f);
+                            k.Prop(r, "Plate", plateAt, 0.02f, 0f, 0.24f);
+                            string[] meal = b.Trade == Trade.Pizza ? new[] { "Pizza_Slice" } : b.Trade == Trade.Bakery ? new[] { "Croissant", "Cupcake", "Donut2" } : new[] { "Cheeseburger", "Pancakes_Stack", "Steak", "Hotdog", "Waffle" };
+                            k.Prop(r, meal[rng.Next(meal.Length)], plateAt + Vector3.up * 0.015f, 0.07f, (float)rng.NextDouble() * 360f);
+                            k.Prop(r, "Soda", new Vector3(x - 0.25f, 0.76f, z + 0.9f), 0.12f);
+                        }
                         k.Fit(r, "chair", new Vector3(x, 0f, z + 0.15f), new Vector3(0.5f, 0f, 0f));
                         k.Fit(r, "chair", new Vector3(x, 0f, z + 1.65f), new Vector3(0.5f, 0f, 0f), 180f);
                     }
@@ -375,6 +415,12 @@ namespace OpeningBell.City
                     k.Fit(r, "kitchenCoffeeMachine", new Vector3(0f, 1.04f, cz), new Vector3(0.35f, 0f, 0f), 180f);
                     string food = b.Trade == Trade.Pizza ? "Pizza" : b.Trade == Trade.Bakery ? "Bread" : "Cheeseburger";
                     for (int i = 0; i < 3; i++) k.Prop(r, food, new Vector3(-hw + 2f + i * 0.5f, 1.04f, cz), 0.1f, i * 40f, 0.3f);
+                    if (b.Trade == Trade.Bakery)
+                    {
+                        // The bakery's glass counter: cakes, croissants and buns under the glass.
+                        string[] bakes = { "carrot_cake", "strawberry_chocolate_cake", "croissant", "hamburger_buns", "croissant" };
+                        for (int i = 0; i < bakes.Length; i++) k.Real(r, bakes[i], new Vector3(-hw + 1.6f + i * 0.34f, 1.04f, cz - 0.1f), 180f);
+                    }
                     break;
                 case Trade.Tattoo:
                     k.Fit(r, "loungeChairRelax", new Vector3(-hw + 1.5f, 0f, back - 0.5f), new Vector3(1f, 0f, 0f), 90f);
@@ -385,6 +431,8 @@ namespace OpeningBell.City
                     k.Fit(r, "loungeSofa", new Vector3(0f, 0f, front - 0.3f), new Vector3(1.8f, 0f, 0f));
                     break;
                 case Trade.Police:
+                    k.Real(r, "security_camera_01", new Vector3(hw - 0.3f, 2.6f, front - 1f), 225f);
+                    k.Real(r, "wall_clock", new Vector3(0f, 2.3f, d - 0.05f), 180f);
                     // Front desk behind glass, a bench to wait on, the notice board and the flag.
                     k.Span(r, "Desk glass", new Vector3(-hw + 1.2f, 1.04f, cz - 0.05f), new Vector3(hw - 1.6f, 2.3f, cz + 0.05f), c.P.Glass(new Color(0.7f, 0.8f, 0.85f, 0.3f)), collider: true);
                     k.Fit(r, "bench", new Vector3(-hw + 2f, 0f, front), new Vector3(2f, 0f, 0f));
@@ -394,25 +442,34 @@ namespace OpeningBell.City
                     k.Box(r, "Flag", new Vector3(hw - 0.9f, 2.1f, d - 0.6f), new Vector3(0.8f, 0.5f, 0.02f), c.P.Lit(new Color(0.15f, 0.3f, 0.55f)), collider: false);
                     break;
                 case Trade.Bank:
+                    k.Real(r, "security_camera_01", new Vector3(-hw + 0.3f, 2.6f, front - 1f), 135f);
+                    k.Real(r, "wall_clock", new Vector3(hw * 0.5f, 2.3f, d - 0.05f), 180f);
                     k.Span(r, "Teller glass", new Vector3(-hw + 1.2f, 1.04f, cz - 0.05f), new Vector3(hw - 1.6f, 2.3f, cz + 0.05f), c.P.Glass(new Color(0.7f, 0.8f, 0.85f, 0.3f)), collider: true);
                     k.Fit(r, "bench", new Vector3(0f, 0f, front), new Vector3(2f, 0f, 0f));
                     k.Fit(r, "pottedPlant", new Vector3(-hw + 0.6f, 0f, front), new Vector3(0.6f, 0f, 0f));
                     k.Box(r, "Vault door", new Vector3(-hw + 1.5f, 1.2f, d - 0.12f), new Vector3(1.6f, 2f, 0.1f), c.P.Lit(new Color(0.55f, 0.56f, 0.58f), 0.7f), collider: false);
                     break;
                 case Trade.Repair:
-                    for (float x = -hw + 1f; x < hw - 1f; x += 1.5f)
-                        k.Fit(r, "computerScreen", new Vector3(x, 1.04f, cz), new Vector3(0.5f, 0f, 0f), 180f);
-                    for (float z = front; z < back; z += 1.6f) k.Fit(r, "bookcaseClosed", new Vector3(-hw + 0.3f, 0f, z), new Vector3(0f, 1.8f, 1.2f), 90f);
+                    ShopStock.Spread(k, r, ShopStock.Repair, new Vector3(-hw * 0.3f, 1.04f, cz), hw, 180f, rng, 3);
+                    for (float z = front; z < back; z += 1.2f)
+                    {
+                        k.Real(r, "steel_frame_shelves_01", new Vector3(-hw + 0.3f, 0f, z), 90f);
+                        foreach (float y in new[] { 0.05f, 0.73f, 1.41f })
+                            ShopStock.Spread(k, r, ShopStock.Repair, new Vector3(-hw + 0.3f, y, z), 0.9f, 90f, rng, 2);
+                    }
                     break;
                 case Trade.Bar:
                 case Trade.Nightclub:
-                    for (float x = -hw + 1.6f; x < hw - 2f; x += 0.9f) k.Fit(r, "stoolBar", new Vector3(x, 0f, cz - 0.9f), new Vector3(0.45f, 0f, 0f));
-                    for (float x = -hw + 1f; x < hw - 1f; x += 0.25f)
-                        k.Prop(r, rng.Next(2) == 0 ? "Bottle1" : "Bottle2", new Vector3(x, 1.4f, d - 0.3f), 0.3f);
+                    for (float x = -hw + 1.6f; x < hw - 2f; x += 0.9f)
+                        if (k.Real(r, "bar_chair_round_01", new Vector3(x, 0f, cz - 0.9f), (float)rng.NextDouble() * 360f) == null)
+                            k.Fit(r, "stoolBar", new Vector3(x, 0f, cz - 0.9f), new Vector3(0.45f, 0f, 0f));
+                    for (float x = -hw + 1f; x < hw - 1f; x += 0.75f)
+                        if (k.Real(r, "wine_bottles_01", new Vector3(x + 0.3f, 1.4f, d - 0.3f), 180f) == null)
+                            k.Prop(r, rng.Next(2) == 0 ? "Bottle1" : "Bottle2", new Vector3(x, 1.4f, d - 0.3f), 0.3f);
                     k.Span(r, "Back shelf", new Vector3(-hw + 0.8f, 1.35f, d - 0.5f), new Vector3(hw - 0.8f, 1.4f, d - 0.1f), counter, collider: false);
                     if (b.Trade == Trade.Bar)
                     {
-                        k.Span(r, "Pool table", new Vector3(-1.2f, 0f, front + 0.5f), new Vector3(1.2f, 0.8f, front + 2.4f), c.P.Lit(new Color(0.1f, 0.4f, 0.2f), 0.2f));
+                        ShopStock.PoolTable(c, r, new Vector3(0f, 0f, front + 1.45f), 0f);
                         for (float z = front; z < back; z += 2.2f)
                         {
                             k.Fit(r, "benchCushion", new Vector3(-hw + 0.6f, 0f, z), new Vector3(0f, 0f, 1.6f), 90f);
@@ -425,17 +482,16 @@ namespace OpeningBell.City
                 case Trade.Arcade:
                     for (float z = front; z < back; z += 1.2f)
                     {
-                        Cabinet(c, r, new Vector3(-hw + 0.5f, 0f, z), 90f, rng);
-                        Cabinet(c, r, new Vector3(hw - 0.5f, 0f, z), 270f, rng);
+                        ShopStock.ArcadeCabinet(c, r, new Vector3(-hw + 0.5f, 0f, z), 90f, rng);
+                        ShopStock.ArcadeCabinet(c, r, new Vector3(hw - 0.5f, 0f, z), 270f, rng);
                     }
-                    for (float x = -hw + 2.5f; x < hw - 2.5f; x += 1.2f) Cabinet(c, r, new Vector3(x, 0f, (front + back) / 2f), 0f, rng);
+                    for (float x = -hw + 2.5f; x < hw - 2.5f; x += 1.2f) ShopStock.ArcadeCabinet(c, r, new Vector3(x, 0f, (front + back) / 2f), 0f, rng);
                     break;
                 case Trade.Gym:
-                    for (float z = front; z < back; z += 2f)
-                    for (float x = -hw + 1.2f; x < hw - 1f; x += 2.4f)
+                    for (float z = front; z < back - 1f; z += 2.8f)
+                    for (float x = -hw + 1.4f; x < hw - 1f; x += 3.2f)
                     {
-                        k.Span(r, "Bench", new Vector3(x - 0.2f, 0f, z), new Vector3(x + 0.2f, 0.45f, z + 1.3f), c.P.Lit(new Color(0.12f, 0.12f, 0.13f)));
-                        k.Box(r, "Bar", new Vector3(x, 1.1f, z + 1f), new Vector3(1.8f, 0.05f, 0.05f), metal, collider: false);
+                        ShopStock.WeightBench(c, r, new Vector3(x, 0f, z + 0.65f), 0f);
                     }
                     k.Span(r, "Mirror", new Vector3(-hw + 0.02f, 0.3f, front), new Vector3(-hw + 0.04f, 2.4f, back), c.P.Lit(new Color(0.7f, 0.75f, 0.78f), 0.95f), collider: false);
                     break;
@@ -463,6 +519,7 @@ namespace OpeningBell.City
         private static void Stock(Kit k, Transform r, string item, Vector3 at, float yaw)
         {
             if (item.StartsWith("food_")) k.Model(r, item, at, yaw);
+            else if (char.IsLower(item[0])) k.Real(r, item, at, yaw); // Poly Haven ids are lower case, measured objects
             else k.Prop(r, item, at, 0.24f, yaw);
         }
 
@@ -477,8 +534,11 @@ namespace OpeningBell.City
                 Trade.Supermarket => new[] { "food_sm_cereal", "food_sm_pasta", "food_sm_canned_food_3", "food_sm_juice_carton", "food_sm_milk_bottle",
                     "food_sm_sause", "food_sm_coffee_box", "food_sm_olive_oil", "food_sm_porridge" },
                 Trade.FishMarket => new[] { "Fish", "Fish", "Lettuce_Whole", "Fish" },
-                Trade.Discount => new[] { "food_sm_snack", "food_sm_chocolate_bar", "food_sm_canned_food_4", "food_sm_detergent_powder", "food_sm_dishwashing_liquid", "food_sm_bleach" },
-                Trade.Pharmacy => new[] { "food_sm_pills_box", "food_sm_protein_jar", "food_sm_detergent_liquid", "food_sm_pills_box", "food_sm_glue" },
+                Trade.Discount => new[] { "food_sm_snack", "food_sm_chocolate_bar", "food_sm_canned_food_4", "food_sm_detergent_powder", "food_sm_dishwashing_liquid", "food_sm_bleach",
+                    "bleach_bottle", "all_purpose_cleaner", "multi_cleaner_bottle", "drain_cleaner" },
+                Trade.Pharmacy => new[] { "food_sm_pills_box", "food_sm_protein_jar", "food_sm_detergent_liquid", "food_sm_pills_box", "food_sm_glue", "medical_tape", "all_purpose_cleaner" },
+                Trade.Hardware => ShopStock.Tools,
+                Trade.AutoParts => ShopStock.CarCare,
                 _ => null,
             };
             Color[] boxes = { new Color(0.8f, 0.3f, 0.2f), new Color(0.2f, 0.4f, 0.7f), new Color(0.9f, 0.8f, 0.3f), new Color(0.3f, 0.6f, 0.35f), new Color(0.9f, 0.9f, 0.88f) };
@@ -489,6 +549,19 @@ namespace OpeningBell.City
                 {
                     float y = 0.35f + level * 0.5f;
                     foreach (float side in new[] { -1f, 1f })
+                    {
+                        if (t == Trade.Hardware || t == Trade.AutoParts)
+                        {
+                            // A steel shelf sticking out of the gondola, then real-size tools and cans along it, spaced by
+                            // their own width.
+                            k.Box(r, "Shelf", new Vector3(x + side * 0.48f, y - 0.015f, (front + back) / 2f), new Vector3(0.36f, 0.03f, back - front), shelf, collider: false);
+                            k.Box(r, "Shelf lip", new Vector3(x + side * 0.66f, y + 0.02f, (front + back) / 2f), new Vector3(0.01f, 0.07f, back - front), c.P.Lit(new Color(0.85f, 0.2f, 0.15f), 0.4f), collider: false);
+                            ShopStock.Level(k, r, goods, x + side * 0.12f, y, front + 0.1f, back - 0.1f, side, rng);
+                            continue;
+                        }
+                        // The shelf the goods stand on, with a price rail along its edge.
+                        k.Box(r, "Shelf", new Vector3(x + side * 0.43f, y - 0.015f, (front + back) / 2f), new Vector3(0.26f, 0.03f, back - front), shelf, collider: false);
+                        k.Box(r, "Price rail", new Vector3(x + side * 0.56f, y - 0.01f, (front + back) / 2f), new Vector3(0.01f, 0.05f, back - front), c.P.Lit(new Color(0.92f, 0.92f, 0.9f), 0.3f), collider: false);
                         for (float z = front + 0.2f; z < back - 0.1f; z += goods != null ? 0.28f : 0.45f)
                         {
                             if (goods != null) Stock(k, r, goods[rng.Next(goods.Length)], new Vector3(x + side * 0.42f, y, z), side > 0f ? 90f : 270f);
@@ -499,6 +572,7 @@ namespace OpeningBell.City
                                     c.P.Lit(boxes[rng.Next(boxes.Length)], 0.2f), collider: false);
                             }
                         }
+                    }
                 }
             }
             if (t == Trade.Liquor || t == Trade.Supermarket)
@@ -506,9 +580,7 @@ namespace OpeningBell.City
                 k.Span(r, "Cooler", new Vector3(-hw + 0.1f, 0f, front), new Vector3(-hw + 0.8f, 2.1f, back), c.P.Lit(new Color(0.85f, 0.87f, 0.9f), 0.6f));
                 k.Span(r, "Cooler glow", new Vector3(-hw + 0.8f, 0.3f, front + 0.1f), new Vector3(-hw + 0.82f, 1.9f, back - 0.1f), c.P.Unlit(new Color(0.8f, 0.9f, 1f)), collider: false);
             }
-            if (t == Trade.AutoParts)
-                for (float z = front; z < back; z += 0.8f)
-                    k.Cylinder(r, "Tyre", new Vector3(hw - 0.5f, 0.35f, z), 0.7f, 0.25f, c.P.Lit(new Color(0.08f, 0.08f, 0.09f))).transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            if (t == Trade.AutoParts) ShopStock.AutoParts(c, r, hw, front, back);
         }
 
         /// <summary>
@@ -528,20 +600,14 @@ namespace OpeningBell.City
             k.Fit(r, "gas_cigars", new Vector3(-hw * 0.3f, 1.1f, d - 0.18f), new Vector3(1.8f, 0f, 0f), 180f);
         }
 
-        private static void GlassCase(CityContext c, Transform r, Vector3 at, float length, float width)
+        private static void GlassCase(CityContext c, Transform r, Vector3 at, float length, float width, string[] stock, System.Random rng)
         {
             Kit k = c.Kit;
             k.Span(r, "Case base", at + new Vector3(-width / 2f, 0f, -length / 2f), at + new Vector3(width / 2f, 0.8f, length / 2f), c.P.Lit(new Color(0.25f, 0.22f, 0.2f), 0.3f));
+            k.Box(r, "Case felt", at + new Vector3(0f, 0.805f, 0f), new Vector3(width - 0.04f, 0.01f, length - 0.04f), c.P.Lit(new Color(0.12f, 0.12f, 0.16f), 0.05f), collider: false);
             k.Pane(r, "Case glass", at + new Vector3(-width / 2f, 0.8f, -length / 2f), at + new Vector3(width / 2f, 1.1f, length / 2f), new Color(0.75f, 0.85f, 0.9f, 0.25f));
-            for (float z = -length / 2f + 0.2f; z < length / 2f; z += 0.35f)
-                k.Box(r, "Trinket", at + new Vector3(0f, 0.85f, z), new Vector3(0.12f, 0.08f, 0.12f), c.P.Lit(new Color(0.85f, 0.75f, 0.3f), 0.8f), collider: false);
-        }
-
-        private static void Cabinet(CityContext c, Transform r, Vector3 at, float yaw, System.Random rng)
-        {
-            Transform g = Kit.Group(r, "Arcade cabinet", at, yaw);
-            c.Kit.Box(g, "Body", new Vector3(0f, 0.9f, 0f), new Vector3(0.7f, 1.8f, 0.7f), c.P.Lit(Color.HSVToRGB((float)rng.NextDouble(), 0.7f, 0.4f), 0.3f));
-            c.Kit.Box(g, "Screen", new Vector3(0f, 1.35f, -0.36f), new Vector3(0.55f, 0.45f, 0.02f), c.P.Glow(Color.HSVToRGB((float)rng.NextDouble(), 0.6f, 1f), 1.6f), collider: false);
+            for (float z = -length / 2f + 0.2f; z < length / 2f - 0.1f; z += 0.35f)
+                k.Real(r, stock[rng.Next(stock.Length)], at + new Vector3(((float)rng.NextDouble() - 0.5f) * 0.2f, 0.81f, z), (float)rng.NextDouble() * 360f);
         }
     }
 

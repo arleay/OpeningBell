@@ -175,6 +175,33 @@ namespace OpeningBell.City
         public GameObject Prop(Transform parent, string model, Vector3 bottom, float height, float yaw = 0f, float width = 0f) =>
             Fit(parent, model, bottom, width > 0f ? new Vector3(width, 0f, 0f) : new Vector3(0f, height, 0f), yaw);
 
+        /// <summary>
+        /// A model at its own real size (the Poly Haven scans are measured objects), times <paramref name="scale"/>, its
+        /// base centred on <paramref name="bottom"/>. Any yaw. Null when missing.
+        /// </summary>
+        public GameObject Real(Transform parent, string model, Vector3 bottom, float yaw = 0f, float scale = 1f)
+        {
+            string asked = model;
+            model = Resolve(model, ref yaw);
+            if (Art == null || Art.Model(model) == null) return null;
+            Bounds b = Art.ModelBounds(model); // measured without the root's scale (see CityArt.ModelBounds)
+            // Real size is the file's own root scale: some Poly Haven FBXs keep their mesh in other units under a
+            // scaled root (the ukulele's is ×100), and a scale of 1 drew it a few millimetres tall.
+            scale *= Art.Model(model).transform.localScale.x;
+            GameObject go = Place(parent, model, asked, Vector3.zero, yaw, Vector3.one * scale);
+            go.transform.localPosition = bottom - Quaternion.Euler(0f, yaw, 0f) * (b.center * scale) + Vector3.up * (b.extents.y * scale);
+            return go;
+        }
+
+        /// <summary>A model's bounds at its real size (what <see cref="Real"/> places), including its root's scale.</summary>
+        public Bounds RealBounds(string model)
+        {
+            if (Art == null || Art.Model(model) == null) return new Bounds(Vector3.zero, Vector3.zero);
+            Bounds b = Art.ModelBounds(model);
+            float s = Art.Model(model).transform.localScale.x;
+            return new Bounds(b.center * s, b.size * s);
+        }
+
         /// <summary>A box collider around a model's own bounds, for furniture the player shouldn't walk through.</summary>
         public void Solid(GameObject model)
         {

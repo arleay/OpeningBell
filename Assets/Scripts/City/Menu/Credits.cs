@@ -31,7 +31,7 @@ namespace OpeningBell.City
                 "Computer Workspace Pack by Manix3D (Sketchfab)",
                 "Kenney (kenney.nl): car, city, furniture and nature kits",
                 "Quaternius (quaternius.com): characters, animations, food, plants, cars",
-                "Poly Haven (polyhaven.com): furniture",
+                "Poly Haven (polyhaven.com): furniture and shop stock",
                 "ambientCG (ambientcg.com): surface textures",
                 "Rgsdev: low poly vehicles",
                 "Engine recordings: BxB Studio, Multiversal Vehicle Controller",
