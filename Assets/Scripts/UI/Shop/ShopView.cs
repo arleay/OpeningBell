@@ -416,7 +416,7 @@ namespace OpeningBell.UI
                 what.style.marginTop = 2f;
                 string how = o.How == Fulfilment.Pickup ? "Pickup" : $"Delivery to {o.DestinationName}{(o.MoveIn ? " · move-in service" : "")}";
                 Text(card, how, 12f, Muted).style.marginTop = 2f;
-                var state = Text(card, StatusText(o), 13f, o.State == OrderStatus.Delivered || o.State == OrderStatus.Ready ? Good : _brand, true);
+                var state = Text(card, StatusText(o), 13f, o.State == ShopOrderStatus.Delivered || o.State == ShopOrderStatus.Ready ? Good : _brand, true);
                 state.style.marginTop = 4f;
                 state.style.whiteSpace = WhiteSpace.Normal;
             }
@@ -430,11 +430,11 @@ namespace OpeningBell.UI
             string at = due.ToString("h:mm tt", C);
             return o.State switch
             {
-                OrderStatus.Preparing when o.How == Fulfilment.Pickup => $"Preparing · ready for pickup around {at}",
-                OrderStatus.Preparing => $"Preparing your order · estimated delivery {at}",
-                OrderStatus.Ready => "Ready for pickup in the bays behind the stores (off Grove St)",
-                OrderStatus.OnTheWay => $"Out for delivery · arriving around {at}",
-                OrderStatus.Unloading => o.MoveIn ? $"At {o.DestinationName}: the crew's bringing it in" : $"At {o.DestinationName}: unloading at your door",
+                ShopOrderStatus.Preparing when o.How == Fulfilment.Pickup => $"Preparing · ready for pickup around {at}",
+                ShopOrderStatus.Preparing => $"Preparing your order · estimated delivery {at}",
+                ShopOrderStatus.Ready => "Ready for pickup in the bays behind the stores (off Grove St)",
+                ShopOrderStatus.OnTheWay => $"Out for delivery · arriving around {at}",
+                ShopOrderStatus.Unloading => o.MoveIn ? $"At {o.DestinationName}: the crew's bringing it in" : $"At {o.DestinationName}: unloading at your door",
                 _ => o.MoveIn ? $"Delivered and moved in at {o.DestinationName}" : $"Delivered to {o.DestinationName}",
             };
         }

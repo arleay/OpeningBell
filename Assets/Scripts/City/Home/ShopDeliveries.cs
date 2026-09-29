@@ -69,19 +69,19 @@ namespace OpeningBell.City
                 var due = new DateTime(o.Due);
                 if (o.How == Fulfilment.Pickup)
                 {
-                    if (o.State == OrderStatus.Preparing && now >= due) SetOut(o);
+                    if (o.State == ShopOrderStatus.Preparing && now >= due) SetOut(o);
                     continue;
                 }
                 switch (o.State)
                 {
-                    case OrderStatus.Preparing:
+                    case ShopOrderStatus.Preparing:
                         // Packed and loaded, then the drive over: out the door for the last part of the wait.
-                        if (now >= due.AddMinutes(-DriveMinutes(o))) shop.SetStatus(o, OrderStatus.OnTheWay);
+                        if (now >= due.AddMinutes(-DriveMinutes(o))) shop.SetStatus(o, ShopOrderStatus.OnTheWay);
                         break;
-                    case OrderStatus.OnTheWay:
+                    case ShopOrderStatus.OnTheWay:
                         if (now >= due) Start(o);
                         break;
-                    case OrderStatus.Unloading:
+                    case ShopOrderStatus.Unloading:
                         if (!_runs.ContainsKey(o.Id)) Start(o);
                         else if (now > due.AddMinutes(GiveUpMinutes)) _runs[o.Id].Finish();
                         break;
@@ -97,13 +97,13 @@ namespace OpeningBell.City
             var goods = _w.Belongings.Items.Where(i => i.Order == o.Id && i.State == ItemState.AtPickup).ToList();
             HomeStores.SetOut(_w, goods);
             foreach (OwnedItem i in goods) i.Order = 0;
-            _c.Game.Shop.SetStatus(o, OrderStatus.Ready);
+            _c.Game.Shop.SetStatus(o, ShopOrderStatus.Ready);
             _w.Say($"Order #{o.Id} is ready: it's out in the pickup bays behind the stores, off Grove St.");
         }
 
         private void Start(ShopOrder o)
         {
-            _c.Game.Shop.SetStatus(o, OrderStatus.Unloading);
+            _c.Game.Shop.SetStatus(o, ShopOrderStatus.Unloading);
             var go = new GameObject("Delivery #" + o.Id);
             go.transform.SetParent(transform, false);
             var run = go.AddComponent<DeliveryRun>();
@@ -114,7 +114,7 @@ namespace OpeningBell.City
         internal void Done(ShopOrder o)
         {
             _runs.Remove(o.Id);
-            _c.Game.Shop.SetStatus(o, OrderStatus.Delivered);
+            _c.Game.Shop.SetStatus(o, ShopOrderStatus.Delivered);
             _w.Say(o.MoveIn ? $"Order #{o.Id} is in: the movers left it {(IsPenthouse(o) ? "by the lift on your floor" : "inside the front door")}."
                 : $"Order #{o.Id} was delivered to your door at {o.DestinationName}.");
         }

@@ -10,7 +10,7 @@ namespace OpeningBell.Home
     /// Where an order is. Pickup: Preparing, then Ready (set out in the bays behind the stores). Delivery: Preparing,
     /// OnTheWay (the truck's driving over), Unloading (parked at your door, the crew at work), Delivered.
     /// </summary>
-    public enum OrderStatus { Preparing, Ready, OnTheWay, Unloading, Delivered }
+    public enum ShopOrderStatus { Preparing, Ready, OnTheWay, Unloading, Delivered }
 
     [Serializable]
     public sealed class CartLine
@@ -45,7 +45,7 @@ namespace OpeningBell.Home
 
         public HomeStore StoreKind => (HomeStore)Store;
         public Fulfilment How => (Fulfilment)Fulfilment;
-        public OrderStatus State => (OrderStatus)Status;
+        public ShopOrderStatus State => (ShopOrderStatus)Status;
         public decimal Total => Goods + DeliveryFee + ServiceFee;
     }
 
@@ -174,7 +174,7 @@ namespace OpeningBell.Home
                 Id = _s.NextId++, Store = (int)store, Fulfilment = (int)how, Placed = now.Ticks, Due = q.Due.Ticks,
                 Destination = how == Fulfilment.Delivery ? destination : "", DestinationName = how == Fulfilment.Delivery ? destinationName : "",
                 MoveIn = moveIn && how == Fulfilment.Delivery, Goods = q.Goods, DeliveryFee = q.Delivery, ServiceFee = q.Service,
-                Status = (int)OrderStatus.Preparing,
+                Status = (int)ShopOrderStatus.Preparing,
             };
             var names = new List<string>();
             foreach (CartLine l in lines)
@@ -205,7 +205,7 @@ namespace OpeningBell.Home
             return (order, null);
         }
 
-        public void SetStatus(ShopOrder order, OrderStatus status)
+        public void SetStatus(ShopOrder order, ShopOrderStatus status)
         {
             if (order.Status == (int)status) return;
             order.Status = (int)status;
