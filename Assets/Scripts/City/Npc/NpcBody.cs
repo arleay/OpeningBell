@@ -17,6 +17,8 @@ namespace OpeningBell.City
         Run,
         /// <summary>Seated and talking (a call at the desk, a word with the next seat).</summary>
         SitTalk,
+        /// <summary>Seated at a desk, hands on the keyboard, typing.</summary>
+        SitType,
     }
 
     /// <summary>
@@ -56,6 +58,51 @@ namespace OpeningBell.City
         {
             new Color(0.1f, 0.08f, 0.06f), new Color(0.3f, 0.2f, 0.12f), new Color(0.6f, 0.45f, 0.25f), new Color(0.55f, 0.55f, 0.55f),
         };
+
+        // Seated typing: the arms bent over the sitting clip (there's no seated typing clip in the library).
+        private bool _typing;
+        private float _typeWeight;
+
+        /// <summary>
+        /// Typing at a desk: after the animator has posed the seated body, each arm is turned so the upper arm hangs
+        /// forward from the shoulder and the forearm reaches to a keyboard in front of the chest, the hands tapping
+        /// a little out of step. Bone directions are aimed in world space, so it works on any humanoid rig.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (_animator == null) return;
+            _typeWeight = Mathf.MoveTowards(_typeWeight, _typing ? 1f : 0f, Time.deltaTime * 3f);
+            if (_typeWeight <= 0f || !_animator.isActiveAndEnabled) return;
+            Transform body = transform;
+            Transform chest = _animator.GetBoneTransform(HumanBodyBones.UpperChest) ?? _animator.GetBoneTransform(HumanBodyBones.Chest);
+            if (chest == null) return;
+            float t = Time.time + _phaseOffset;
+            for (int side = -1; side <= 1; side += 2)
+            {
+                bool left = side < 0;
+                Transform upper = _animator.GetBoneTransform(left ? HumanBodyBones.LeftUpperArm : HumanBodyBones.RightUpperArm);
+                Transform lower = _animator.GetBoneTransform(left ? HumanBodyBones.LeftLowerArm : HumanBodyBones.RightLowerArm);
+                Transform hand = _animator.GetBoneTransform(left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
+                if (upper == null || lower == null || hand == null) continue;
+                float arm = Vector3.Distance(upper.position, lower.position) + Vector3.Distance(lower.position, hand.position);
+                // Keys: in front of the chest, a little below it, hands apart; each taps on its own rhythm.
+                float tap = Mathf.Max(0f, Mathf.Sin(t * (left ? 9.1f : 10.3f))) * 0.015f;
+                Vector3 keys = chest.position + body.forward * arm * 0.62f - body.up * (arm * 0.42f - tap) + body.right * side * arm * 0.22f;
+                // Elbow: down and slightly out from the shoulder.
+                Vector3 elbow = upper.position + (-body.up * 0.85f + body.forward * 0.35f + body.right * side * 0.2f).normalized * Vector3.Distance(upper.position, lower.position);
+                Aim(upper, lower.position, elbow, _typeWeight);
+                Aim(lower, hand.position, keys, _typeWeight);
+            }
+        }
+
+        /// <summary>Turns a bone so its child (at <paramref name="from"/>) points toward <paramref name="to"/>, by <paramref name="weight"/>.</summary>
+        private static void Aim(Transform bone, Vector3 from, Vector3 to, float weight)
+        {
+            Vector3 have = from - bone.position, want = to - bone.position;
+            if (have.sqrMagnitude < 1e-6f || want.sqrMagnitude < 1e-6f) return;
+            Quaternion turn = Quaternion.FromToRotation(have, want);
+            bone.rotation = Quaternion.Slerp(Quaternion.identity, turn, weight) * bone.rotation;
+        }
 
         /// <summary>True when this body is an animated character rather than primitives.</summary>
         public bool IsCharacter => _animator != null;
@@ -171,6 +218,7 @@ namespace OpeningBell.City
                     speed = Mathf.Max(0.6f, stride * 1.35f / 4.83f); // the jog clip covers 4.83 m/s
                     break;
                 case NpcPose.Sit: state = "Sit"; break;
+                case NpcPose.SitType: state = "Sit"; break; // the arms are posed over it in LateUpdate
                 case NpcPose.SitTalk: state = "SitTalk"; break;
                 case NpcPose.Typing: state = "Interact"; break;
                 case NpcPose.Phone: state = "Talk"; break;
@@ -184,6 +232,7 @@ namespace OpeningBell.City
                 _animator.CrossFadeInFixedTime(hash, 0.25f, 0, _phaseOffset % 1f);
             }
             _animator.SetFloat(SpeedParam, speed);
+            _typing = pose == NpcPose.SitType;
             bool cup = pose == NpcPose.Drink;
             if (_heldCup != null && _heldCup.gameObject.activeSelf != cup) _heldCup.gameObject.SetActive(cup);
         }
@@ -234,6 +283,7 @@ namespace OpeningBell.City
                     armR = swing * 0.7f;
                     break;
                 case NpcPose.Sit:
+                case NpcPose.SitType:
                 case NpcPose.SitTalk:
                     legL = legR = -85f;
                     armL = armR = -25f;

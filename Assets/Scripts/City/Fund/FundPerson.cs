@@ -195,6 +195,7 @@ namespace OpeningBell.City
                     break;
                 case Phase.AtSpot:
                     if (want.Key != _target.Key) { StandUp(); Go(want); break; }
+                    Repose(want);
                     Idle();
                     break;
                 case Phase.Inside:
@@ -260,6 +261,8 @@ namespace OpeningBell.City
             {
                 Activity.Training => NpcPose.Sit,
                 Activity.RiskLocked => NpcPose.SitTalk,
+                // At the keyboard while trading or getting ready (with capital to trade: without it they just sit).
+                Activity.Trading or Activity.Preparing when _e.Base > 0m || _e.DeskEquity > 0m => NpcPose.SitType,
                 _ => NpcPose.Sit,
             };
             return new Spot
@@ -501,10 +504,18 @@ namespace OpeningBell.City
             SetShown(false);
         }
 
+        /// <summary>Same seat, new pose (capital arrives: they start typing): taken up at once, not after the idle.</summary>
+        private void Repose(Spot want)
+        {
+            if (want.Pose == _target.Pose) return;
+            _target.Pose = want.Pose;
+            _idleUntil = 0f;
+        }
+
         /// <summary>Unwatched: straight to the spot, in its pose.</summary>
         private void Place(Spot s)
         {
-            if (_phase == Phase.AtSpot && s.Key == _target.Key) { Idle(); return; }
+            if (_phase == Phase.AtSpot && s.Key == _target.Key) { Repose(s); Idle(); return; }
             _target = s;
             SetShown(true);
             Warp(s.Pos, s.Yaw);
