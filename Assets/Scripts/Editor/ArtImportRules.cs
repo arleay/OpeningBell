@@ -21,6 +21,12 @@ namespace OpeningBell.EditorTools
         /// <summary>Sketchfab CC-BY packs split into one FBX per prop by Tools/Blender/split_pack.py (credited in-game).</summary>
         public const string Sketchfab = "Assets/Art/ThirdParty/Sketchfab/";
 
+        /// <summary>
+        /// Models loaded by name at runtime (Resources.Load) rather than through CityArt: the moving cart, converted
+        /// from the user's STL assembly by Tools/Models/stl2obj.py. No normals in the file: calculated here.
+        /// </summary>
+        public const string Models = "Assets/Resources/Models/";
+
         /// <summary>One-shot clips that staff play on repeat while working.</summary>
         private static readonly string[] AlsoLooped = { "Interact", "PickUp_Table", "Fixing_Kneeling" };
 
@@ -28,7 +34,7 @@ namespace OpeningBell.EditorTools
         public const string Surfaces = "Assets/Resources/Surfaces/";
 
         /// <summary>Bump when a rule changes: Unity re-imports what this postprocessor touched.</summary>
-        public override uint GetVersion() => 25;
+        public override uint GetVersion() => 26;
 
         private void OnPreprocessModel()
         {
@@ -46,6 +52,19 @@ namespace OpeningBell.EditorTools
             {
                 importer.generateMeshLods = true;
                 importer.isReadable = false;
+            }
+            if (assetPath.StartsWith(Models))
+            {
+                importer.animationType = ModelImporterAnimationType.None;
+                importer.importAnimation = false;
+                importer.importCameras = false;
+                importer.importLights = false;
+                importer.materialImportMode = ModelImporterMaterialImportMode.None; // the builder paints it
+                // Readable: RollCart checks each part's winding (the file's handedness) and turns it outward if needed.
+                importer.isReadable = true;
+                importer.importNormals = ModelImporterNormals.Calculate;
+                importer.normalSmoothingAngle = 40f; // round rollers and tubes, crisp box-section corners
+                importer.generateMeshLods = true;   // 148k triangles of CAD casters and rollers
             }
             if (assetPath.StartsWith(Characters) || assetPath.StartsWith(Animations))
             {

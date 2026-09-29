@@ -134,6 +134,42 @@ namespace OpeningBell.Home
     }
 
     [Serializable]
+    public sealed class CartSaveData
+    {
+        /// <summary>Taken from its spot in the lobby (and paid for); false while it's parked there.</summary>
+        public bool Out;
+        /// <summary>Where it was left (world), while out.</summary>
+        public double X, Y, Z, Yaw;
+    }
+
+    /// <summary>
+    /// Harborview's moving cart: a roll cage by the concierge desk that anyone moving in can push up in the lift.
+    /// Each use costs <see cref="Fee"/>, paid when it leaves its spot; sending it back parks it there again.
+    /// </summary>
+    public sealed class MovingCart
+    {
+        public const decimal Fee = 5m;
+
+        private CartSaveData _s = new CartSaveData();
+
+        public bool Out => _s.Out;
+        public (double X, double Y, double Z, double Yaw) Pose => (_s.X, _s.Y, _s.Z, _s.Yaw);
+
+        public void TakeOut() => _s.Out = true;
+
+        public void SetPose(double x, double y, double z, double yaw)
+        {
+            _s.X = x; _s.Y = y; _s.Z = z; _s.Yaw = yaw;
+        }
+
+        public void Return() => _s = new CartSaveData();
+
+        public CartSaveData CaptureState() => new CartSaveData { Out = _s.Out, X = _s.X, Y = _s.Y, Z = _s.Z, Yaw = _s.Yaw };
+
+        public void RestoreState(CartSaveData data) => _s = data ?? new CartSaveData();
+    }
+
+    [Serializable]
     public sealed class EstateSaveData
     {
         public List<string> Owned = new List<string>();
@@ -207,6 +243,7 @@ namespace OpeningBell.Home
     {
         public BelongingsSaveData Belongings = new BelongingsSaveData();
         public RentalSaveData Rental = new RentalSaveData();
+        public CartSaveData Cart = new CartSaveData();
         public EstateSaveData Estate = new EstateSaveData();
     }
 }

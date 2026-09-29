@@ -27,6 +27,8 @@ namespace OpeningBell.City
         public Estate Estate => _c.Game.Estate;
         public Carrier Hands { get; private set; }
         public Loaner Loaner { get; set; }
+        /// <summary>Harborview's moving cart (built with the tower), or null.</summary>
+        public RollCart Cart { get; set; }
         public IReadOnlyList<HomeSpec> Homes => _c.Homes;
         /// <summary>The store's collection yard: things may be set down here before loading.</summary>
         public Rect PickupYard { get; set; }

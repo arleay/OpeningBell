@@ -64,7 +64,11 @@ namespace OpeningBell.City
             else if (item.Support == Support.Wall) WallPiece(c, r, item);
             else
             {
-                GameObject go = k.Fit(r, item.Model, Vector3.zero, new Vector3(item.Width, item.Height, item.Depth), 0f, stretch: true);
+                // Furniture is fitted to its catalog box. Desk tech (keyboards, mice, laptops, speakers) keeps its own
+                // proportions, scaled to fit the footprint: stretched to the box, a keyboard came out four times as
+                // thick as it is and the open laptop was squashed flat onto its keys.
+                bool tech = item.Store == HomeStore.Tech;
+                GameObject go = k.Fit(r, item.Model, Vector3.zero, new Vector3(item.Width, tech ? 0f : item.Height, item.Depth), 0f, stretch: !tech);
                 if (go == null) k.Box(r, "Stand-in", new Vector3(0f, item.Height / 2f, 0f), new Vector3(item.Width, item.Height, item.Depth), c.P.Lit(new Color(0.6f, 0.55f, 0.5f)), collider: false);
                 else Tint(go, ColourOf(item, variant));
             }

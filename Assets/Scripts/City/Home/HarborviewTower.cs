@@ -433,6 +433,8 @@ namespace OpeningBell.City
 
             Elevator lift = Lift(c, dyn, V(X, g + 0.02f, Z + LiftZ), PenthouseFloor - 0.02f, GarageFloor - 0.02f, HarborviewOffice.Floor - 0.02f);
             ResidentsLift = lift;
+            // The moving cart, parked north of the concierge desk along the east wall, facing the lift.
+            RollCart.Build(c, world, lift, V(258.9f, g + 0.01f, 109.6f), 0f); // on the forecourt slab (the lobby's collider)
             // The penthouse is residents only (or open-house visitors). Level 26 is open to anyone (viewings, then the
             // fund's staff and visitors); the P1 garage to residents and, once the fund exists, its staff.
             bool Resident() => world.Estate.Owns(HomeSales.PenthouseId) || HomeSales.OpenHouse.Contains(world.Game.Clock.Now);

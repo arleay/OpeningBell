@@ -83,6 +83,7 @@ namespace OpeningBell
         /// <summary>Furniture and tech bought (wherever it is), the store's loaner, and the homes owned.</summary>
         public global::OpeningBell.Home.Belongings Belongings { get; } = new global::OpeningBell.Home.Belongings();
         public global::OpeningBell.Home.Rental Rental { get; } = new global::OpeningBell.Home.Rental();
+        public global::OpeningBell.Home.MovingCart Cart { get; } = new global::OpeningBell.Home.MovingCart();
         public global::OpeningBell.Home.Estate Estate { get; } = new global::OpeningBell.Home.Estate();
         /// <summary>What the player has found on the map (the city's discovery fills it; saved with the game).</summary>
         public HashSet<string> Discovered { get; } = new HashSet<string>(StringComparer.Ordinal);
@@ -207,6 +208,7 @@ namespace OpeningBell
                 {
                     Belongings.RestoreState(save.Home.Belongings);
                     Rental.RestoreState(save.Home.Rental);
+                    Cart.RestoreState(save.Home.Cart);
                     Estate.RestoreState(save.Home.Estate);
                 }
                 if (save.HasFund && save.Fund != null) Fund.RestoreState(save.Fund);
@@ -251,7 +253,7 @@ namespace OpeningBell
                 HasHome = true,
                 Home = new global::OpeningBell.Home.HomeSaveData
                 {
-                    Belongings = Belongings.CaptureState(), Rental = Rental.CaptureState(), Estate = Estate.CaptureState(),
+                    Belongings = Belongings.CaptureState(), Rental = Rental.CaptureState(), Cart = Cart.CaptureState(), Estate = Estate.CaptureState(),
                 },
             };
             if (player != null)

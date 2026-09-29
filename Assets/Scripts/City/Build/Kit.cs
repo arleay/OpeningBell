@@ -163,9 +163,21 @@ namespace OpeningBell.City
                     if (size[i] > 0f) scale[i] = size[i] / extent[i];
             if (quarter) scale = new Vector3(scale.z, scale.y, scale.x); // back to the model's own axes
 
-            GameObject go = Place(parent, model, asked, Vector3.zero, yaw, scale);
+            // localScale acts along the root's own axes, before its rotation. A Blender/Sketchfab root is turned -90° on
+            // X, so its local y is the world's depth and its z the height: scale by axis as seen after the rotation, or a
+            // stretch swaps height and depth (a keyboard came out 0.7 m deep, a trading desk's top 7 cm above its collider).
+            Quaternion rootRotation = Art.Model(model).transform.localRotation;
+            var local = new Vector3(scale[AxisOf(rootRotation * Vector3.right)], scale[AxisOf(rootRotation * Vector3.up)], scale[AxisOf(rootRotation * Vector3.forward)]);
+            GameObject go = Place(parent, model, asked, Vector3.zero, yaw, local);
             go.transform.localPosition = bottom - Quaternion.Euler(0f, yaw, 0f) * Vector3.Scale(b.center, scale) + Vector3.up * (b.extents.y * scale.y);
             return go;
+        }
+
+        /// <summary>Which axis (0 x, 1 y, 2 z) a turned unit axis lies along.</summary>
+        private static int AxisOf(Vector3 v)
+        {
+            float x = Mathf.Abs(v.x), y = Mathf.Abs(v.y), z = Mathf.Abs(v.z);
+            return x >= y && x >= z ? 0 : y >= z ? 1 : 2;
         }
 
         /// <summary>

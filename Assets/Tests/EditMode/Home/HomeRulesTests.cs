@@ -188,6 +188,10 @@ namespace OpeningBell.Tests
             var rental = new Rental();
             rental.Start(new DateTime(2026, 3, 2, 9, 0, 0), 1.0);
             game.Home.Rental = rental.CaptureState();
+            var cart = new MovingCart();
+            cart.TakeOut();
+            cart.SetPose(260.5, 88.02, 115.25, 90);
+            game.Home.Cart = cart.CaptureState();
 
             SaveGame back = JsonUtility.FromJson<SaveGame>(JsonUtility.ToJson(game));
             var e2 = new Estate();
@@ -204,6 +208,12 @@ namespace OpeningBell.Tests
             r2.RestoreState(back.Home.Rental);
             Assert.IsTrue(r2.Active);
             Assert.AreEqual(rental.Due, r2.Due);
+            var c2 = new MovingCart();
+            c2.RestoreState(back.Home.Cart);
+            Assert.IsTrue(c2.Out, "the cart stays where it was left, paid for");
+            Assert.AreEqual((260.5, 88.02, 115.25, 90.0), c2.Pose);
+            c2.Return();
+            Assert.IsFalse(c2.Out, "sent back: the next use is paid again");
         }
     }
 }

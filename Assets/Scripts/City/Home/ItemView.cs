@@ -103,7 +103,8 @@ namespace OpeningBell.City
             _wing.center = new Vector3((sx0 + sx1) / 2f, h / 2f, (sz0 + sz1) / 2f);
         }
 
-        public override bool CanInteract => base.CanInteract && _world != null && !_world.Hands.Holding;
+        // Not while pushing the moving cart: both hands are on it.
+        public override bool CanInteract => base.CanInteract && _world != null && !_world.Hands.Holding && (_world.Cart == null || !_world.Cart.Pushing);
 
         public override string Prompt
         {

@@ -76,6 +76,7 @@
 - WORLD_SPEC Phases 12 and 14–17 (property, Phase 14, can now use the town's houses): mechanics, property, advanced vehicles, aviation, world polish
 
 ## Known debt / decisions to revisit
+- Harborview moving cart (`RollCart`): the model's author and licence are unknown (the player supplied the STLs), so confirm them before any public release. You walk at full pace while pushing. A swing to the side is only checked where it ends, not along the arc. Loads go on the deck only, not stacked.
 - Part B: the loaner's drive home is only exercised by hand (tests move cargo by carrying); reversing with the trailer is basic raycast-wheel physics. Garages only on lots deep enough (34 m+). Monitor text is TextMesh (fine up close, fuzzy far off). Sold items vanish instantly (no buyer)
 - Phone: you stand still while it's out (control is off); no texting back or incoming calls; call history isn't saved; the phone can't be used in vehicles or at the desk
 - No market holidays (`MarketSchedule.IsTradingDay`)

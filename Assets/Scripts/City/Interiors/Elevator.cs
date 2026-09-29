@@ -37,6 +37,16 @@ namespace OpeningBell.City
         public int CarFloor => _logic.CarFloor;
         public string LabelOf(int floor) => _stops[floor].Label;
         public int FloorCount => _stops.Length;
+        /// <summary>Height of a stop's car floor above the shaft's origin.</summary>
+        public float StopY(int floor) => _stops[floor].Y;
+        /// <summary>
+        /// The car reached a stop (from, to), after the player riding in it was moved across. Anything else standing in
+        /// the car (the moving cart) moves itself the same way: every stop has its own copy of the car.
+        /// </summary>
+        public event System.Action<int, int> Arrived;
+
+        /// <summary>Is <paramref name="world"/> inside the car at stop <paramref name="floor"/>?</summary>
+        public bool InCar(int floor, Vector3 world) => InsideCar(floor, transform.InverseTransformPoint(world));
 
         public void Configure(FloorStop[] stops, Vector2 carHalfSize, float doorWidth, Transform player, Material lampOn, Material lampOff)
         {
@@ -115,6 +125,7 @@ namespace OpeningBell.City
             }
             _sound.transform.localPosition = new Vector3(0f, _stops[to].Y + 2f, 0f);
             _sound.PlayOneShot(_chime);
+            Arrived?.Invoke(from, to);
         }
 
         private void Refresh()
