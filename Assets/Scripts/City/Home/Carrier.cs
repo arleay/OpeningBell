@@ -531,6 +531,8 @@ namespace OpeningBell.City
             _w.Belongings.Touch();
             if (unbox) _w.Show(i);
             else _w.Pose(v);
+            // An Office Ready Kit comes out of its crate set up: the desk and everything on it.
+            if (i.Item != null && i.Item.IsKit && !i.Boxed && i.State == ItemState.Placed) _w.UnpackKit(i);
         }
 
         // ---- moving boxes ----

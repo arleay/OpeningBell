@@ -255,6 +255,7 @@ namespace OpeningBell.UI
                 : it.IsArm ? $". Holds {it.Arms} monitor{(it.Arms == 1 ? "" : "s")}; clamps to the back of a desk."
                 : it.IsMonitor ? $". {it.Inches}\" screen: charts, watchlists, positions, news."
                 : it.IsLaptop ? ". Computer and screen in one: charts, watchlists, positions, news."
+                : it.IsKit ? $". A whole trading desk, set up: {it.KitScreens} × 27\" monitor{(it.KitScreens == 1 ? "" : "s")} on a {it.KitScreens}-screen arm, a tower PC, keyboard, mouse and speaker. Ships in one crate and unpacks assembled wherever you set it down."
                 : it.Seat ? ". Seats one." : "";
             return $"{size}{(it.Outdoor ? ", indoor or outdoor" : "")}{extra}";
         }

@@ -143,6 +143,41 @@ namespace OpeningBell.City
             return view;
         }
 
+        /// <summary>
+        /// An Office Ready Kit set down at home: the crate becomes the desk and everything on it, each a belonging of its
+        /// own (arm clamped to the desk, screens on the arm and switched on, each on a different stock).
+        /// </summary>
+        public void UnpackKit(OwnedItem kit)
+        {
+            HomeItem spec = kit.Item;
+            if (spec == null || !spec.IsKit || kit.State != ItemState.Placed) return;
+            Quaternion turn = Quaternion.Euler(0f, kit.Yaw, 0f);
+            var at = new Vector3(kit.X, kit.Y, kit.Z);
+            var tickers = Game.Market.Securities;
+            OwnedItem desk = null, arm = null;
+            int screen = 0;
+            foreach (HomeModels.KitPart part in HomeModels.KitLayout(spec))
+            {
+                OwnedItem i = Belongings.Add(part.Item.Id, 0, ItemState.Placed);
+                i.Boxed = false;
+                i.Property = kit.Property;
+                i.Owner = kit.Owner;
+                Vector3 p = at + turn * part.Local;
+                i.X = p.x; i.Y = p.y; i.Z = p.z;
+                i.Yaw = kit.Yaw;
+                if (part.On == 0) desk = i;
+                else if (part.Item.IsArm) { arm = i; i.MountedOn = desk.Uid; }
+                else if (part.On == 2)
+                {
+                    i.MountedOn = arm.Uid;
+                    i.Symbol = tickers.Count > 0 ? tickers[screen++ % tickers.Count].Ticker : "";
+                }
+                else i.MountedOn = desk.Uid;
+            }
+            Hide(kit.Uid);
+            Belongings.Remove(kit);
+        }
+
         public void Hide(int uid)
         {
             if (!_views.TryGetValue(uid, out ItemView v)) return;

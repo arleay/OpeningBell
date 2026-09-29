@@ -51,7 +51,8 @@ namespace OpeningBell.City
                     k.Box(r, "Carton", new Vector3(0f, item.Height / 2f, 0f), new Vector3(item.Width, item.Height, item.Depth), c.P.Lit(new Color(0.66f, 0.52f, 0.36f), 0.05f), collider: false);
                 return root;
             }
-            if (item.IsMonitor) Monitor(c, r, item, variant);
+            if (item.IsKit) KitSetup(c, r, item);
+            else if (item.IsMonitor) Monitor(c, r, item, variant);
             else if (item.IsLaptop) Laptop(c, r, item, variant);
             else if (item.IsArm) Arm(c, r, item, variant);
             else if (item.Id == "pc_tower")
@@ -127,6 +128,65 @@ namespace OpeningBell.City
             GameObject screen = k.Box(panel, ScreenName, new Vector3(0f, 0.004f, -0.001f), new Vector3(w - 0.03f, lh - 0.035f, 0.002f),
                 c.P.Unlit(new Color(0.02f, 0.02f, 0.03f)), collider: false);
             screen.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
+        /// <summary>One piece of an Office Ready Kit, in the desk's frame: where it stands, and what it hangs from.</summary>
+        public readonly struct KitPart
+        {
+            public readonly HomeItem Item;
+            public readonly Vector3 Local;
+            /// <summary>0 on the floor (the desk), 1 on the desk, 2 on the arm.</summary>
+            public readonly int On;
+
+            public KitPart(HomeItem item, Vector3 local, int on)
+            {
+                Item = item;
+                Local = local;
+                On = on;
+            }
+        }
+
+        /// <summary>
+        /// How an Office Ready Kit is set out, in the desk's frame (front -z, where you sit): the arm clamped at the back
+        /// middle with the screens on its slots, the tower on the left of the top, the keyboard front and centre with
+        /// the mouse to its right, the speaker at the right-hand end.
+        /// </summary>
+        public static List<KitPart> KitLayout(HomeItem kit)
+        {
+            string[] ids = HomeItem.KitParts(kit.KitScreens);
+            HomeItem desk = HomeCatalog.Find(ids[0]), arm = HomeCatalog.Find(ids[1]);
+            float top = desk.Surface, hw = desk.Width / 2f, hd = desk.Depth / 2f;
+            var parts = new List<KitPart> { new KitPart(desk, Vector3.zero, 0) };
+            Vector3 clamp = new Vector3(0f, top, hd - 0.08f);
+            parts.Add(new KitPart(arm, clamp, 1));
+            int screen = 0;
+            for (int i = 2; i < ids.Length; i++)
+            {
+                HomeItem it = HomeCatalog.Find(ids[i]);
+                if (it.IsMonitor) { parts.Add(new KitPart(it, clamp + ArmSlot(kit.KitScreens, screen++), 2)); continue; }
+                Vector3 at = it.Id switch
+                {
+                    "pc_tower" => new Vector3(-hw + 0.2f, top, 0.05f),
+                    "keyboard" => new Vector3(0f, top, -hd + 0.22f),
+                    "mouse" => new Vector3(0.36f, top, -hd + 0.22f),
+                    _ => new Vector3(hw - 0.15f, top, 0.1f), // the speaker
+                };
+                parts.Add(new KitPart(it, at, 1));
+            }
+            return parts;
+        }
+
+        /// <summary>The kit as it'll stand once unpacked: every piece's own model in its place (screens on the arm, no stands).</summary>
+        private static void KitSetup(CityContext c, Transform r, HomeItem kit)
+        {
+            foreach (KitPart part in KitLayout(kit))
+            {
+                GameObject piece = Build(c, r, part.Item, 0, false);
+                piece.transform.localPosition = part.Local;
+                if (part.On != 2) continue;
+                foreach (Transform t in piece.GetComponentsInChildren<Transform>(true))
+                    if (t.name == "Base" || t.name == "Neck") t.gameObject.SetActive(false);
+            }
         }
 
         /// <summary>A pole clamped at the back, a bar across with a mount for each screen.</summary>

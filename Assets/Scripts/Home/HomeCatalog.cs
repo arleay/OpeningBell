@@ -44,6 +44,8 @@ namespace OpeningBell.Home
         public bool Outdoor;
         /// <summary>Something you sit on: never on a bed, a table or another seat.</summary>
         public bool Seat;
+        /// <summary>An Office Ready Kit: a whole trading desk with this many screens, sold as one and unpacked assembled.</summary>
+        public int KitScreens;
         /// <summary>Floor-standing, but fine on a desk or table top too (a tower PC).</summary>
         public bool OnTops;
         public string[] Variants = { "Default" };
@@ -57,6 +59,19 @@ namespace OpeningBell.Home
         /// <summary>Anything with a live screen: monitors and laptops.</summary>
         public bool HasScreen => IsMonitor || IsLaptop;
         public bool IsArm => Arms > 0;
+        public bool IsKit => KitScreens > 0;
+
+        /// <summary>
+        /// What an Office Ready Kit unpacks into: the desk (the trading desk from three screens up), a monitor arm for
+        /// the screens, 27" monitors, a tower, keyboard, mouse and speakers. The first entry is the desk.
+        /// </summary>
+        public static string[] KitParts(int screens)
+        {
+            var parts = new System.Collections.Generic.List<string> { screens <= 2 ? "desk_standard" : "desk_trading", "arm_" + screens };
+            for (int i = 0; i < screens; i++) parts.Add("mon_27");
+            parts.AddRange(new[] { "pc_tower", "keyboard", "mouse", "speakers" });
+            return parts.ToArray();
+        }
         /// <summary>Anything big or heavy: carried slowly, and too bulky for a car's back seat.</summary>
         public bool Large => Math.Max(Width, Depth) > 1.2f || Width * Depth * Height > 0.4f;
         /// <summary>Loading space it takes, in cubic metres.</summary>
@@ -180,6 +195,15 @@ namespace OpeningBell.Home
             T("pc_tower", "Tower PC", "Computers", Tier.Mid, 1299m, "", 0.22f, 0.45f, 0.48f, Support.Floor, "Northbyte").OnTops = true;
             T("laptop", "Laptop", "Computers", Tier.Mid, 999m, "laptop", 0.34f, 0.24f, 0.02f, brand: "Northbyte");
             T("speakers", "Desk Speakers", "Audio", Tier.Mid, 119m, "speakerSmall", 0.14f, 0.16f, 0.24f, brand: "Tonebox");
+            // Office Ready Kits: a complete desk, set up, in one crate. Sized as the desk (what it stands on and needs room for).
+            for (int n = 1; n <= 6; n++)
+            {
+                bool big = n > 2;
+                HomeItem kit = T("kit_" + n, $"Office Ready Kit · {n} Screen{(n == 1 ? "" : "s")}", "Office Kits", Tier.Premium, 50000m, "",
+                    big ? 2.4f : 1.6f, big ? 0.9f : 0.75f, 0.75f, Support.Floor, "Circuit Stop");
+                kit.KitScreens = n;
+                kit.Variants = new[] { "Default" };
+            }
             return all;
         }
     }

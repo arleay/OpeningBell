@@ -26,6 +26,22 @@ namespace OpeningBell.Tests
         }
 
         [Test]
+        public void OfficeReadyKits_OneToSixScreens_AllInOneCrate()
+        {
+            for (int n = 1; n <= 6; n++)
+            {
+                HomeItem kit = I("kit_" + n);
+                Assert.IsTrue(kit.IsKit && kit.Boxed && kit.Store == HomeStore.Tech);
+                Assert.AreEqual(50000m, kit.Price);
+                string[] parts = HomeItem.KitParts(n);
+                Assert.IsTrue(I(parts[0]).IsDesk, "the desk comes first");
+                Assert.AreEqual(n, I(parts[1]).Arms, "an arm for exactly the screens");
+                Assert.AreEqual(n, parts.Count(id => I(id).IsMonitor));
+                CollectionAssert.IsSubsetOf(new[] { "pc_tower", "keyboard", "mouse", "speakers" }, parts);
+            }
+        }
+
+        [Test]
         public void MovingBox_LastPackedComesOutFirst_AndOnlyWhenOpen()
         {
             var b = new Belongings();
