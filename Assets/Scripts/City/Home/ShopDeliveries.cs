@@ -45,11 +45,12 @@ namespace OpeningBell.City
             var list = new List<(string, string)>();
             foreach (HomeSpec h in _w.Homes)
             {
-                if (h.Kind == HomeKind.Office || !_w.Owns(h)) continue;
+                if (!_w.Owns(h)) continue; // the office counts once the fund holds Level 26
                 string kind = h.Kind switch
                 {
                     HomeKind.Apartment => "apartment",
                     HomeKind.Penthouse => "high-rise",
+                    HomeKind.Office => "office, Harborview 26",
                     HomeKind.Mansion => "mansion",
                     _ => "house",
                 };
@@ -119,14 +120,27 @@ namespace OpeningBell.City
                 : $"Order #{o.Id} was delivered to your door at {o.DestinationName}.");
         }
 
-        internal bool IsPenthouse(ShopOrder o) => _w.Find(o.Destination)?.Kind == HomeKind.Penthouse;
+        /// <summary>Up Harborview's lift: the penthouse or the office on 26.</summary>
+        internal bool IsPenthouse(ShopOrder o) => InTower(_w.Find(o.Destination));
+
+        private static bool InTower(HomeSpec h) => h != null && (h.Kind == HomeKind.Penthouse || h.Kind == HomeKind.Office);
+
+        /// <summary>The lift stop a Harborview delivery rides to.</summary>
+        internal int LiftStop(ShopOrder o) => _w.Find(o.Destination)?.Kind == HomeKind.Office ? HarborviewTower.StopOffice : HarborviewTower.StopPenthouse;
+
+        /// <summary>In front of the lift on the delivery's floor (world), and a step back into the car.</summary>
+        private static Vector3 LiftFront(HomeSpec h) => h.Kind == HomeKind.Office
+            ? HarborviewOffice.World(HarborviewOffice.LiftLanding.x, HarborviewOffice.LiftLanding.y - 0.6f) : HarborviewTower.PenthouseLiftFront;
+
+        private static Vector3 InCar(HomeSpec h) => h.Kind == HomeKind.Office
+            ? HarborviewOffice.World(HarborviewOffice.LiftLanding.x, HarborviewOffice.LiftLanding.y + 1.4f) : HarborviewTower.PenthouseLiftFront + new Vector3(0f, 0f, 2f);
 
         // ------------------------------------------------------------------ where things go
 
         /// <summary>Just outside the home's entrance (world): the kerbside drop and where the movers go in.</summary>
         internal Vector3 Entrance(HomeSpec home)
         {
-            if (home.Kind == HomeKind.Penthouse) return HarborviewTower.LobbyDoorOutside;
+            if (InTower(home)) return HarborviewTower.LobbyDoorOutside;
             if (home.Kind == HomeKind.Apartment && _c.Anchors.TryGetValue("apartment_front_out", out Vector3 a)) return a;
             Vector3 p = home.Root.TransformPoint(home.DoorLocal + new Vector3(0f, 0f, -1.4f));
             p.y = HomeWorld.GroundAt(p);
@@ -137,7 +151,7 @@ namespace OpeningBell.City
         internal List<Vector3> WayIn(HomeSpec home)
         {
             var path = new List<Vector3>();
-            if (home.Kind == HomeKind.Penthouse)
+            if (InTower(home))
             {
                 Vector3 inside = HarborviewTower.LobbyDoorOutside + new Vector3(0f, 0f, 3.5f);
                 path.Add(inside);
@@ -154,15 +168,21 @@ namespace OpeningBell.City
         }
 
         /// <summary>Where the crew comes back into view inside: out of the lift on the penthouse floor, or the front door.</summary>
-        internal Vector3 InnerEntry(HomeSpec home) => home.Kind == HomeKind.Penthouse
-            ? HarborviewTower.PenthouseLiftFront + new Vector3(0f, 0f, 2f)
+        internal Vector3 InnerEntry(HomeSpec home) => InTower(home)
+            ? InCar(home)
             : home.Root.TransformPoint(home.DoorLocal + new Vector3(0f, 0f, 0.5f));
 
         /// <summary>A move-in's n-th spot: in front of the penthouse lift, or in rows inside the front door.</summary>
         internal Vector3 MoveInSpot(HomeSpec home, int n)
         {
-            if (home.Kind == HomeKind.Penthouse)
-                return HarborviewTower.PenthouseLiftFront + new Vector3((n % 3 - 1) * 1.1f, 0f, -(n / 3) * 1.1f);
+            if (InTower(home))
+            {
+                // Rows stepping away from the lift, across its front.
+                Vector3 front = LiftFront(home), away = front - InCar(home);
+                away.y = 0f;
+                away.Normalize();
+                return front + Vector3.Cross(Vector3.up, away) * ((n % 3 - 1) * 1.1f) + away * (n / 3 * 1.1f);
+            }
             Vector3 p = home.Root.TransformPoint(home.DoorLocal + new Vector3((n % 3 - 1) * 1.1f, 0f, 1.6f + n / 3 * 1.2f));
             p.y = HomeWorld.GroundAt(p);
             return p;
@@ -441,7 +461,7 @@ namespace OpeningBell.City
                         foreach (Walker w in _crew) w.Body.gameObject.SetActive(false);
                         _wait = _d.IsPenthouse(_o) ? 14f : 5f;
                         // They call the lift; it's at the penthouse, doors open, when they step out.
-                        if (_d.IsPenthouse(_o)) HarborviewTower.ResidentsLift?.Request(HarborviewTower.StopPenthouse);
+                        if (_d.IsPenthouse(_o)) HarborviewTower.ResidentsLift?.Request(_d.LiftStop(_o));
                         _phase = Phase.Inside;
                     }
                     break;
