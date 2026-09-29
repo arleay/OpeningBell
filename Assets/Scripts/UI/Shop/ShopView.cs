@@ -288,10 +288,19 @@ namespace OpeningBell.UI
                 var controls = Row(text, Justify.FlexStart);
                 controls.style.alignItems = Align.Center;
                 controls.style.marginTop = 4f;
+                controls.style.flexWrap = Wrap.Wrap;
                 Stepper(controls, l.Qty, n => Shop.SetQty(_store, l, n));
-                Link(controls, "Remove", () => Shop.SetQty(_store, l, 0), Bad).style.marginLeft = 10f;
-                var total = Text(row, Money(l.Total), 15f, Ink, true);
-                total.style.marginRight = 12f;
+                var remove = Link(controls, "Remove", () => Shop.SetQty(_store, l, 0), Bad);
+                remove.style.marginLeft = 10f;
+                remove.style.marginTop = 4f;
+                remove.style.whiteSpace = WhiteSpace.NoWrap;
+                remove.style.flexShrink = 0;
+                // The line total: under the details on the phone (no room for a column), at the right end otherwise.
+                var total = Text(_compact ? text : row, Money(l.Total), 15f, Ink, true);
+                total.style.whiteSpace = WhiteSpace.NoWrap;
+                total.style.flexShrink = 0;
+                if (_compact) total.style.marginTop = 4f;
+                else total.style.marginRight = 12f;
             }
             ShopQuote q = HomeShop.Quote(cart, Fulfilment.Pickup, false, Now);
             var sum = Row(page);
@@ -526,6 +535,8 @@ namespace OpeningBell.UI
         private Button Button(VisualElement parent, string text, bool primary, Action click, bool big = false)
         {
             var b = new Button(click) { text = text };
+            b.style.flexShrink = 0;
+            b.style.whiteSpace = WhiteSpace.NoWrap;
             b.style.backgroundColor = primary ? _brand : Card;
             b.style.color = primary ? Color.white : Ink;
             b.style.unityFontStyleAndWeight = FontStyle.Bold;
@@ -560,7 +571,9 @@ namespace OpeningBell.UI
             var row = Row(parent, Justify.FlexStart);
             row.style.alignItems = Align.Center;
             Button(row, "−", false, () => set(value - 1));
+            row.style.flexShrink = 0;
             var n = Text(row, value.ToString(C), 14f, Ink, true);
+            n.style.flexShrink = 0;
             n.style.minWidth = 24f;
             n.style.unityTextAlign = TextAnchor.MiddleCenter;
             Button(row, "+", false, () => set(value + 1));
