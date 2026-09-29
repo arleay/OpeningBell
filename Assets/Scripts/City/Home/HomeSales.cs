@@ -21,6 +21,7 @@ namespace OpeningBell.City
             Transform root = Kit.Group(c.Static, "Homes for sale");
             Transform dyn = Kit.Group(c.Dynamic, "Homes for sale");
             c.Homes.Add(HarborviewTower.Penthouse(c, world, root, dyn));
+            c.Homes.Add(HarborviewOffice.Build(c, world, root, dyn));
             var doors = new List<Door>(Object.FindObjectsByType<Door>(FindObjectsSortMode.None));
             foreach (HomeSpec h in c.Homes)
             {
@@ -29,11 +30,12 @@ namespace OpeningBell.City
                 if (door != null)
                 {
                     HomeSpec spec = h;
+                    // Level 26 is open for viewings until a fund takes it; then its keypad decides.
                     door.LockReason = () => world.Owns(spec)
                         ? (world.Estate.Locked(spec.Id) ? "locked (keypad)" : null)
-                        : OpenHouse.Contains(world.Game.Clock.Now) ? null : "for sale · open house 10 AM–6 PM";
+                        : spec.Kind == HomeKind.Office || OpenHouse.Contains(world.Game.Clock.Now) ? null : "for sale · open house 10 AM–6 PM";
                 }
-                if (h.Kind != HomeKind.Penthouse) Sign(c, world, dyn, h);
+                if (h.Kind != HomeKind.Penthouse && h.Kind != HomeKind.Office) Sign(c, world, dyn, h);
                 // Every home's frame faces its way in along -z (the penthouse's faces the lift).
                 const float s = 1f;
                 float yaw = h.Root.eulerAngles.y;

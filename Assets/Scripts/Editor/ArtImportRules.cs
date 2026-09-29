@@ -28,11 +28,25 @@ namespace OpeningBell.EditorTools
         public const string Surfaces = "Assets/Resources/Surfaces/";
 
         /// <summary>Bump when a rule changes: Unity re-imports what this postprocessor touched.</summary>
-        public override uint GetVersion() => 17;
+        public override uint GetVersion() => 25;
 
         private void OnPreprocessModel()
         {
             var importer = (ModelImporter)assetImporter;
+            // Traffic car meshes are merged at runtime too (a parked car's body and wheels into one, the salvage yard's
+            // wrecks by the cell), which needs them CPU-readable.
+            if (assetPath.Contains("/CarKit/") || assetPath.StartsWith("Assets/Art/ThirdParty/Quaternius/Cars/")
+                || assetPath.StartsWith("Assets/Art/ThirdParty/Rgsdev/Vehicles/"))
+                importer.isReadable = true;
+            // The detailed cars are converted at full source detail (up to millions of triangles): mesh LODs keep the
+            // close-up look and drop to lighter levels for cars further away. They're never merged (traffic, parked
+            // cars and wrecks use the low-poly mix), so no CPU copy: readable, each kept a second copy in RAM, and a
+            // scene load with them ran the editor out of memory between PlayMode tests.
+            if (assetPath.StartsWith(Cars))
+            {
+                importer.generateMeshLods = true;
+                importer.isReadable = false;
+            }
             if (assetPath.StartsWith(Characters) || assetPath.StartsWith(Animations))
             {
                 // Blender exports: bake the axis conversion so roots aren't rotated -90° on X (Quaternius' own setup).
@@ -50,11 +64,25 @@ namespace OpeningBell.EditorTools
                 importer.importLights = false;
                 // The city is static-batched at runtime, which needs CPU-readable meshes.
                 importer.isReadable = true;
+                // The scanned props are dense (a pocket watch is 16k triangles): Unity's mesh LODs let a renderer drop
+                // to lighter levels with distance, and MeshMerge picks a level for what it merges (see there).
+                // Trees too: the forest draws thousands of them out to 900 m (Forest picks a level per chunk by distance).
+                if (assetPath.StartsWith(PolyHaven) || assetPath.StartsWith(Sketchfab) || assetPath.StartsWith(Nature)) importer.generateMeshLods = true;
             }
         }
 
         private void OnPreprocessTexture()
         {
+            if (assetPath.StartsWith("Assets/Resources/Cards/"))
+            {
+                // Kenney's 64 px pixel-art cards (CC0): crisp pixels, no mips or compression blur.
+                var cards = (TextureImporter)assetImporter;
+                cards.filterMode = UnityEngine.FilterMode.Point;
+                cards.mipmapEnabled = false;
+                cards.textureCompression = TextureImporterCompression.Uncompressed;
+                cards.alphaIsTransparency = false;
+                return;
+            }
             if (assetPath.StartsWith(Nature))
             {
                 var nature = (TextureImporter)assetImporter;
@@ -106,6 +134,11 @@ namespace OpeningBell.EditorTools
         /// </summary>
         private void OnPostprocessModel(UnityEngine.GameObject root)
         {
+            if (assetPath.StartsWith(Characters + "Tiny/"))
+            {
+                ToSrgb(root);
+                return;
+            }
             // Cars only: Kenney furniture names its mirror, oven doors and shower screen "glass" too.
             if (!assetPath.StartsWith(Cars) && !assetPath.StartsWith("Assets/Art/ThirdParty/Quaternius/Cars/")) return;
             var glass = AssetDatabase.LoadAssetAtPath<UnityEngine.Material>(CarGlass);
@@ -136,6 +169,26 @@ namespace OpeningBell.EditorTools
                 }
                 if (changed) r.sharedMaterials = mats;
             }
+        }
+
+        /// <summary>
+        /// The Tiny characters' FBX colours are Blender's linear values, and this project renders in gamma space, which
+        /// shows a material colour as-is: every outfit came out far darker than the pack's own renders (a mid-blue
+        /// shirt, linear 0.18, drew as navy). Converting to sRGB gives the colours Quaternius picked. (Set here: a
+        /// change made in OnPostprocessMaterial doesn't stick to these embedded materials.)
+        /// </summary>
+        private static void ToSrgb(UnityEngine.GameObject root)
+        {
+            var done = new System.Collections.Generic.HashSet<UnityEngine.Material>();
+            foreach (UnityEngine.Renderer r in root.GetComponentsInChildren<UnityEngine.Renderer>())
+                foreach (UnityEngine.Material m in r.sharedMaterials)
+                {
+                    if (m == null || !done.Add(m) || !m.HasProperty("_BaseColor")) continue;
+                    UnityEngine.Color c = m.GetColor("_BaseColor");
+                    UnityEngine.Color srgb = c.gamma;
+                    srgb.a = c.a;
+                    m.SetColor("_BaseColor", srgb);
+                }
         }
 
         private static void MakeOpaque(UnityEngine.Material m)

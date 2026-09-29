@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: EconomySettings
   m_EditorClassIdentifier: OpeningBell.Runtime::OpeningBell.EconomySettings
   config:
-    StartingBankBalance: 1800
+    StartingBankBalance: 0
     DailyLivingCost: 15
     OverdraftFee: 35
     Bills:

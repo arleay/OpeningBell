@@ -52,7 +52,7 @@ namespace OpeningBell.UI
             TradingDayReport day = Context.Game.Days.Current;
             if (day == null) return;
 
-            var account = Context.Account;
+            var account = Context.Game.Account; // the day report is the personal brokerage's
             Ui.SetText(_title, $"DAY {day.DayNumber} · {Fmt.Date(day.Date).ToUpperInvariant()}");
             SetSigned(_pnl, account.DailyPnL);
             SetSigned(_realized, day.RealizedPnL - day.Commissions);

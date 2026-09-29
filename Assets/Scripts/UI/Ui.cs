@@ -54,6 +54,8 @@ namespace OpeningBell.UI
         public static void Show(VisualElement e, bool visible) =>
             e.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
 
+        public static void AddClassesTo(VisualElement e, string classes) => AddClasses(e, classes);
+
         private static void AddClasses(VisualElement e, string classes)
         {
             if (string.IsNullOrEmpty(classes)) return;

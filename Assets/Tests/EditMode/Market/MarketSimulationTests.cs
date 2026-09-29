@@ -9,6 +9,8 @@ namespace OpeningBell.Tests
     public class MarketSimulationTests
     {
         private static readonly DateTime Monday = TestMarkets.Monday;
+        /// <summary>Independent markets averaged by the statistical tests below.</summary>
+        private const int Seeds = 6;
 
         [Test]
         public void InitialState_IsValidBeforeAnyTick()
@@ -164,22 +166,28 @@ namespace OpeningBell.Tests
                 TestMarkets.Spec("ENR1", Sector.Energy, 40, vol: 0.01, beta: 1.0),
                 TestMarkets.Spec("IND0", Sector.Healthcare, 40, vol: 0.01, beta: 0, sectorBeta: 0),
             };
-            var config = TestMarkets.FastConfig();
-            config.MaxCandlesPerSeries = 20000;
-            var sim = TestMarkets.Create(9, Monday.AddHours(3), specs, config);
-            sim.AdvanceTo(Monday.AddDays(28));
-
-            var returns = specs.Select(s =>
+            // One 4-week path swings these correlations by ±0.07, so a single seed passes or fails on luck.
+            // The thresholds apply to the mean over several independent markets.
+            double sameSector = 0, crossSector = 0, techToIndex = 0, zeroBetaToIndex = 0;
+            for (ulong seed = 9; seed < 9 + Seeds; seed++)
             {
-                sim.TryGetSecurity(s.Ticker, out var sec);
-                return RegularReturns(sec.Candles.Get(Timeframe.Minute5), sim.Schedule);
-            }).ToArray();
-            var index = RegularReturns(sim.Index.Candles.Get(Timeframe.Minute5), sim.Schedule);
+                var config = TestMarkets.FastConfig();
+                config.MaxCandlesPerSeries = 20000;
+                var sim = TestMarkets.Create(seed, Monday.AddHours(3), specs, config);
+                sim.AdvanceTo(Monday.AddDays(28));
 
-            double sameSector = Correlation(returns[0], returns[1]);
-            double crossSector = Correlation(returns[0], returns[2]);
-            double techToIndex = Correlation(returns[0], index);
-            double zeroBetaToIndex = Correlation(returns[3], index);
+                var returns = specs.Select(s =>
+                {
+                    sim.TryGetSecurity(s.Ticker, out var sec);
+                    return RegularReturns(sec.Candles.Get(Timeframe.Minute5), sim.Schedule);
+                }).ToArray();
+                var index = RegularReturns(sim.Index.Candles.Get(Timeframe.Minute5), sim.Schedule);
+
+                sameSector += Correlation(returns[0], returns[1]) / Seeds;
+                crossSector += Correlation(returns[0], returns[2]) / Seeds;
+                techToIndex += Correlation(returns[0], index) / Seeds;
+                zeroBetaToIndex += Correlation(returns[3], index) / Seeds;
+            }
             TestContext.WriteLine($"same-sector {sameSector:F3}, cross-sector {crossSector:F3}, tech-index {techToIndex:F3}, zero-beta-index {zeroBetaToIndex:F3}");
 
             Assert.Greater(sameSector, crossSector + 0.1);
@@ -214,21 +222,26 @@ namespace OpeningBell.Tests
         [Test]
         public void DailyVolatilityAndVolume_MatchSpec()
         {
+            // 30 daily returns estimate σ to about ±13% (fat tails make it worse), so average several markets.
             var spec = TestMarkets.Spec("VOL", Sector.Healthcare, 50, vol: 0.03, beta: 0, sectorBeta: 0);
-            var sim = TestMarkets.Create(6, Monday.AddHours(3), new[] { spec }, TestMarkets.FastConfig());
-            sim.AdvanceTo(Monday.AddDays(42));
+            double sd = 0, regularVolumeToAdv = 0;
+            for (ulong seed = 6; seed < 6 + Seeds; seed++)
+            {
+                var sim = TestMarkets.Create(seed, Monday.AddHours(3), new[] { spec }, TestMarkets.FastConfig());
+                sim.AdvanceTo(Monday.AddDays(42));
 
-            CandleSeries daily = sim.Securities[0].Candles.Get(Timeframe.Day1);
-            var logReturns = new List<double>();
-            for (int i = 1; i < daily.Count; i++)
-                logReturns.Add(Math.Log((double)daily[i].Close / (double)daily[i - 1].Close));
+                CandleSeries daily = sim.Securities[0].Candles.Get(Timeframe.Day1);
+                Assert.AreEqual(30, daily.Count);
+                var logReturns = new List<double>();
+                for (int i = 1; i < daily.Count; i++)
+                    logReturns.Add(Math.Log((double)daily[i].Close / (double)daily[i - 1].Close));
 
-            double mean = logReturns.Average();
-            double sd = Math.Sqrt(logReturns.Sum(r => (r - mean) * (r - mean)) / (logReturns.Count - 1));
-            double regularVolumeToAdv = daily.Completed.Average(c => (double)c.Volume) / spec.AverageDailyVolume;
-            TestContext.WriteLine($"{logReturns.Count} daily returns, sd {sd:P2}; regular-session volume {regularVolumeToAdv:P0} of ADV");
+                double mean = logReturns.Average();
+                sd += Math.Sqrt(logReturns.Sum(r => (r - mean) * (r - mean)) / (logReturns.Count - 1)) / Seeds;
+                regularVolumeToAdv += daily.Completed.Average(c => (double)c.Volume) / spec.AverageDailyVolume / Seeds;
+            }
+            TestContext.WriteLine($"{Seeds} markets, mean daily sd {sd:P2}; regular-session volume {regularVolumeToAdv:P0} of ADV");
 
-            Assert.AreEqual(30, daily.Count);
             Assert.That(sd, Is.InRange(0.024, 0.037));
             Assert.That(regularVolumeToAdv, Is.InRange(0.75, 1.25));
         }

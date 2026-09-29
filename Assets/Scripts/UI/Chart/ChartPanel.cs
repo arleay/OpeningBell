@@ -77,13 +77,43 @@ namespace OpeningBell.UI
             _view.ToolChanged += _ => RefreshToolButtons();
             _view.SelectionChanged += _ => BuildSelectBar();
 
-            _trading.Modify = (id, price) => Context.Orders.ModifyPrice(id, price);
-            _trading.Cancel = id => Context.Orders.Cancel(id);
-            _trading.CreateBracket = (tp, sl) =>
+            // Through the context so copied accounts follow (their brackets cover their own position size).
+            _trading.Modify = (id, price) => Context.Modify(id, price);
+            _trading.Cancel = id => Context.Cancel(id);
+            // A TP or SL dragged out of the position bar and dropped at a price.
+            _trading.AddProtection = (stopLoss, price) =>
             {
-                long qty = Context.Orders.AvailableToClose(_ticker);
-                if (qty <= 0) return "All your contracts are already covered by orders.";
-                foreach (Order o in Context.Orders.SubmitBracket(_ticker, qty, tp, sl))
+                string ticker = _ticker;
+                foreach (Order o in Context.PlaceMany(om => om.PositionQuantity(ticker) != 0
+                             ? new List<Order> { om.SubmitProtection(ticker, stopLoss, price) }
+                             : new List<Order>()))
+                    if (o.Status == OrderStatus.Rejected) return o.StatusReason;
+                return null;
+            };
+            // Chart actions redraw at once, not on the next market tick (which never comes while paused).
+            _trading.Changed = Refresh;
+
+            // The position bar's close button: the TP/SL covering the position are cancelled first (otherwise they would
+            // still fire on a position that no longer exists), then it closes like the positions list's CLOSE button.
+            _trading.Close = () =>
+            {
+                string ticker = _ticker;
+                foreach (Order o in _trading.Orders.ToArray())
+                    if (o.OcoGroup != 0) Context.Cancel(o.Id);
+                if (Context.Orders.AvailableToClose(ticker) <= 0) return "Nothing left to close: other orders cover the position.";
+                if (!Context.Market.TryGetQuote(ticker, out Quote quote)) return "No quote for " + ticker + ".";
+                bool regular = Context.Market.Session == MarketSession.Regular;
+                foreach (Order o in Context.PlaceMany(om =>
+                         {
+                             long qty = om.AvailableToClose(ticker);
+                             if (qty <= 0) return new List<Order>();
+                             bool shortPosition = om.PositionQuantity(ticker) < 0;
+                             OrderSide side = shortPosition ? OrderSide.Buy : OrderSide.Sell;
+                             return new List<Order>
+                             {
+                                 regular ? om.SubmitMarket(ticker, side, qty) : om.SubmitLimit(ticker, side, qty, shortPosition ? quote.Ask : quote.Bid),
+                             };
+                         }))
                     if (o.Status == OrderStatus.Rejected) return o.StatusReason;
                 return null;
             };
@@ -268,6 +298,7 @@ namespace OpeningBell.UI
             Toggle(m, "Swept highs / lows", () => _prefs.ShowSweeps, v => _prefs.ShowSweeps = v, "overlay-sweeps");
             Toggle(m, "Equal highs / lows", () => _prefs.ShowEqualHighsLows, v => _prefs.ShowEqualHighsLows = v, "overlay-equal");
             Toggle(m, "Liquidity (PMH/PML, PDH/PDL, ORH/ORL)", () => _prefs.ShowLiquidity, v => _prefs.ShowLiquidity = v, "overlay-liquidity");
+            Toggle(m, "Buy / sell signal (temporary cheat)", () => _prefs.ShowSignal, v => _prefs.ShowSignal = v, "overlay-signal");
             if (Debug.isDebugBuild)
                 Toggle(m, "Developer: hidden market (F10)", () => _prefs.ShowDebug, v => _prefs.ShowDebug = v, "overlay-debug");
         }

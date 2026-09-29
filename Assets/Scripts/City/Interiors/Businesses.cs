@@ -167,8 +167,13 @@ namespace OpeningBell.City
 
             // Staff behind the counter; they come and go by the back corner. Long days get a lunch break.
             var (look, greeting, talk, sells) = Staff[b.Trade];
-            var station = new Vector3(hw > 4f ? hw * 0.4f : 0f, 0f, d - 1.7f);
-            var route = new List<Vector3> { station, new Vector3(hw - 0.9f, 0f, d - 1.7f), new Vector3(hw - 0.9f, 0f, d - 0.6f) };
+            // At Sal's the right half of the counter is the player's when they work there (PROP_SPEC §5): Sal stands left.
+            bool sals = b.Name == "Sal's Pizza";
+            var station = new Vector3(sals ? -hw * 0.4f : hw > 4f ? hw * 0.4f : 0f, 0f, d - 1.7f);
+            // Sal comes and goes through the kitchen corner on his side, never across the half of the counter you work.
+            var route = sals
+                ? new List<Vector3> { station, new Vector3(-hw + 0.9f, 0f, d - 1.7f), new Vector3(-hw + 0.9f, 0f, d - 1.3f) }
+                : new List<Vector3> { station, new Vector3(hw - 0.9f, 0f, d - 1.7f), new Vector3(hw - 0.9f, 0f, d - 0.6f) };
             var lines = new Queue<string>(talk);
             int openHours = ((hours.Close - hours.Open) + 24 * 60) % (24 * 60);
             var schedule = new WorkSchedule { Shift = hours };
@@ -183,6 +188,7 @@ namespace OpeningBell.City
                 c.Game, c.Hud, c.Player, look: look);
             for (int i = 0; i < sells.Length; i++)
                 Counter(c, root, new Vector3(station.x - 0.6f + i * 1.2f, 1.02f, d - 2.45f), sells[i].Item, sells[i].Price, staff, sells[i].Thanks);
+            if (sals) PizzaShop.Build(c, root, dyn, b, doorX, seed);
             root.gameObject.AddComponent<OpenLights>().Configure(c, hours, lamp, staff, signPanel, signText, neon ? name : null,
                 c.P.Glow(new Color(0.2f, 0.9f, 0.35f), 1.4f), c.P.Glow(new Color(1f, 0.7f, 0.15f), 1.2f), c.P.Unlit(new Color(0.1f, 0.1f, 0.1f)),
                 c.P.Sign(new Color(0.16f, 0.16f, 0.18f)));

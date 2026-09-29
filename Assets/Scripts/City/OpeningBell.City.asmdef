@@ -11,7 +11,11 @@
         "OpeningBell.Runtime",
         "OpeningBell.UI",
         "OpeningBell.Gameplay",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "OpeningBell.Casino",
+        "OpeningBell.Fund",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

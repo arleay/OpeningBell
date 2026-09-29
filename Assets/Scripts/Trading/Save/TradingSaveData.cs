@@ -126,6 +126,7 @@ namespace OpeningBell.Trading
                 });
             }
 
+            if (days == null) return data; // prop accounts keep their own day records
             foreach (TradingDayReport r in days.Completed) data.CompletedDays.Add(Capture(r));
             if (days.Current != null)
             {
@@ -181,6 +182,7 @@ namespace OpeningBell.Trading
             }
             orders.Restore(data.NextOrderId, data.NextFillId, restoredOrders, fills);
 
+            if (days == null) return;
             var completed = new List<TradingDayReport>();
             foreach (DayReportSaveData r in data.CompletedDays) completed.Add(Restore(r));
             days.Restore(completed, data.HasCurrentDay ? Restore(data.CurrentDay) : null);

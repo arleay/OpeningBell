@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using OpeningBell.Gameplay;
 using UnityEngine;
@@ -91,16 +92,40 @@ namespace OpeningBell.City
 
         public void Open()
         {
-            if (IsLocked) return;
-            if (!_wantOpen && _open < 0.05f && _player != null)
+            if (IsLocked || _player == null) return;
+            OpenFor(_player.position, key: false);
+        }
+
+        /// <summary>
+        /// Someone at <paramref name="from"/> opens it (swinging away from them). People with a key (staff with their
+        /// card) open locked doors too.
+        /// </summary>
+        public void OpenFor(Vector3 from, bool key)
+        {
+            if (IsLocked && !key) return;
+            if (!_wantOpen && _open < 0.05f)
             {
                 // Swing away from whoever opens it. Leaves extend along the hinge's +x, so a positive yaw swings
                 // the free edge toward -z: use it when the opener stands on the +z side.
-                Vector3 local = leaf.parent.InverseTransformPoint(_player.position);
+                Vector3 local = leaf.parent.InverseTransformPoint(from);
                 _direction = local.z > leaf.localPosition.z ? 1f : -1f;
             }
             _wantOpen = true;
             _openedAt = Time.time;
+            _heldFor = Time.time + 2.5f;
+        }
+
+        /// <summary>People walking about (the fund's staff): automatic doors open for them as for the player.</summary>
+        public static readonly List<Transform> Walkers = new List<Transform>();
+
+        private float _heldFor;
+
+        private bool WalkerNear(float range)
+        {
+            Vector3 at = transform.position;
+            foreach (Transform w in Walkers)
+                if (w != null && (w.position - at).sqrMagnitude < range * range) return true;
+            return false;
         }
 
         private void Update()
@@ -109,10 +134,11 @@ namespace OpeningBell.City
             if (kind == DoorKind.AutoSlide)
             {
                 bool near = _player != null && (_player.position - transform.position).sqrMagnitude < sensorRange * sensorRange;
-                _wantOpen = near && !IsLocked;
+                // Staff carry key cards: the doors open for them even when locked to the public.
+                _wantOpen = (near && !IsLocked) || WalkerNear(sensorRange);
             }
-            else if (_wantOpen && Time.time - _openedAt > autoCloseSeconds && _player != null &&
-                     (_player.position - leaf.position).sqrMagnitude > 2.2f * 2.2f)
+            else if (_wantOpen && Time.time - _openedAt > autoCloseSeconds && Time.time > _heldFor && _player != null &&
+                     (_player.position - leaf.position).sqrMagnitude > 2.2f * 2.2f && !WalkerNear(1.6f))
             {
                 _wantOpen = false;
             }

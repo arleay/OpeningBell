@@ -233,11 +233,11 @@ Market:
 - [x] M5 Participants → flow → book walk → price (replaces the deviation noise)
 - [x] M6 Market memory: PDH/PDL/PDC, previous week, premarket range, opening range (5/30 m), swings with equal-high merging, round numbers, day extremes
 - [x] M7 Stop orders: resting conditional flow in the market; player stop/stop-limit (trigger on the tick range, regular session only, gap-through fills at the market), brackets (OCO, good until cancelled), price edits for dragging lines, square-root market impact for large player orders
-- [ ] M8 Supply/demand zones and liquidity concentration
-- [x] M9 Derived ICT/SMC detection (`StructureDetector`: FVGs with fill fraction, swings, BOS/CHoCH, sweeps, equal highs/lows); not yet read by participants
-- [ ] M10 Time macros, premarket ramp (opening and closing crosses done)
-- [ ] M11 News and sectors feed participants
-- [ ] M12 Statistics suite and tuning (harness + calibration done: `MarketStatisticsTests`, `TestResults/market-stats.txt`, `market-*.png`); debug overlay
+- [x] M8 Supply/demand zones (`Flow/Zones.cs`): order blocks from displacement bases, absorption zones where institutions soaked up flow; resting interest consumed by retests (no regrowth), states untouched / partly mitigated / mitigated / invalidated, an invalidated order block flips once into a breaker; saved
+- [x] M9 Derived ICT/SMC detection (`StructureDetector`: FVGs with fill fraction, swings, BOS/CHoCH, sweeps, equal highs/lows). Participants read structure: gap traders rest at FVG midpoints (zones), sweep traders fade a break that fails back within 30 min, trend followers lean on the last 5m break of structure
+- [x] M10 Time macros (`MarketConfig.TimeMacros`, configurable): volume, volatility, book depth, institutional arrivals and spread per window; premarket ramp (8:00 catalysts, 9:00 prep, 9:25 queued orders); opening and closing crosses
+- [x] M11 News and sectors feed participants: headlines pull market makers (wider spread, thinner book), bring in retail, momentum and institutions, and pull resting orders in the news's way; rotation desks and institutions lean with the group's last half hour
+- [x] M12 Statistics suite and tuning (`MarketStatisticsTests`, `TestResults/market-stats.txt`, `market-*.png`; mechanisms in `MarketParticipantTests`); debug overlay (F10, dev builds): day, regime, leg, structure, institutional pressure, retail/momentum, MM withdrawal, group pull, zones as bands
 
 Chart:
 - [x] C-A Colours and themes: 5 presets + custom colours per part, saved as a preference

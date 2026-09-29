@@ -681,9 +681,12 @@ namespace OpeningBell.City
                 return;
             }
             _sellArmed = 0;
-            _w.Game.Economy.Receive(price, "Sold: " + v.Spec.Name, _w.Game.Clock.Now);
+            // Company equipment is the company's: the money goes back to it.
+            bool company = v.Item.Owner == "fund" && _w.Game.Fund.Exists;
+            if (company) _w.Game.Fund.SoldEquipment(price, "Sold: " + v.Spec.Name);
+            else _w.Game.Economy.Receive(price, "Sold: " + v.Spec.Name, _w.Game.Clock.Now);
             _w.Belongings.Remove(v.Item);
-            _w.Say($"Sold for {HomeWorld.Dollars(price)}.");
+            _w.Say(company ? $"Sold for {HomeWorld.Dollars(price)}, paid to {_w.Game.Fund.Name}." : $"Sold for {HomeWorld.Dollars(price)}.");
         }
     }
 }

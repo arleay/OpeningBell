@@ -55,6 +55,7 @@ namespace OpeningBell.Tests
             var terminal = Find<TradingTerminal>();
             yield return SitDown(Find<WorkstationController>());
             RenderTerminalOffscreen(terminal);
+            OpenApp(terminal, "broker");
             yield return null;
             yield return null;
 

@@ -14,6 +14,8 @@ namespace OpeningBell.City
     {
         /// <summary>Metres the body stands behind the camera: the camera sits just in front of the face.</summary>
         private const float SetBack = 0.12f;
+        /// <summary>The player's standing height (top of the head), metres.</summary>
+        public const float PlayerHeight = 1.7f;
         /// <summary>How far ahead of the eyes a punch lands, metres.</summary>
         private const float FistReach = 0.45f;
         /// <summary>Extra metres the body slides back when looking straight down (see LateUpdate).</summary>
@@ -93,10 +95,10 @@ namespace OpeningBell.City
             _model = Instantiate(source, transform, false);
             _model.name = "PlayerBody";
             CharacterStyle.Apply(_model, look);
-            // Scale so the eyes land at the camera: they sit about 0.1 m above the head bone.
-            Vector3 head = source.GetComponent<Animator>().GetBoneTransform(HumanBodyBones.Head)?.position ?? new Vector3(0f, 1.62f, 0f);
-            float eyes = _player.CameraPivot.localPosition.y;
-            float scale = Mathf.Clamp(eyes / (head.y + 0.1f), 0.8f, 1.1f);
+            // 1.7 m tall, like the townsfolk (CharacterStyle.Scale). The camera keeps its eye height: in first person the
+            // head is hidden, and the big Tiny head puts the model's own eyes lower than a real person's.
+            Vector3 head = source.GetComponent<Animator>().GetBoneTransform(HumanBodyBones.Head)?.position ?? new Vector3(0f, 1.16f, 0f);
+            float scale = CharacterStyle.Scale(PlayerHeight, head.y);
             _model.transform.localScale = Vector3.one * scale;
             _restHeadZ = head.z * scale;
             _model.transform.localPosition = new Vector3(0f, 0f, -SetBack);
@@ -170,7 +172,8 @@ namespace OpeningBell.City
             float headTarget = _restHeadZ - (SetBack + LookDownShift * Mathf.Sin(down * Mathf.PI * 0.5f));
             float headNow = transform.InverseTransformPoint(_head.position).z;
             Vector3 at = _model.transform.localPosition;
-            at.z = Mathf.Clamp(at.z + headTarget - headNow, -0.8f, 0.2f);
+            // Third person: seen from outside, the body just stands where the player is.
+            at.z = _player.ThirdPerson ? 0f : Mathf.Clamp(at.z + headTarget - headNow, -0.8f, 0.2f);
             _model.transform.localPosition = at;
 
             Vector3 v = _controller.velocity;
@@ -201,7 +204,9 @@ namespace OpeningBell.City
             SteerWatch();
             // The head (hair especially) sits in front of the eyes; collapse it so it never fills the view. The cost
             // is a headless shadow, which reads fine.
-            if (_head != null) _head.localScale = Vector3.one * 0.001f;
+            // Third person shows the whole character, head included. (The hands keep their size: the watch and ring
+            // were fitted to them.)
+            if (_head != null) _head.localScale = Vector3.one * (_player.ThirdPerson ? 1f : 0.001f);
         }
 
         /// <summary>

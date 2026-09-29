@@ -40,6 +40,7 @@ namespace OpeningBell.Tests
             var terminal = Find<TradingTerminal>();
             yield return SitDown(Find<WorkstationController>());
             RenderTerminalOffscreen(terminal);
+            OpenApp(terminal, "broker");
             game.SkipTo(game.Clock.Now.Date.AddHours(11.2)); // a morning of candles to chart
             game.IsPaused = true;
             terminal.Context.Select("APEX");
@@ -85,9 +86,8 @@ namespace OpeningBell.Tests
             VisualElement chart = terminal.Root.Q(className: "chart-view");
             string texts = string.Join(" | ", chart.Query<Label>().ToList().Where(l => l.resolvedStyle.display != DisplayStyle.None).Select(l => l.text));
             TestContext.WriteLine(texts);
-            StringAssert.Contains("AVG ", texts, "the position line is labelled");
-            StringAssert.Contains("TP 2", texts, "the take-profit line");
-            StringAssert.Contains("SL 2", texts, "the stop-loss line");
+            StringAssert.Contains(" USD", texts, "the position bar shows the live P&L");
+            Assert.IsTrue(legs.All(o => panel.View.CancelPointOf(o.Id).HasValue), "each bracket leg has its pill with an \u00D7");
             StringAssert.Contains("RSI 14", texts, "the RSI pane");
             StringAssert.Contains("MACD 12 26 9", texts, "the MACD pane");
             StringAssert.Contains("EMA 20", texts, "the EMA legend");
@@ -148,6 +148,36 @@ namespace OpeningBell.Tests
             Assert.IsTrue(prefs.UseCustom, "a custom colour makes a custom theme from the current one");
             Assert.AreEqual(new Color(0.3f, 0.76f, 0.97f), prefs.Theme.Up);
             Assert.AreEqual(ChartTheme.Presets.First(t => t.Name == "Light").Background, prefs.Theme.Background, "the rest is kept");
+
+            // With the TP gone its tab is back on the position bar: drag it out and drop it above the price.
+            terminal.RefreshAll();
+            yield return null;
+            Vector2? tab = view.ProtectionTabPoint(false);
+            Assert.IsTrue(tab.HasValue, "the TP tab shows while there is no take-profit");
+            Assert.IsFalse(view.ProtectionTabPoint(true).HasValue, "the SL tab hides while the stop-loss works");
+            decimal target = PriceTick.RoundNearest(last * 1.015m);
+            Vector2 dropAt = new Vector2(tab.Value.x, view.PointOf(m1[m1.Count - 10].Start, (double)target).y);
+            Pointer(view, EventType.MouseDown, tab.Value);
+            Pointer(view, EventType.MouseDrag, dropAt);
+            Pointer(view, EventType.MouseUp, dropAt);
+            Order newTp = game.Orders.OpenOrders.Single(o => o.Ticker == "APEX" && o.Type == OrderType.Limit);
+            Assert.AreEqual((double)target, (double)newTp.LimitPrice, 0.02, "dropped where it was let go");
+            Assert.AreEqual(stop.OcoGroup, newTp.OcoGroup, "and one-cancels-other with the stop-loss");
+            SaveTerminalScreenshot("terminal-chart-light-tp.png");
+
+            // The close button on the position bar flattens the position and takes its stop-loss with it.
+            terminal.RefreshAll();
+            yield return null;
+            Vector2? close = view.ClosePoint;
+            Assert.IsTrue(close.HasValue, "the position bar has a close button");
+            // A real click goes to whatever is on top at that point: it must be the chart, not something covering it.
+            VisualElement picked = view.panel.Pick(view.LocalToWorld(close.Value));
+            TestContext.WriteLine($"picked at the close button: {picked?.GetType().Name} '{picked?.name}' .{string.Join(".", picked?.GetClasses() ?? new string[0])}");
+            Assert.AreSame(view, picked, "nothing covers the position bar's close button");
+            Pointer(view, EventType.MouseDown, close.Value);
+            Pointer(view, EventType.MouseUp, close.Value);
+            Assert.AreEqual(OrderStatus.Cancelled, stop.Status, "the stop-loss is cancelled first");
+            Assert.AreEqual(0, game.Orders.PositionQuantity("APEX"), "the position is closed");
         }
 
         /// <summary>Sends a mouse event to the chart at a point in its local coordinates.</summary>

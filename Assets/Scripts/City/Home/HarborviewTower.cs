@@ -58,7 +58,8 @@ namespace OpeningBell.City
             k.Facade(t, "Podium E", V(260f, 0f, 96f), V(270f, PodiumTop, 128f), concrete, roof);
             k.Facade(t, "Podium N", V(244f, 0f, 124f), V(260f, PodiumTop, 128f), concrete, roof);
             k.Span(t, "Lobby roof", V(244f, 6.5f, 96f), V(260f, PodiumTop, 124f), roof);
-            k.Facade(t, "Tower", V(X - HW, PodiumTop, Z - HD), V(X + HW, PenthouseFloor, Z + HD), c.P.Facade(FacadeStyle.Glass, false), roof);
+            // The glass tower stops at Level 26, the office floor built under the penthouse (HarborviewOffice).
+            k.Facade(t, "Tower", V(X - HW, PodiumTop, Z - HD), V(X + HW, HarborviewOffice.Floor, Z + HD), c.P.Facade(FacadeStyle.Glass, false), roof);
             Balconies(c, t);
             Lobby(c, t);
             // Canopy over the doors with the name on its edge.
@@ -82,7 +83,7 @@ namespace OpeningBell.City
             float x0 = X - HW, x1 = X + HW, z0 = Z - HD, z1 = Z + HD;
             const float deep = 1.8f, wide = 5.2f;
             float[] alongX = { 241.5f, 248.3f, 255.7f, 262.5f }, alongZ = { 104f, 112f, 120f };
-            for (float y = PodiumTop + FloorHeight; y < PenthouseFloor - 2f; y += FloorHeight)
+            for (float y = PodiumTop + FloorHeight; y < HarborviewOffice.Floor - 1f; y += FloorHeight)
             {
                 // The floor line all round.
                 slab.Cuboid(V(x0 - 0.08f, y - 0.1f, z0 - 0.08f), V(x1 + 0.08f, y + 0.08f, z0));
@@ -101,8 +102,8 @@ namespace OpeningBell.City
                 }
             }
             // The fins: floor to crown, just proud of the balconies.
-            slab.Cuboid(V(X - 0.8f, PodiumTop, z0 - 0.5f), V(X + 0.8f, PenthouseFloor - 0.4f, z0));
-            slab.Cuboid(V(X - 0.8f, PodiumTop, z1), V(X + 0.8f, PenthouseFloor - 0.4f, z1 + 0.5f));
+            slab.Cuboid(V(X - 0.8f, PodiumTop, z0 - 0.5f), V(X + 0.8f, HarborviewOffice.Floor, z0));
+            slab.Cuboid(V(X - 0.8f, PodiumTop, z1), V(X + 0.8f, HarborviewOffice.Floor, z1 + 0.5f));
             slab.Build(t, "Balcony slabs", c.P.Lit(new Color(0.86f, 0.83f, 0.74f), 0.15f), collider: false);
             glass.Build(t, "Balcony glass", c.P.Glass(new Color(0.55f, 0.7f, 0.78f, 0.35f)), collider: false)
                 .GetComponent<MeshRenderer>()?.SetShadows(false);
@@ -207,6 +208,73 @@ namespace OpeningBell.City
         /// "bring my car here" use them), board-marked concrete, columns, fluorescent strips, and the lift's lowest stop
         /// in a small lobby.
         /// </summary>
+        /// <summary>
+        /// A wall-mounted lift sign: brushed frame, dark blue face, the standard lift pictogram (car with up and down
+        /// triangles), ELEVATOR and the floors it serves, and an arrow round the corner to the doors. <paramref name="yaw"/>
+        /// is the direction the sign faces (0 = north); <paramref name="arrow"/> ±1 points to the reader's right/left, 0 both ways.
+        /// </summary>
+        private static void LiftSign(CityContext c, Transform t, Vector3 at, float yaw, int arrow)
+        {
+            Kit k = c.Kit;
+            Transform s = Kit.Group(t, "Elevator sign", at, yaw + 180f);
+            // Local frame: the readable face is -z (toward the reader) and +x runs to the reader's right.
+            Material frame = c.P.Lit(new Color(0.72f, 0.73f, 0.75f), 0.8f);
+            Material face = c.P.Lit(new Color(0.06f, 0.2f, 0.42f), 0.35f);
+            Material white = c.P.Glow(new Color(0.96f, 0.97f, 1f), 1.05f);
+            const float w = 1.9f, h = 0.78f;
+            k.Box(s, "Frame", new Vector3(0f, 0f, 0.012f), new Vector3(w + 0.06f, h + 0.06f, 0.024f), frame, collider: false);
+            k.Box(s, "Face", new Vector3(0f, 0f, -0.002f), new Vector3(w, h, 0.01f), face, collider: false);
+            float z = -0.009f;
+            // Pictogram on the left: a car outline with a triangle up and one down beside it.
+            float px = -w / 2f + 0.24f;
+            k.Box(s, "Car L", new Vector3(px - 0.1f, 0f, z), new Vector3(0.025f, 0.36f, 0.004f), white, collider: false);
+            k.Box(s, "Car R", new Vector3(px + 0.1f, 0f, z), new Vector3(0.025f, 0.36f, 0.004f), white, collider: false);
+            k.Box(s, "Car T", new Vector3(px, 0.1675f, z), new Vector3(0.225f, 0.025f, 0.004f), white, collider: false);
+            k.Box(s, "Car B", new Vector3(px, -0.1675f, z), new Vector3(0.225f, 0.025f, 0.004f), white, collider: false);
+            k.Box(s, "Door gap", new Vector3(px, -0.02f, z), new Vector3(0.012f, 0.27f, 0.004f), white, collider: false);
+            Triangle(k, s, new Vector3(px + 0.19f, 0.07f, z), 0.1f, true, white);
+            Triangle(k, s, new Vector3(px + 0.19f, -0.07f, z), 0.1f, false, white);
+            // Words (a TextMesh reads from its -z side, like the face).
+            float tx = px + 0.36f;
+            TextMesh title = k.Text(s, "ELEVATOR", new Vector3(tx, 0.13f, z - 0.002f), 0f, 0.16f, Color.white, TextAnchor.MiddleLeft);
+            title.fontStyle = FontStyle.Bold;
+            k.Text(s, "LOBBY  ·  PENTHOUSE  ·  LEVEL 26", new Vector3(tx + 0.01f, -0.04f, z - 0.002f), 0f, 0.047f, new Color(0.85f, 0.9f, 1f), TextAnchor.MiddleLeft);
+            // Arrow(s) round to the doors, below the words.
+            if (arrow == 0)
+            {
+                Arrow(k, s, new Vector3(tx + 0.14f, -0.22f, z), -1, white);
+                Arrow(k, s, new Vector3(tx + 0.62f, -0.22f, z), 1, white);
+            }
+            else Arrow(k, s, new Vector3(tx + 0.38f, -0.22f, z), arrow, white);
+        }
+
+        /// <summary>A solid triangle (pointing up or down) from stacked bars: reads as one shape at any distance.</summary>
+        private static void Triangle(Kit k, Transform s, Vector3 c, float size, bool up, Material m)
+        {
+            const int rows = 6;
+            for (int i = 0; i < rows; i++)
+            {
+                float f = (i + 0.5f) / rows;
+                float width = size * (up ? 1f - f : f) * 1.15f + 0.004f;
+                float y = c.y - size / 2f + size * f;
+                k.Box(s, "Tri", new Vector3(c.x, y, c.z), new Vector3(width, size / rows + 0.002f, 0.004f), m, collider: false);
+            }
+        }
+
+        /// <summary>A horizontal arrow; <paramref name="dir"/> +1 points to the reader's right (local +x).</summary>
+
+        private static void Arrow(Kit k, Transform s, Vector3 c, int dir, Material m)
+        {
+            float d = dir;
+            k.Box(s, "Arrow shaft", new Vector3(c.x - d * 0.03f, c.y, c.z), new Vector3(0.2f, 0.03f, 0.004f), m, collider: false);
+            for (int i = 0; i < 6; i++)
+            {
+                float f = (i + 0.5f) / 6f;
+                float height = 0.11f * (1f - f) + 0.004f;
+                k.Box(s, "Arrow head", new Vector3(c.x + d * (0.07f + 0.08f * f), c.y, c.z), new Vector3(0.08f / 6f + 0.002f, height, 0.004f), m, collider: false);
+            }
+        }
+
         private static void Garage(CityContext c, Transform t)
         {
             Kit k = c.Kit;
@@ -251,12 +319,23 @@ namespace OpeningBell.City
                 if (x + 2.6f <= 249f || x >= 255f) bays.Add((x, 118f, 123.2f, 0f));
             }
             for (float x = 255.5f; x + 2.6f <= 268.5f; x += 2.6f) bays.Add((x, 125.1f, 130.25f, 180f));
+            StaffBays.Clear();
             foreach (var (x0, z0, z1, yaw) in bays)
             {
                 float y = f + 0.006f;
                 foreach (float x in new[] { x0, x0 + 2.6f })
                     lines.Quad(V(x - 0.05f, y, z0), V(x + 0.05f, y, z0), V(x + 0.05f, y, z1), V(x - 0.05f, y, z1));
-                c.ParkingSpots.Add((V(x0 + 1.3f, Grade + f, (z0 + z1) / 2f), yaw, ParkingKind.Lot));
+                Vector3 bay = V(x0 + 1.3f, Grade + f, (z0 + z1) / 2f);
+                // The row along the lane past the lift is reserved for Level 26's staff: out of the everyday parking.
+                if (z0 > 124f)
+                {
+                    StaffBays.Add((bay, yaw));
+                    // Painted at the head of the bay, upright for a driver turning in from the lane (text top to the south).
+                    k.Text(t, "RESERVED", V(x0 + 1.3f, f + 0.012f, z0 + 1.2f), 0f, 0.2f, new Color(0.95f, 0.8f, 0.2f)).transform.localRotation = Quaternion.Euler(90f, 180f, 0f);
+                    k.Text(t, "LEVEL 26", V(x0 + 1.3f, f + 0.012f, z0 + 1.65f), 0f, 0.14f, new Color(0.95f, 0.8f, 0.2f)).transform.localRotation = Quaternion.Euler(90f, 180f, 0f);
+                    continue;
+                }
+                c.ParkingSpots.Add((bay, yaw, ParkingKind.Lot));
             }
             lines.Build(t, "Bay lines", paint, collider: false);
             // Aisle arrows: yellow chevrons down the middle of the lane and the cross aisle, pointing the way round.
@@ -280,6 +359,11 @@ namespace OpeningBell.City
             k.Span(t, "Lift core W", V(248.8f, f, 121f), V(249f, Soffit, 124f), wall);
             k.Span(t, "Lift core E", V(255f, f, 121f), V(255.2f, Soffit, 124f), wall);
             k.Span(t, "Lift core N", V(248.8f, f, 123.8f), V(255.2f, Soffit, 124f), wall);
+            // Wayfinding on the core's blind sides (the doors are on the south face): a proper wall-mounted sign, lift
+            // pictogram, and arrows round to the doors. North faces the reserved staff row; east and west the aisles.
+            LiftSign(c, t, V(252f, f + 1.75f, 124.02f), 0f, 0);
+            LiftSign(c, t, V(255.22f, f + 1.75f, 122.5f), 90f, -1);
+            LiftSign(c, t, V(248.78f, f + 1.75f, 122.5f), 270f, 1);
             k.Text(t, "P1  RESIDENTS", V(252f, f + 3.1f, 120.88f), 0f, 0.16f, new Color(0.95f, 0.75f, 0.15f));
             k.Span(t, "Walkway", V(250.6f, f + 0.006f, 112f), V(253.4f, f + 0.008f, 121f), c.P.Lit(new Color(0.25f, 0.45f, 0.3f), 0.2f), collider: false);
 
@@ -347,13 +431,17 @@ namespace OpeningBell.City
             Terrace(c, p, m);
             c.SwingDoor(p, "Penthouse", V(-0.55f, 0f, 5.5f), 1.1f, 2.4f, m.Walnut);
 
-            Elevator lift = Lift(c, dyn, V(X, g + 0.02f, Z + LiftZ), PenthouseFloor - 0.02f, GarageFloor - 0.02f);
-            // Only residents (or open-house visitors) ride up or down to the garage; anyone can come back to the lobby.
+            Elevator lift = Lift(c, dyn, V(X, g + 0.02f, Z + LiftZ), PenthouseFloor - 0.02f, GarageFloor - 0.02f, HarborviewOffice.Floor - 0.02f);
+            ResidentsLift = lift;
+            // The penthouse is residents only (or open-house visitors). Level 26 is open to anyone (viewings, then the
+            // fund's staff and visitors); the P1 garage to residents and, once the fund exists, its staff.
+            bool Resident() => world.Estate.Owns(HomeSales.PenthouseId) || HomeSales.OpenHouse.Contains(world.Game.Clock.Now);
+            bool Staff() => world.Game.Fund != null && world.Game.Fund.Exists;
             foreach (ElevatorButton button in lift.GetComponentsInChildren<ElevatorButton>())
             {
                 bool inCar = button.name.StartsWith("Button");
-                if ((inCar && button.Floor != 0) || (!inCar && button.Floor != 1))
-                    button.LockReason = () => world.Estate.Owns(HomeSales.PenthouseId) || HomeSales.OpenHouse.Contains(world.Game.Clock.Now) ? null : "residents only";
+                if (inCar && button.Floor == StopPenthouse) button.LockReason = () => Resident() ? null : "residents only";
+                else if (button.Floor == StopGarage) button.LockReason = () => Resident() || Staff() ? null : "residents only";
             }
 
             var spec = new HomeSpec
@@ -724,7 +812,20 @@ namespace OpeningBell.City
         /// stop, doors south into the lobby, the penthouse foyer and the garage's lift lobby. Stops keep the order the
         /// save and the buttons know (L 0, PH 1, P1 2); the panel shows them bottom to top.
         /// </summary>
-        private static Elevator Lift(CityContext c, Transform dyn, Vector3 at, float rise, float garage)
+        /// <summary>The residents' lift (the fund's staff ride it too). Stop indices: L, PH, P1, Level 26.</summary>
+        public static Elevator ResidentsLift { get; private set; }
+        public const int StopLobby = 0, StopPenthouse = 1, StopGarage = 2, StopOffice = 3;
+
+        /// <summary>Staff commutes (FundWorld): the ramp lane's centre line, where the ramp leaves the street and reaches the
+        /// garage floor, the garage's middle, and where to stand at the garage lift's doors (world).</summary>
+        public const float StaffLaneZ = (LaneZ0 + GZ1) / 2f, RampTopX = GX0, RampFootX = RampEnd;
+        public static Vector3 GarageCentre => V(252f, Grade + GarageFloor, 121f);
+        public static Vector3 GarageLiftDoor => V(252f, Grade + GarageFloor, 120.2f);
+
+        /// <summary>The garage bays reserved for the fund's staff (world position of the bay centre on the floor, and yaw).</summary>
+        public static readonly List<(Vector3 P, float Yaw)> StaffBays = new List<(Vector3, float)>();
+
+        private static Elevator Lift(CityContext c, Transform dyn, Vector3 at, float rise, float garage, float office)
         {
             Kit k = c.Kit;
             Material walnut = c.P.Lit(new Color(0.3f, 0.19f, 0.12f), 0.4f);
@@ -735,9 +836,10 @@ namespace OpeningBell.City
             Material lampOn = c.P.Unlit(new Color(1f, 0.75f, 0.35f));
             Transform shaft = Kit.Group(dyn, "Harborview lift", at);
             var elevator = shaft.gameObject.AddComponent<Elevator>();
-            string[] labels = { "L", "PH", "P1" };
-            float[] heights = { 0f, rise, garage };
-            int[] row = { 1, 2, 0 }; // panel position, bottom up
+            // Stops keep the order saves and buttons know (L 0, PH 1, P1 2); Level 26 came later, so it's 3.
+            string[] labels = { "L", "PH", "P1", "26" };
+            float[] heights = { 0f, rise, garage, office };
+            int[] row = { 1, 3, 0, 2 }; // panel position, bottom up
             var stops = new Elevator.FloorStop[labels.Length];
             const float doorZ = -1.2f;
             for (int f = 0; f < labels.Length; f++)

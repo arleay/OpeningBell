@@ -223,21 +223,52 @@ namespace OpeningBell.City
             return false;
         }
 
+        private HomeItem _pendingItem;
+        private int _pendingVariant;
+
+        /// <summary>A company to bill instead of the player's own card (the fund, once it holds its office), or null.</summary>
+        private OpeningBell.Fund.HedgeFund Company => _w.OfficeHeld ? _w.Game.Fund : null;
+
         /// <summary>Buys one: tech (boxed) into your hands if they're free, everything else to the pickup counter.</summary>
         public OwnedItem Buy(HomeItem item, int variant)
         {
             if (!Open) { _w.Say($"{Name} is closed. {Hours.Describe()}"); return null; }
             string colour = item.Variants.Length > 1 ? item.Variants[variant] + " " : "";
-            if (!Confirm(item.Id + variant, $"The {colour}{item.Name}, {HomeWorld.Dollars(item.Price)}? [E] again to pay.")) return null;
-            string error = _w.Game.Economy.Spend(item.Price, $"{Name}: {item.Name}", _w.Game.Clock.Now);
+            _pendingItem = item;
+            _pendingVariant = variant;
+            string company = Company != null ? $" · [F] bill {Company.Name}" : "";
+            if (!Confirm(item.Id + variant, $"The {colour}{item.Name}, {HomeWorld.Dollars(item.Price)}? [E] again: your card{company}.")) return null;
+            _pendingItem = null;
+            return Purchase(item, variant, company: false);
+        }
+
+        private void Update()
+        {
+            // [F] while a purchase is waiting to be confirmed bills the company card instead.
+            if (_pendingItem == null || Company == null || Time.unscaledTime > _pendingUntil) return;
+            var keys = UnityEngine.InputSystem.Keyboard.current;
+            if (keys == null || !keys.fKey.wasPressedThisFrame) return;
+            HomeItem item = _pendingItem;
+            _pendingItem = null;
+            _pending = null;
+            Purchase(item, _pendingVariant, company: true);
+        }
+
+        /// <summary>Pays (the player's bank, or the company) and hands it over or sends it to the pickup counter.</summary>
+        public OwnedItem Purchase(HomeItem item, int variant, bool company)
+        {
+            string error = company
+                ? Company?.BuyEquipment(item.Price, $"{Name}: {item.Name}") ?? "No company to bill."
+                : _w.Game.Economy.Spend(item.Price, $"{Name}: {item.Name}", _w.Game.Clock.Now);
             if (error != null)
             {
-                Say("Card's been declined, sorry.");
+                Say(company ? "The company card's been declined, sorry." : "Card's been declined, sorry.");
                 _w.Say(error);
                 return null;
             }
             bool hands = item.Boxed && !_w.Hands.Holding;
             OwnedItem owned = _w.Belongings.Add(item.Id, variant, hands ? ItemState.Carried : ItemState.AtPickup);
+            if (company) owned.Owner = "fund";
             if (hands)
             {
                 _w.Hands.TakeNew(owned);
@@ -321,13 +352,13 @@ namespace OpeningBell.City
 
         private int Waiting => _w.Belongings.Count(ItemState.AtPickup);
 
-        public override string Prompt => Waiting == 0 ? "Home delivery (nothing waiting)" : $"Deliver {Waiting} item{(Waiting == 1 ? "" : "s")} to {_w.MainHome.Name} · {HomeWorld.Dollars(HomeWorld.DeliveryFee)}";
+        public override string Prompt => Waiting == 0 ? "Home delivery (nothing waiting)" : $"Deliver {Waiting} item{(Waiting == 1 ? "" : "s")} to {_w.DeliveryTarget} · {HomeWorld.Dollars(HomeWorld.DeliveryFee)}";
 
         public override void Interact()
         {
             if (Waiting == 0) { _desk.Say("Buy something first and I'll book the van."); return; }
             if (!_desk.Open) { _w.Say($"{_desk.Name} is closed."); return; }
-            if (!_desk.Confirm("delivery", $"{Waiting} item{(Waiting == 1 ? "" : "s")} to {_w.MainHome.Name} for {HomeWorld.Dollars(HomeWorld.DeliveryFee)}? [E] again to book.")) return;
+            if (!_desk.Confirm("delivery", $"{Waiting} item{(Waiting == 1 ? "" : "s")} to {_w.DeliveryTarget} for {HomeWorld.Dollars(HomeWorld.DeliveryFee)}? [E] again to book.")) return;
             string error = _w.BookDelivery();
             if (error != null) _w.Say(error);
         }

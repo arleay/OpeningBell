@@ -50,6 +50,14 @@ namespace OpeningBell.Market
 
         public readonly List<MetaOrder> Metas = new List<MetaOrder>();
         public readonly LevelBook Levels = new LevelBook();
+        public readonly ZoneBook Zones = new ZoneBook();
+
+        /// <summary>5-minute market structure as swing traders read it: +1 after a swing high breaks, −1 after a swing low.</summary>
+        public int Structure;
+        /// <summary>EMAs of the per-step market + sector move and its square (rotation traders follow the group).</summary>
+        public double SectorMom, SectorVar;
+        /// <summary>Signed push institutions absorbed this minute (+ = buyers soaked up selling): where demand shows.</summary>
+        public double Absorbed;
 
         // Session trackers (log prices; NaN = none yet).
         public double PremarketHigh = double.NaN, PremarketLow = double.NaN;
@@ -60,6 +68,8 @@ namespace OpeningBell.Market
         public bool OpenAuctionDone;
         /// <summary>Start (ticks) of the last 5-minute bar checked for swings (by time: counts change with trimming and loads).</summary>
         public long LastSwingTicks;
+        /// <summary>Start (ticks) of the last hourly bar checked for swings.</summary>
+        public long LastHourSwingTicks;
 
         // The current leg of the day's move (regular session): how the day's direction actually arrives.
         public LegKind Leg;

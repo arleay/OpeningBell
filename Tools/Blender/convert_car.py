@@ -2,8 +2,9 @@
 CarFactory drives: a root with children "body" and "wheel-front-left/-right", "wheel-back-left/-right", front
 towards Unity's +z, wheels on the ground, sized to a real length.
 
-    blender -b -P Tools/Blender/convert_car.py -- <in> <out.fbx> [--length 4.7] [--max-tris 60000]
+    blender -b -P Tools/Blender/convert_car.py -- <in> <out.fbx> [--length 4.7] [--max-tris 60000 | 0 = keep all]
         [--wheels REGEX|auto] [--front +y|-y|+x|-x] [--drop REGEX] [--only REGEX] [--scale 1.35]
+        [--paint REGEX] [--paint-colour r,g,b]
 
 Only visible, rendered meshes count; --drop removes more by name (backdrops, lights, signs) and --only keeps just
 the matching ones (one car out of a pack). Wheels are found by name (--wheels REGEX; default tyres/rims/hubs/discs,
@@ -147,6 +148,77 @@ lo, hi = bounds(meshes)
 transform(meshes, mathutils.Matrix.Translation(-Vec(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))))
 car = size(meshes)
 flatten_materials(meshes)
+
+
+def tag_glass():
+    """Unity swaps every car material named "glass" for the tinted see-through one (ArtImportRules), but authors name
+    windows anything ("vitre phares" on the Urus). A material that transmits light, or is mostly transparent, is glass:
+    the name gets " glass" so the swap finds it."""
+    for m in bpy.data.materials:
+        if "glass" in m.name.lower() or not m.node_tree:
+            continue
+        clear = False
+        for n in m.node_tree.nodes:
+            if n.type in ("BSDF_GLASS", "BSDF_TRANSPARENT", "BSDF_REFRACTION"):
+                clear = True
+            elif n.type == "BSDF_PRINCIPLED":
+                t = n.inputs.get("Transmission Weight")
+                a = n.inputs.get("Alpha")
+                clear |= t is not None and not t.links and t.default_value >= 0.5
+                clear |= a is not None and not a.links and a.default_value <= 0.5
+        if clear:
+            m.name += " glass"
+
+
+tag_glass()
+
+
+def fix_materials():
+    """Three repairs, then the paint tag.
+    - Importers duplicate a material per use ("tyre.001", "tyre.002") and sometimes only one copy keeps its image: the
+      Raptor's tyres came out white on three wheels. Faces on an untextured copy move to a textured one of the same
+      base name.
+    - GTA ports leave paint slots in placeholder magenta ("__PAINT_2_" rims): anything not tagged as paint is dark
+      gunmetal instead.
+    - --paint REGEX names the body paint: those materials get " [paint]", which is all a respray recolours
+      (CarFactory.Paint); a car's other materials (lights, trim, interior, badges) never change. --paint-colour r,g,b
+      sets its factory colour, for sources that ship white (NFS and GTA ports colour paint at runtime)."""
+    def base(name):
+        return re.sub(r"\.\d{3}$", "", name)
+
+    def textured(m):
+        p = next((n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None) if m.node_tree else None
+        return p is not None and p.inputs["Base Color"].links and p.inputs["Base Color"].links[0].from_node.type == "TEX_IMAGE"
+
+    with_image = {}
+    for m in bpy.data.materials:
+        if textured(m):
+            with_image.setdefault(base(m.name), m)
+    for o in meshes:
+        for slot in o.material_slots:
+            m = slot.material
+            # Blender's default names ("Material.001", "Material.049") are different materials, not copies.
+            if m is not None and not textured(m) and base(m.name) in with_image and base(m.name).lower() != "material":
+                slot.material = with_image[base(m.name)]
+
+    paint = re.compile(opt["--paint"], re.I) if "--paint" in opt else None
+    colour = tuple(float(c) for c in opt["--paint-colour"].split(",")) if "--paint-colour" in opt else None
+    for m in bpy.data.materials:
+        p = next((n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None) if m.node_tree else None
+        if paint is not None and paint.search(m.name) and "glass" not in m.name.lower():
+            m.name += " [paint]"
+            if colour is not None:
+                # Older shaders (no Principled node) export their viewport colour.
+                m.diffuse_color = colour + (1.0,)
+            if colour is not None and p is not None:
+                for link in list(p.inputs["Base Color"].links):
+                    m.node_tree.links.remove(link)
+                p.inputs["Base Color"].default_value = colour + (1.0,)
+        elif "__paint_" in m.name.lower() and p is not None and not p.inputs["Base Color"].links:
+            p.inputs["Base Color"].default_value = (0.12, 0.12, 0.13, 1.0)
+
+
+fix_materials()
 
 
 def split_loose(o):
@@ -293,9 +365,27 @@ def decimate(o, target):
 before = tris(everything)
 # Wheels get a fixed budget each (round silhouettes show faceting first, but 100k-triangle tyres are absurd);
 # the body gets the rest.
-for w in wheels:
-    decimate(w, int(opt.get("--wheel-tris", min(6000, max_tris // 10))))
-decimate(body, max_tris - tris(wheels))
+# --max-tris 0 keeps the source mesh untouched: detailed cars you buy and drive are seen up close, and Unity's mesh
+# LODs (ArtImportRules) lighten them with distance instead.
+# --wheel-tris caps each wheel on its own: subdivided tyres (the Urus' were ~900k triangles each) add nothing visible
+# and a mesh that size overflows the D3D12 upload buffer.
+if max_tris > 0 or "--wheel-tris" in opt:
+    for w in wheels:
+        decimate(w, int(opt.get("--wheel-tris", min(6000, max_tris // 10))))
+if max_tris > 0:
+    decimate(body, max_tris - tris(wheels))
+
+
+# One UV map and no colour layers: materials take one colour texture and vertex colours were folded into them
+# (flatten_materials). Spare layers cost vertex size: the Aventador's 100 bytes a vertex put its body over the D3D12
+# upload buffer.
+for o in everything:
+    uv = o.data.uv_layers
+    keep = next((l for l in uv if l.active_render), uv.active)
+    for l in [l for l in uv if l != keep]:
+        uv.remove(l)
+    for a in list(o.data.color_attributes):
+        o.data.color_attributes.remove(a)
 
 tex = os.path.join(os.path.dirname(out), "Textures")
 os.makedirs(tex, exist_ok=True)

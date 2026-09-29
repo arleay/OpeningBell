@@ -242,6 +242,8 @@ namespace OpeningBell.City
             var box = car.AddComponent<BoxCollider>();
             box.center = new Vector3(0f, 0.55f, 0f);
             box.size = new Vector3(1.45f, 1.1f, 3.3f);
+            // Scenery, never driven: body and wheels as one renderer per material (hundreds of cars line the streets).
+            MeshMerge.MergeIntoOne(car.transform);
             return car;
         }
     }

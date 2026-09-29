@@ -5,14 +5,18 @@ using UnityEngine.UIElements;
 namespace OpeningBell.UI
 {
     /// <summary>
-    /// Single-screen trading terminal: composes the panels into one UIDocument and refreshes them at a fixed
-    /// UI rate. Panels only share a TerminalContext, so later monitors can each host a subset of them.
+    /// The player's computer: a desktop and taskbar hosting the apps (trading terminal, news, mail, browser) in one
+    /// UIDocument, refreshed at a fixed UI rate. Panels only share a TerminalContext, so later monitors can each
+    /// host a subset of them.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public sealed class TradingTerminal : MonoBehaviour
     {
         [SerializeField] private GameBootstrap game;
         [SerializeField] private StyleSheet styleSheet;
+
+        /// <summary>The terminal's stylesheet (Terminal.uss), for HUD windows that reuse its look.</summary>
+        public StyleSheet Style => styleSheet;
         [Tooltip("Real seconds between UI refreshes. The market ticks independently.")]
         [SerializeField, Min(0.02f)] private float refreshInterval = 0.1f;
         [Tooltip("Resolution of the in-world monitor texture.")]
@@ -27,6 +31,7 @@ namespace OpeningBell.UI
         public VisualElement Root { get; private set; }
         public TerminalContext Context { get; private set; }
         public ChartPanel Chart { get; private set; }
+        public BrowserApp Browser { get; private set; }
 
         /// <summary>What the in-world monitor displays while the terminal is not on screen.</summary>
         public RenderTexture WorldTexture { get; private set; }
@@ -39,7 +44,9 @@ namespace OpeningBell.UI
             _document = GetComponent<UIDocument>();
             // Runtime copy: switching targetTexture must never modify the shared PanelSettings asset.
             _document.panelSettings = Instantiate(_document.panelSettings);
-            WorldTexture = new RenderTexture(worldResolution.x, worldResolution.y, 0, RenderTextureFormat.ARGB32) { name = "TerminalScreen" };
+            // Needs a depth-stencil buffer: UI Toolkit masks clipped content (the desktop, the browser) with the
+            // stencil, and without one those areas render solid white on the monitor.
+            WorldTexture = new RenderTexture(worldResolution.x, worldResolution.y, 24, RenderTextureFormat.ARGB32) { name = "TerminalScreen" };
         }
 
         private void OnDestroy()
@@ -60,6 +67,14 @@ namespace OpeningBell.UI
             Root.AddToClassList("terminal");
             Context = new TerminalContext(game);
 
+            // The screen is a small OS: apps fill the area above the taskbar, one at a time.
+            var screen = Ui.Box("os-screen", Root);
+            var taskbar = new Taskbar(Context);
+            Root.Add(taskbar.Root);
+
+            var desktop = new DesktopScreen(Context);
+            screen.Add(desktop.Root);
+
             var accountBar = new AccountBarPanel(Context);
             var watchlist = new WatchlistPanel(Context);
             var quote = new QuotePanel(Context);
@@ -70,8 +85,9 @@ namespace OpeningBell.UI
             var news = new NewsPanel(Context);
             var summary = new DaySummaryPanel(Context);
 
-            Root.Add(accountBar.Root);
-            var body = Ui.Box("terminal-body", Root);
+            var broker = Ui.Box("broker-app", screen);
+            broker.Add(accountBar.Root);
+            var body = Ui.Box("terminal-body", broker);
             var left = Ui.Box("left-column", body);
             left.Add(watchlist.Root);
             left.Add(news.Root);
@@ -80,20 +96,23 @@ namespace OpeningBell.UI
             center.Add(chart.Root);
             center.Add(activity.Root);
             body.Add(orderEntry.Root);
+            broker.Add(accountBar.Menu); // after the panels: the account menu drops down over them
 
-            var bank = new BankApp(Context);
-            var store = new StoreApp(Context);
+            var newsroom = new NewsroomApp(Context);
             var mail = new MailApp(Context);
-            Root.Add(bank.Root);
-            Root.Add(store.Root);
-            Root.Add(mail.Root);
+            var browser = new BrowserApp(Context, new BankApp(Context), new StoreApp(Context));
+            Browser = browser;
+            screen.Add(newsroom.Root);
+            screen.Add(mail.Root);
+            screen.Add(browser.Root);
             Root.Add(summary.Root); // overlay: last child draws on top
 
-            _always.AddRange(new TerminalPanel[] { accountBar, summary });
-            _apps[TerminalApp.Broker] = (body, new TerminalPanel[] { watchlist, news, quote, chart, orderEntry, activity });
-            _apps[TerminalApp.Bank] = (bank.Root, new TerminalPanel[] { bank });
-            _apps[TerminalApp.Store] = (store.Root, new TerminalPanel[] { store });
+            _always.AddRange(new TerminalPanel[] { taskbar, summary });
+            _apps[TerminalApp.Desktop] = (desktop.Root, new TerminalPanel[] { desktop });
+            _apps[TerminalApp.Broker] = (broker, new TerminalPanel[] { accountBar, watchlist, news, quote, chart, orderEntry, activity });
+            _apps[TerminalApp.News] = (newsroom.Root, new TerminalPanel[] { newsroom });
             _apps[TerminalApp.Mail] = (mail.Root, new TerminalPanel[] { mail });
+            _apps[TerminalApp.Browser] = (browser.Root, new TerminalPanel[] { browser });
             Context.AppChanged += ShowCurrentApp;
             ShowCurrentApp();
         }

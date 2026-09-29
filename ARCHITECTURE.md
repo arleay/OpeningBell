@@ -208,6 +208,28 @@ Log price = fair + deviation, per tick:
   - `Footstep` and `Landed` events drive `Footsteps` (City), which picks grass, paving or indoor boards from what's underfoot (`SurfaceTag`, untagged = indoors) and plays synthesized steps (`ProceduralSounds.Footstep`).
   - Camera motion resets whenever someone else takes the camera (desk, vehicles).
 
+## Hedge fund (`OpeningBell.Fund`, `FUND_SPEC.md`)
+
+- **Pure simulation, world follows.** `HedgeFund` (Core, Market, Trading, Home refs; no UnityEngine) owns the company:
+  ledger (cash basis) and expense journal (accrual basis), people, contracts, schedules, payroll, bills, training and
+  the traders' brains. It advances in whole game minutes (`AdvanceTo`, called from the market's tick and from
+  `GameBootstrap.Update/SkipTo`), so a skipped day and a played day decide the same. `City/Fund/FundWorld` only draws
+  it: bodies (`FundPerson`), the NavMesh, parking, the [E] window; nothing there feeds back except the physical
+  "can someone reach this chair" check (`HedgeFund.Access`).
+- **Books tie by construction:** Equity − net owner contributions = trading net − expenses + other income, asserted in
+  every fund test (`FundRig.AssertBooksTie`). Collectible profit never changes equity; owner withdrawals are separate.
+- **Randomness without state:** fund decisions draw from `CounterRandom` (a hash of world seed, stream, person and
+  minute), so nothing random needs saving and replays match regardless of how time was chunked.
+- **Employees trade the real market:** each desk is an `Account` + `OrderManager` with the player's broker rules,
+  fills, slippage and price impact. Desks in the same tick share the hidden book depth (`LiquidityShare`), so ten
+  traders can't each take the full top of book. Hard limits sit in the order gate; behaviour (sizing up, revenge)
+  is clamped there, never trusted.
+- **The brain sees only public data** (`Features`: completed candles, quotes, VWAP, published headlines). Setup
+  quality is built from features measured to predict outcomes (`TraderCalibrationTests.SetupEdge`); skills act as
+  perception noise, thresholds, sizing, stop placement, management and execution delay.
+- **World LOD:** when the player isn't on Level 26 (or in P1), staff and cars are placed where the simulation says;
+  nothing is animated. Bays change only out of the camera's view.
+
 ## Save / load
 
 - **Goal: exact resume.** Loading builds the simulation from the same definitions (catalog, config, news templates, seed), then overwrites runtime state. A loaded game continues tick-for-tick like the original. `SaveLoadTests.SavedGame_ResumesExactly_ThroughJson` saves mid-session with open orders and a queued scheduled headline, round-trips JSON, runs both two days on, and compares everything.

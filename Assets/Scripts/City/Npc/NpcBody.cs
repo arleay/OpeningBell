@@ -15,6 +15,8 @@ namespace OpeningBell.City
         Cycle,
         /// <summary>Jogging or running (fights, fleeing); <c>stride</c> as for Walk.</summary>
         Run,
+        /// <summary>Seated and talking (a call at the desk, a word with the next seat).</summary>
+        SitTalk,
     }
 
     /// <summary>
@@ -62,19 +64,22 @@ namespace OpeningBell.City
         public float SeatHeight => IsCharacter ? 0.5f * transform.GetChild(0).localScale.y : 0.92f;
 
         /// <param name="look">Preferred outfit (a character file name such as "Suit"); random when null.</param>
-        public static NpcBody Create(Kit kit, Transform parent, string name, int seed, Color? outfit = null, string look = null)
+        /// <param name="style">Skin and hair (creator palette indices) instead of random ones; <paramref name="outfit"/> then tints the outfit.</param>
+        /// <param name="height">Standing height in metres (0: random 1.55–1.8).</param>
+        public static NpcBody Create(Kit kit, Transform parent, string name, int seed, Color? outfit = null, string look = null,
+            OpeningBell.PlayerLook style = null, float height = 0f)
         {
             var rng = new System.Random(seed);
             var root = new GameObject(name);
             root.transform.SetParent(parent, false);
             var npc = root.AddComponent<NpcBody>();
             npc._phaseOffset = (float)rng.NextDouble() * 10f;
-            if (kit.Art != null && kit.Art.HasPeople) npc.BuildCharacter(kit.Art, kit, rng, look);
+            if (kit.Art != null && kit.Art.HasPeople) npc.BuildCharacter(kit.Art, kit, rng, look, style, style != null ? outfit : null, height);
             else npc.BuildPrimitive(kit, rng, outfit);
             return npc;
         }
 
-        private void BuildCharacter(CityArt art, Kit kit, System.Random rng, string look)
+        private void BuildCharacter(CityArt art, Kit kit, System.Random rng, string look, OpeningBell.PlayerLook style, Color? top, float height)
         {
             IReadOnlyList<GameObject> people = art.People;
             var matches = new List<GameObject>();
@@ -91,12 +96,12 @@ namespace OpeningBell.City
             model.name = "Body";
             _animator = model.GetComponent<Animator>();
             // A skin tone and hair colour of their own (the creator's palette), so a crowd isn't one person repeated.
-            CharacterStyle.Apply(model, new OpeningBell.PlayerLook { Skin = 1 + rng.Next(CharacterStyle.Skins.Length - 1), Hair = rng.Next(3) == 0 ? 0 : 1 + rng.Next(6) });
-            // Sized by the head rather than a fixed factor: the costume set varies (a pug, a wizard), while seats, cups
-            // and colliders assume a head at about 1.5–1.65 m.
+            CharacterStyle.Apply(model, style ?? new OpeningBell.PlayerLook { Skin = 1 + rng.Next(CharacterStyle.Skins.Length - 1), Hair = rng.Next(3) == 0 ? 0 : 1 + rng.Next(6) }, top);
+            // Sized by the head rather than a fixed factor (the costume set varies: a pug, a wizard): 1.55–1.8 m tall.
             Transform headBone = _animator.GetBoneTransform(HumanBodyBones.Head);
             float headY = headBone != null ? model.transform.InverseTransformPoint(headBone.position).y : 1.62f;
-            model.transform.localScale = Vector3.one * ((1.5f + 0.15f * (float)rng.NextDouble()) / Mathf.Max(0.3f, headY));
+            float tall = 1.55f + 0.25f * (float)rng.NextDouble();
+            model.transform.localScale = Vector3.one * CharacterStyle.Scale(height > 0f ? height : tall, headY);
             _animator.runtimeAnimatorController = art.PeopleAnimator;
             _animator.applyRootMotion = false;
             _animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
@@ -166,6 +171,7 @@ namespace OpeningBell.City
                     speed = Mathf.Max(0.6f, stride * 1.35f / 4.83f); // the jog clip covers 4.83 m/s
                     break;
                 case NpcPose.Sit: state = "Sit"; break;
+                case NpcPose.SitTalk: state = "SitTalk"; break;
                 case NpcPose.Typing: state = "Interact"; break;
                 case NpcPose.Phone: state = "Talk"; break;
                 case NpcPose.Cycle: state = "Drive"; break;
@@ -228,6 +234,7 @@ namespace OpeningBell.City
                     armR = swing * 0.7f;
                     break;
                 case NpcPose.Sit:
+                case NpcPose.SitTalk:
                     legL = legR = -85f;
                     armL = armR = -25f;
                     drop = 0.43f;

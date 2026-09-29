@@ -48,19 +48,22 @@ namespace OpeningBell.Gameplay
                 // The opening and closing bells frame the regular session.
                 if (current == MarketSession.Regular || previous == MarketSession.Regular) Play("bell", _bell);
             };
-            game.Orders.OrderFilled += _ =>
-            {
-                // A sweep can produce several fills in one tick; one blip is enough.
-                if (Time.unscaledTime - _lastFill < 0.15f) return;
-                _lastFill = Time.unscaledTime;
-                Play("fill", _fill);
-            };
+            game.Orders.OrderFilled += _ => OnFill();
+            game.Prop.Filled += (_, __) => OnFill(); // copied trades fill several accounts at once: still one blip
             game.Market.NewsPublished += item => Play("news", item.IsMajor ? _breaking : _news);
             game.Economy.TransactionPosted += tx =>
             {
                 if (tx.IsNotable) Play("bill", _bill);
             };
             game.Inbox.Received += _ => Play("mail", _mail);
+        }
+
+        private void OnFill()
+        {
+            // A sweep can produce several fills in one tick; one blip is enough.
+            if (Time.unscaledTime - _lastFill < 0.15f) return;
+            _lastFill = Time.unscaledTime;
+            Play("fill", _fill);
         }
 
         private void Play(string cue, AudioClip clip)

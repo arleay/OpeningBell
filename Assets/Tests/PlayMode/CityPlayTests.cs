@@ -156,6 +156,7 @@ namespace OpeningBell.Tests
             yield return WaitUntil(() => workstation.State == WorkstationState.Seated, 5f, "seated at the office desk");
             Assert.AreSame(_city.OfficeDesk, workstation.CurrentDesk);
             RenderTerminalOffscreen(terminal);
+            OpenApp(terminal, "broker");
             yield return null;
             VisualElement root = terminal.Root;
             Click(root.Q("watch-APEX"));

@@ -60,6 +60,7 @@ namespace OpeningBell.City
                 k.Box(r, "Case", new Vector3(0f, item.Height / 2f, 0f), new Vector3(item.Width, item.Height, item.Depth), c.P.Lit(new Color(0.12f, 0.12f, 0.13f), 0.5f), collider: false);
                 k.Box(r, "Light strip", new Vector3(0f, item.Height * 0.55f, -item.Depth / 2f - 0.003f), new Vector3(0.02f, item.Height * 0.7f, 0.004f), c.P.Glow(new Color(0.3f, 0.7f, 1f)), collider: false);
             }
+            else if (item.Id == "coffee_station") CoffeeStation(c, r, item, variant);
             else if (item.Support == Support.Wall) WallPiece(c, r, item);
             else
             {
@@ -123,6 +124,31 @@ namespace OpeningBell.City
             return new Vector3((col - (inRow - 1) / 2f) * 0.66f, 0.2f + row * 0.42f, -0.06f);
         }
 
+        /// <summary>
+        /// A base cabinet in the chosen wood with a stone top, the kit's coffee machine, a grinder, cups and a tray of mugs:
+        /// the office coffee point.
+        /// </summary>
+        private static void CoffeeStation(CityContext c, Transform r, HomeItem item, int variant)
+        {
+            Kit k = c.Kit;
+            float w = item.Width, d = item.Depth, top = 0.9f;
+            GameObject cab = k.Fit(r, "kitchenCabinet", Vector3.zero, new Vector3(w, top, d), 0f, stretch: true);
+            if (cab == null) k.Box(r, "Cabinet", new Vector3(0f, top / 2f, 0f), new Vector3(w, top, d), c.P.Lit(ColourOf(item, variant) * 0.55f, 0.3f), collider: false);
+            else Tint(cab, ColourOf(item, variant));
+            k.Box(r, "Worktop", new Vector3(0f, top + 0.02f, 0f), new Vector3(w + 0.02f, 0.04f, d + 0.02f), c.P.Lit(new Color(0.78f, 0.76f, 0.72f), 0.4f), collider: false);
+            float y = top + 0.04f;
+            if (k.Fit(r, "kitchenCoffeeMachine", new Vector3(-w * 0.22f, y, 0.02f), new Vector3(0.36f, 0.4f, 0.34f), 0f) == null)
+            {
+                k.Box(r, "Machine", new Vector3(-w * 0.22f, y + 0.2f, 0.02f), new Vector3(0.36f, 0.4f, 0.34f), c.P.Lit(new Color(0.75f, 0.76f, 0.78f), 0.8f), collider: false);
+                k.Box(r, "Drip tray", new Vector3(-w * 0.22f, y + 0.03f, -0.12f), new Vector3(0.28f, 0.03f, 0.1f), c.P.Lit(new Color(0.2f, 0.2f, 0.22f), 0.6f), collider: false);
+            }
+            Material cup = c.P.Lit(new Color(0.95f, 0.95f, 0.93f), 0.6f);
+            k.Box(r, "Grinder", new Vector3(w * 0.06f, y + 0.16f, 0.08f), new Vector3(0.14f, 0.32f, 0.16f), c.P.Lit(new Color(0.12f, 0.12f, 0.13f), 0.5f), collider: false);
+            k.Box(r, "Tray", new Vector3(w * 0.3f, y + 0.01f, 0f), new Vector3(0.36f, 0.02f, 0.26f), c.P.Lit(new Color(0.3f, 0.2f, 0.13f), 0.3f), collider: false);
+            for (int i = 0; i < 6; i++)
+                k.Cylinder(r, "Mug", new Vector3(w * 0.3f - 0.12f + (i % 3) * 0.12f, y + 0.07f, -0.06f + (i / 3) * 0.12f), 0.08f, 0.1f, cup);
+        }
+
         private static void WallPiece(CityContext c, Transform r, HomeItem item)
         {
             Kit k = c.Kit;
@@ -148,6 +174,14 @@ namespace OpeningBell.City
                     r.gameObject.AddComponent<ClockHands>().Configure(c, hour, minute);
                     break;
                 }
+                case "whiteboard":
+                    k.Box(r, "Frame", new Vector3(0f, h / 2f, 0f), new Vector3(w, h, 0.03f), c.P.Lit(new Color(0.75f, 0.76f, 0.78f), 0.7f), collider: false);
+                    k.Box(r, "Board", new Vector3(0f, h / 2f, -0.017f), new Vector3(w - 0.05f, h - 0.05f, 0.004f), c.P.Lit(new Color(0.97f, 0.97f, 0.96f), 0.9f), collider: false);
+                    k.Box(r, "Ledge", new Vector3(0f, 0.02f, -0.04f), new Vector3(w * 0.6f, 0.02f, 0.06f), c.P.Lit(new Color(0.75f, 0.76f, 0.78f), 0.7f), collider: false);
+                    k.Box(r, "Chart line", new Vector3(-0.2f, h * 0.55f, -0.021f), new Vector3(w * 0.45f, 0.012f, 0.002f), c.P.Lit(new Color(0.15f, 0.35f, 0.75f)), collider: false, yaw: 0f)
+                        .transform.localRotation = Quaternion.Euler(0f, 0f, 12f);
+                    k.Box(r, "Note", new Vector3(w * 0.28f, h * 0.7f, -0.021f), new Vector3(0.3f, 0.012f, 0.002f), c.P.Lit(new Color(0.8f, 0.2f, 0.2f)), collider: false);
+                    break;
                 case "mirror":
                     k.Box(r, "Frame", new Vector3(0f, h / 2f, 0f), new Vector3(w, h, 0.03f), c.P.Lit(new Color(0.35f, 0.25f, 0.18f)), collider: false);
                     Mirror.Create(c, r, "Glass", new Vector3(0f, h / 2f, -0.017f), Vector3.back, new Vector2(w - 0.08f, h - 0.08f));

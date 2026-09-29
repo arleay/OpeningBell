@@ -31,9 +31,11 @@ namespace OpeningBell.Tests
             yield return null;
             VisualElement root = terminal.Root;
 
-            // Bank app: move $1,000 from the brokerage.
-            Press(root.Q<Button>("app-bank"));
-            Assert.AreEqual(TerminalApp.Bank, terminal.Context.App);
+            // Bank website: move $1,000 from the brokerage.
+            OpenApp(terminal, "browser");
+            Press(root.Q<Button>("bookmark-bank"));
+            Assert.AreEqual(TerminalApp.Browser, terminal.Context.App);
+            Assert.AreEqual("kvcu.com", terminal.Browser.Url);
             root.Q<TextField>("transfer-amount").value = "1000";
             Press(root.Q<Button>("transfer-from-broker"));
             Assert.AreEqual(startBank + 1000m, game.Economy.Bank.Balance);
@@ -43,8 +45,8 @@ namespace OpeningBell.Tests
             yield return null;
             SaveTerminalScreenshot("bank-app.png");
 
-            // Store app: buy the ergonomic chair; it replaces the cheap one in the room.
-            Press(root.Q<Button>("app-store"));
+            // Marketplace website: buy the ergonomic chair; it replaces the cheap one in the room.
+            Press(root.Q<Button>("bookmark-market"));
             Press(root.Q<Button>("buy-ergonomic_chair"));
             Assert.IsTrue(game.Economy.Owns("ergonomic_chair"));
             Assert.IsTrue(GameObject.Find("Chair_Ergo").activeInHierarchy, "upgrade appears in the apartment");
@@ -53,7 +55,7 @@ namespace OpeningBell.Tests
             yield return null;
             yield return null;
             SaveTerminalScreenshot("store-app.png");
-            Press(root.Q<Button>("app-broker"));
+            OpenApp(terminal, "broker");
 
             terminal.ShowOnScreen(true);
             workstation.StandUp();

@@ -9,7 +9,7 @@ namespace OpeningBell.Market
     /// </summary>
     internal static class FlowCodec
     {
-        private const long Version = 3; // 2: legs appended at the end; 3: leg pulse in place of v2's jitter word
+        private const long Version = 4; // 2: legs appended at the end; 3: leg pulse in place of v2's jitter word; 4: structure, rotation, level breaks, zones
 
         public static List<long> Capture(FlowState f)
         {
@@ -63,6 +63,24 @@ namespace OpeningBell.Market
             D(o, f.LegRate);
             D(o, f.LegMinutes);
             D(o, f.LegPulse);
+
+            o.Add(f.Structure);
+            D(o, f.SectorMom);
+            D(o, f.SectorVar);
+            D(o, f.Absorbed);
+            o.Add(f.LastHourSwingTicks);
+            foreach (Level l in f.Levels.All) D(o, l.SinceBreak);
+            o.Add(f.Zones.All.Count);
+            foreach (Zone z in f.Zones.All)
+            {
+                o.Add((long)z.Kind);
+                o.Add(z.Side);
+                o.Add(z.Retests);
+                o.Add((long)z.State);
+                o.Add(z.CreatedTicks);
+                o.Add((z.Inside ? 1 : 0) | (z.Flipped ? 2 : 0));
+                foreach (double v in new[] { z.Low, z.High, z.Strength, z.Interest, z.Initial, z.CreationVolume, z.Age }) D(o, v);
+            }
             return o;
         }
 
@@ -109,6 +127,27 @@ namespace OpeningBell.Market
                 f.LegMinutes = R();
                 double pulse = R();
                 if (version >= 3) f.LegPulse = pulse; // v2 held a (now removed) jitter value here
+            }
+
+            f.Zones.Clear();
+            if (version >= 4)
+            {
+                f.Structure = (int)L();
+                f.SectorMom = R();
+                f.SectorVar = R();
+                f.Absorbed = R();
+                f.LastHourSwingTicks = L();
+                foreach (Level l in f.Levels.All) l.SinceBreak = R();
+                int zones = (int)L();
+                for (int k = 0; k < zones; k++)
+                {
+                    var z = new Zone { Kind = (ZoneKind)L(), Side = (int)L(), Retests = (int)L(), State = (ZoneState)L(), CreatedTicks = L() };
+                    long flags = L();
+                    z.Inside = (flags & 1) != 0;
+                    z.Flipped = (flags & 2) != 0;
+                    z.Low = R(); z.High = R(); z.Strength = R(); z.Interest = R(); z.Initial = R(); z.CreationVolume = R(); z.Age = R();
+                    f.Zones.Mutable.Add(z);
+                }
             }
         }
 

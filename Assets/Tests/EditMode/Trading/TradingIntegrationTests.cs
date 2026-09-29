@@ -123,27 +123,34 @@ namespace OpeningBell.Tests
             MarketConfig config = settings.Config.Clone();
             config.SecurityNewsPerDay = config.SectorNewsPerDay = config.MarketNewsPerDay = 0;
             DateTime monday = TestMarkets.Monday;
-            MarketSimulation Run(bool withScenario)
+            MarketSimulation Run(bool withScenario, ulong seed)
             {
-                var sim = new MarketSimulation(config, catalog.CreateSpecs(), catalog.Index, new SeededRandomService(18492),
+                var sim = new MarketSimulation(config, catalog.CreateSpecs(), catalog.Index, new SeededRandomService(seed),
                     monday.AddHours(6), library.Templates, withScenario ? scenario.ScheduledNews : null);
                 sim.AdvanceTo(monday.AddHours(10));
                 return sim;
             }
+            long OpenVolume(MarketSimulation m)
+            {
+                m.TryGetSecurity("APEX", out var s);
+                return s.Candles.Get(Timeframe.Minute1).Completed.Where(c => c.Start.TimeOfDay >= new TimeSpan(9, 30, 0)).Sum(c => c.Volume);
+            }
 
-            MarketSimulation control = Run(false), onboarding = Run(true);
-            NewsItem headline = onboarding.News.Single();
-            Assert.AreEqual(monday.AddHours(8).AddMinutes(15), headline.Time);
-            StringAssert.Contains("distribution agreement", headline.Headline);
-            CollectionAssert.AreEqual(new[] { "APEX" }, headline.Tickers);
-
-            onboarding.TryGetSecurity("APEX", out var apex);
-            control.TryGetSecurity("APEX", out var apexControl);
-            long OpenVolume(SecurityRuntimeState s) => s.Candles.Get(Timeframe.Minute1).Completed
-                .Where(c => c.Start.TimeOfDay >= new TimeSpan(9, 30, 0)).Sum(c => c.Volume);
-            TestContext.WriteLine($"drawn move {headline.RealizedMove:P2}; APEX {apexControl.Last} → {apex.Last} with news; " +
-                                  $"open volume {OpenVolume(apexControl)} → {OpenVolume(apex)}");
-            Assert.Greater(OpenVolume(apex), OpenVolume(apexControl) * 2, "APEX is highly active at the open");
+            // A single stock's open volume swings several-fold from one path to the next, so the effect is judged over
+            // several days: news mornings against the same mornings without it.
+            double control = 0, withNews = 0;
+            for (ulong seed = 18490; seed < 18496; seed++)
+            {
+                MarketSimulation quiet = Run(false, seed), onboarding = Run(true, seed);
+                NewsItem headline = onboarding.News.Single();
+                Assert.AreEqual(monday.AddHours(8).AddMinutes(15), headline.Time);
+                StringAssert.Contains("distribution agreement", headline.Headline);
+                CollectionAssert.AreEqual(new[] { "APEX" }, headline.Tickers);
+                control += OpenVolume(quiet);
+                withNews += OpenVolume(onboarding);
+                TestContext.WriteLine($"seed {seed}: drawn move {headline.RealizedMove:P2}; open volume {OpenVolume(quiet)} → {OpenVolume(onboarding)}");
+            }
+            Assert.Greater(withNews, control * 2, "APEX is highly active at the open");
         }
 
         [Test]

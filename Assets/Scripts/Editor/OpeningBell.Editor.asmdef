@@ -3,7 +3,8 @@
     "rootNamespace": "OpeningBell.EditorTools",
     "references": [
         "OpeningBell.City",
-        "OpeningBell.Runtime"
+        "OpeningBell.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [
         "Editor"

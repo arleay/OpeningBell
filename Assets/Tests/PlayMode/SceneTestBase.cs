@@ -27,6 +27,8 @@ namespace OpeningBell.Tests
             SaveSystem.DirectoryOverride = _saveDirectory;
             // Fair weather unless a test asks otherwise: screenshots and driving stay comparable.
             OpeningBell.City.WeatherSystem.Forced = OpeningBell.City.Weather.Clear;
+            // New games start broke (PROP_SPEC §5); most tests trade the personal account, so they keep the old start.
+            GameBootstrap.StartingMoneyOverride = (10_000m, 1_800m);
         }
 
         private UnityEngine.InputSystem.Keyboard _keyboard;
@@ -83,6 +85,7 @@ namespace OpeningBell.Tests
             // Disabled bootstraps skip their quit-time autosave, which would otherwise hit the real slot later.
             foreach (var game in Object.FindObjectsByType<GameBootstrap>(FindObjectsSortMode.None)) game.enabled = false;
             SaveSystem.DirectoryOverride = null;
+            GameBootstrap.StartingMoneyOverride = null;
             Time.timeScale = 1f; // a test that ended in the pause menu must not freeze the next one
             if (Directory.Exists(_saveDirectory)) Directory.Delete(_saveDirectory, true);
         }
@@ -130,6 +133,9 @@ namespace OpeningBell.Tests
             if (_terminalTarget == null) _terminalTarget = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32);
             _terminalPanel.targetTexture = _terminalTarget;
         }
+
+        /// <summary>Opens an app from the taskbar ("broker", "news", "mail", "browser"); the computer boots to the desktop.</summary>
+        protected static void OpenApp(TradingTerminal terminal, string app) => Press(terminal.Root.Q<Button>("app-" + app));
 
         protected void SaveTerminalScreenshot(string fileName) => SavePng(_terminalTarget, fileName);
 
@@ -217,7 +223,7 @@ namespace OpeningBell.Tests
             return pixels;
         }
 
-        private static void SavePng(RenderTexture source, string fileName)
+        protected static void SavePng(RenderTexture source, string fileName)
         {
             var previous = RenderTexture.active;
             RenderTexture.active = source;

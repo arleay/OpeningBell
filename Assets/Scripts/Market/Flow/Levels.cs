@@ -45,6 +45,8 @@ namespace OpeningBell.Market
         public double Stops;
         /// <summary>Minutes since this level was created or last reinforced.</summary>
         public double Age;
+        /// <summary>Minutes since price last broke through the level (large if never): a quick break back is a sweep.</summary>
+        public double SinceBreak = double.MaxValue;
 
         public bool IsHighSide => IsHigh(Kind);
 

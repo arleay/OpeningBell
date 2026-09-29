@@ -15,13 +15,17 @@ namespace OpeningBell.Gameplay
         public event Action<Interactable> FocusChanged;
 
         private readonly RaycastHit[] _hits = new RaycastHit[8];
+        private FirstPersonController _player;
 
         private void Update()
         {
             Interactable found = null;
             Transform view = viewCamera.transform;
             // Nearest hit that isn't the player's own body (the camera can sit inside the controller's skin).
-            int count = Physics.RaycastNonAlloc(view.position, view.forward, _hits, reach, mask, QueryTriggerInteraction.Collide);
+            // Third person: the camera is behind the head, so the reach starts that much further back.
+            if (_player == null) _player = viewCamera.GetComponentInParent<FirstPersonController>();
+            float back = _player != null ? _player.CameraBack : 0f;
+            int count = Physics.RaycastNonAlloc(view.position, view.forward, _hits, reach + back, mask, QueryTriggerInteraction.Collide);
             float nearest = float.MaxValue;
             Collider first = null;
             for (int i = 0; i < count; i++)

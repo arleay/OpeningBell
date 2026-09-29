@@ -56,6 +56,10 @@ namespace OpeningBell.Gameplay
             _settings = Group(card);
             _settings.Add(SettingSlider("Mouse sensitivity", 0.2f, 3f, GameSettings.MouseSensitivity, v => GameSettings.MouseSensitivity = v, "setting-sensitivity"));
             _settings.Add(SettingSlider("Master volume", 0f, 1f, GameSettings.MasterVolume, v => GameSettings.MasterVolume = v, "setting-volume"));
+            _settings.Add(SettingSlider("Casino volume", 0f, 1f, GameSettings.CasinoVolume, v => GameSettings.CasinoVolume = v, "setting-casino-volume"));
+            _settings.Add(SettingToggle("Reduce motion", GameSettings.ReduceMotion, v => GameSettings.ReduceMotion = v, "setting-reduce-motion"));
+            _settings.Add(SettingToggle("Reduce flashing", GameSettings.ReduceFlashing, v => GameSettings.ReduceFlashing = v, "setting-reduce-flashing"));
+            _settings.Add(SettingToggle("Card-game hints", GameSettings.GameHints, v => GameSettings.GameHints = v, "setting-hints"));
             _settings.Add(MenuButton("BACK", () => ShowPage(_main), "menu-back"));
 
             _confirm = Group(card);
@@ -185,6 +189,16 @@ namespace OpeningBell.Gameplay
             button.style.color = new Color(0.84f, 0.86f, 0.89f);
             button.style.backgroundColor = new Color(0.11f, 0.14f, 0.17f);
             return button;
+        }
+
+        private static VisualElement SettingToggle(string label, bool value, Action<bool> onChange, string name)
+        {
+            var toggle = new Toggle(label) { value = value, name = name };
+            toggle.style.marginTop = toggle.style.marginBottom = 6;
+            toggle.labelElement.style.color = new Color(0.84f, 0.86f, 0.89f);
+            toggle.labelElement.style.minWidth = 150;
+            toggle.RegisterValueChangedCallback(e => onChange(e.newValue));
+            return toggle;
         }
 
         private static VisualElement SettingSlider(string label, float min, float max, float value, Action<float> onChange, string name)

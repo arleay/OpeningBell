@@ -11,7 +11,10 @@ namespace OpeningBell.UI
 
         public int VisibleCount { get; private set; }
 
-        /// <summary>Candles scrolled back from the newest. 0 = following live data.</summary>
+        /// <summary>
+        /// Candles scrolled back from the newest. 0 = newest at the right edge; negative = empty space to the right of
+        /// the newest candle (dragged left), kept as new candles arrive.
+        /// </summary>
         public float RightOffset { get; private set; }
 
         public bool IsLive => RightOffset < 0.5f;
@@ -26,7 +29,13 @@ namespace OpeningBell.UI
 
         /// <summary>Positive = move back in time.</summary>
         public void Pan(float candles, int total) =>
-            RightOffset = Math.Clamp(RightOffset + candles, 0f, Math.Max(0, total - MinVisible));
+            RightOffset = Math.Clamp(RightOffset + candles, -MaxBlank, Math.Max(0, total - MinVisible));
+
+        /// <summary>Empty slots right of the newest candle.</summary>
+        public int BlankSlots => RightOffset < 0 ? Math.Min(VisibleCount - 1, (int)Math.Round(-RightOffset)) : 0;
+
+        /// <summary>At most this much of the view can be empty space right of the newest candle.</summary>
+        private float MaxBlank => VisibleCount - MinVisible / 3f;
 
         public void FollowLive() => RightOffset = 0f;
 
@@ -39,7 +48,8 @@ namespace OpeningBell.UI
         public void VisibleRange(int total, out int first, out int count)
         {
             int end = Math.Clamp(total - (int)Math.Round(RightOffset), Math.Min(total, 1), total);
-            first = Math.Max(0, end - VisibleCount);
+            // Empty space on the right takes slots from the view, so the newest candle sits further left.
+            first = Math.Max(0, end - (VisibleCount - BlankSlots));
             count = end - first;
         }
 

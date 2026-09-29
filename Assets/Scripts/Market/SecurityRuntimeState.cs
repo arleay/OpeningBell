@@ -1,3 +1,4 @@
+using System;
 using OpeningBell.Core;
 
 namespace OpeningBell.Market
@@ -50,6 +51,45 @@ namespace OpeningBell.Market
         /// <summary>Hidden: today's character and the current regime (debug overlay only).</summary>
         public DayType DayType => Flow.Day.Type;
         public Regime Regime => Flow.Regime;
+        /// <summary>Hidden: live supply/demand zones and fair value gaps with their remaining interest (debug view).</summary>
+        public ZoneBook Zones => Flow.Zones;
+
+        /// <summary>
+        /// Hidden participant state for the developer overlay: leg, 5m structure, institutional pressure (net push
+        /// still to be worked), retail and momentum weights, market makers' withdrawal and the group's pull.
+        /// </summary>
+        /// <summary>
+        /// TEMPORARY cheat signal, −1..+1 (+ = buy). It reads the hidden market, so it really works (on average):
+        /// the gap to fair value (where informed traders are pushing), institutions' unfinished orders, the current
+        /// leg of the day and the day's drift. Remove before release.
+        /// </summary>
+        public double CheatSignal
+        {
+            get
+            {
+                FlowState f = Flow;
+                double sd = Spec.DailyVolatility, pressure = 0;
+                foreach (MetaOrder m in f.Metas) pressure += m.Side * m.Remaining;
+                double price = FairLog + DeviationLog;
+                double leg = f.Leg == LegKind.Pause ? 0 : Math.Sign(f.LegRate);
+                double drift = Math.Sign(f.Day.DriftAt(f.MinutesSinceOpen < 0 ? 0 : f.MinutesSinceOpen));
+                double score = (FairLog - price) / (0.15 * sd) + pressure / (0.1 * sd) + 0.8 * leg + 0.4 * drift;
+                return Math.Tanh(score / 2);
+            }
+        }
+
+        public string DebugSummary
+        {
+            get
+            {
+                FlowState f = Flow;
+                double sd = Spec.DailyVolatility, pressure = 0;
+                foreach (MetaOrder m in f.Metas) pressure += m.Side * m.Remaining;
+                double group = f.SectorVar > 0 ? f.SectorMom / Math.Sqrt(f.SectorVar) * Math.Sqrt(900) : 0; // ≈ 30 minutes of 2 s steps (display only)
+                return $"leg {f.Leg} · structure {(f.Structure > 0 ? "bull" : f.Structure < 0 ? "bear" : "none")} · inst {f.Metas.Count} ({pressure / sd:+0.00;-0.00}σ) · " +
+                       $"retail {f.Day.Retail:0.0} · mom {f.Day.Momentum:0.0} · MM pulled {f.Withdraw:0.00} · group z {group:+0.0;-0.0} · zones {f.Zones.All.Count}";
+            }
+        }
 
         internal SecurityRuntimeState(SecuritySpec spec, SeededRandom rng, int maxCandles)
         {

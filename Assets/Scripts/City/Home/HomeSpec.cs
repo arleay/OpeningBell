@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace OpeningBell.City
 {
-    public enum HomeKind { Apartment, Starter, Family, Mansion, Penthouse }
+    public enum HomeKind { Apartment, Starter, Family, Mansion, Penthouse, Office }
 
     /// <summary>
     /// A home the player can own (or, for the apartment, rents from the start): where it is, what's indoors, its lot,

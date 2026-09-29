@@ -58,9 +58,18 @@ namespace OpeningBell.City
             _cameraHome = _camera.localPosition;
         }
 
+        /// <summary>A reason the player shouldn't drive right now (drinking, CASINO_SPEC §45), or null.</summary>
+        public static System.Func<string> Refusal { get; set; }
+
         public bool Enter(OwnedVehicle v)
         {
             if (IsDriving || _entering || !_fpc.ControlEnabled) return false;
+            string refused = Refusal?.Invoke();
+            if (refused != null)
+            {
+                _hud.ShowToast(refused, 5f);
+                return false;
+            }
             GameObject go = _fleetView.Shown(v);
             if (go == null) return false;
             _vehicle = v;

@@ -55,6 +55,7 @@ namespace OpeningBell.Tests
 
             // Trade: marketable limit buy (market orders are not accepted pre-market).
             RenderTerminalOffscreen(terminal);
+            OpenApp(terminal, "broker");
             yield return null;
             VisualElement root = terminal.Root;
             Click(root.Q("watch-APEX"));

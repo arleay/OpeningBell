@@ -13,13 +13,20 @@ namespace OpeningBell.Market
         public readonly double Sigma;
         /// <summary>This step's market + sector move of fair value: index arbitrage and hedgers carry it straight into price.</summary>
         public readonly double Systematic;
+        /// <summary>This step's market + sector move alone (without the stock's own leg): what rotation traders watch.</summary>
+        public readonly double Group;
+        /// <summary>Time macros: book depth and institutional arrivals relative to normal.</summary>
+        public readonly double Liquidity, Institutional;
 
-        public FlowStep(bool regular, double minutesSinceOpen, double profileVolume, double sigma, double systematic)
+        public FlowStep(bool regular, double minutesSinceOpen, in ActivityProfile profile, double sigma, double systematic, double group)
         {
             Systematic = systematic;
+            Group = group;
             Regular = regular;
             MinutesSinceOpen = minutesSinceOpen;
-            ProfileVolume = profileVolume;
+            ProfileVolume = profile.Volume;
+            Liquidity = profile.Liquidity;
+            Institutional = profile.Institutional;
             Sigma = sigma;
         }
     }
@@ -34,6 +41,9 @@ namespace OpeningBell.Market
     ///   mean reversion lean against distance from VWAP
     ///   breakout       pile in after a remembered level breaks
     ///   news traders   hit the tape right after a headline
+    ///   rotation       trade the stock with its market and sector's last half hour
+    ///   zone traders   rest orders in supply/demand zones and fair value gaps (consumed by retests)
+    ///   sweep traders  fade a break that fails straight back through the level
     /// The net push walks the book: depth (liquidity) turns push into distance; level traders' walls absorb push at
     /// remembered prices; stops just beyond them add push when crossed. So a test of a level can hold (wall absorbs),
     /// break (wall eaten, stops fire, breakout traders pile in), or sweep and fail (stops fire, then the trapped
@@ -64,6 +74,24 @@ namespace OpeningBell.Market
         private const double CrossMargin = 0.02;
         /// <summary>Minutes a level must stand before its break brings in breakout traders.</summary>
         private const double EstablishedMinutes = 20;
+        /// <summary>A break that reverses back through the level within this many minutes failed: a sweep.</summary>
+        private const double SweepMinutes = 30;
+        private const double SweepScale = 0.04;
+
+        // Zones: resting interest per unit of strength (daily volatilities), gaps draw fewer traders than order blocks.
+        private const double ZoneScale = 0.05;
+        private const double GapShare = 0.7;
+        /// <summary>A close this far (daily vols) through a zone's far edge invalidates it.</summary>
+        private const double ZoneBreakMargin = 0.03;
+        /// <summary>Institutional absorption within a minute (daily vols) that marks a zone.</summary>
+        private const double AbsorptionZone = 0.012;
+
+        /// <summary>How much trend followers lean on the 5-minute structure (with it stronger, against it weaker).</summary>
+        private const double StructureWeight = 0.3;
+        /// <summary>Rotation desks: saturated, the group's move carries the stock about 0.4 σ a session on its own.</summary>
+        private const double RotationWeight = 0.4;
+        /// <summary>Index-arbitrage flow relative to the systematic fair-value move (see Step).</summary>
+        private const double ProgramLean = 1.3;
 
         // Legs: share of the session spent pausing (chop), and the size of legs in daily volatilities.
         private const double PauseShare = 0.08;
@@ -111,6 +139,8 @@ namespace OpeningBell.Market
             // Momentum desks are mostly absent outside the session; without this, thin premarket drifts in smooth waves.
             double momentum = MomentumWeight * f.Day.Momentum * RegimeMomentum(f.Regime) * unit * Math.Tanh(0.6 * z5 + 0.4 * z30)
                               * (step.Regular ? 1 : 0.4 * ExtendedParticipation);
+            // Swing traders read the 5-minute structure: momentum with the last break of structure has more followers.
+            momentum *= 1 + StructureWeight * f.Structure * Math.Sign(momentum);
 
             double reversion = 0;
             if (sec.Vwap > 0m)
@@ -143,14 +173,19 @@ namespace OpeningBell.Market
             }
 
             // Index arbitrage / hedging: when the market or the sector moves, programs trade the stock with it at once.
-            double program = step.Systematic;
+            // Programs lean slightly past the fair-value move (hedgers chase the print); walls, zones and flow noise
+            // absorb part of it, and without the lean 5-minute co-movement falls below real markets'.
+            // Systematic also carries the stock's own day leg; only the market + sector part (Group) gets the lean.
+            double program = step.Systematic + (ProgramLean - 1) * step.Group;
+            // Rotation: desks moving money between sectors buy the group that has been rising, sell the one falling.
+            double rotation = RotationWeight * unit * Math.Tanh(0.7 * GroupZ(f)) * (step.Regular ? 1 : ExtendedParticipation);
 
-            double push = noise + value + momentum + reversion + fomo + burst + news + institutional + program;
+            double push = noise + value + momentum + reversion + fomo + burst + news + institutional + program + rotation;
             gross = Math.Abs(noise) + Math.Abs(value) + Math.Abs(momentum) + Math.Abs(reversion) + Math.Abs(fomo)
-                    + Math.Abs(burst) + Math.Abs(news) + Math.Abs(institutional) + Math.Abs(program);
+                    + Math.Abs(burst) + Math.Abs(news) + Math.Abs(institutional) + Math.Abs(program) + Math.Abs(rotation);
 
             // ---- the book
-            double liquidity = f.Day.Liquidity * (step.Regular ? 1 : ExtendedLiquidity) / (1 + f.Withdraw);
+            double liquidity = f.Day.Liquidity * step.Liquidity * (step.Regular ? 1 : ExtendedLiquidity) / (1 + f.Withdraw);
             double newPrice = Walk(f, price, push, liquidity, sd, out double absorbed, out double triggered);
             gross += absorbed + triggered;
 
@@ -161,6 +196,8 @@ namespace OpeningBell.Market
             f.Mom30 += (r - f.Mom30) / (30 * _stepsPerMinute);
             f.Var += (r * r - f.Var) / (10 * _stepsPerMinute);
             f.VarSlow += (r * r - f.VarSlow) / (60 * _stepsPerMinute);
+            f.SectorMom += (step.Group - f.SectorMom) / (30 * _stepsPerMinute);
+            f.SectorVar += (step.Group * step.Group - f.SectorVar) / (30 * _stepsPerMinute);
             // Market makers step back after violent prints and return over a few minutes (volatility clusters).
             f.Withdraw = Math.Min(1.5, f.Withdraw * 0.97 + 0.04 * Math.Max(0, Math.Abs(r) / (s + 1e-12) - 3.5));
             if (f.GrossEma <= 0) f.GrossEma = gross;
@@ -189,20 +226,29 @@ namespace OpeningBell.Market
                 double best = double.MaxValue;
                 Level wallLevel = null, stopLevel = null;
                 MetaOrder meta = null;
+                Zone zone = null;
                 foreach (Level l in f.Levels.All)
                 {
                     if (l.Side != dir) continue;
                     double wallDist = (l.Log - pos) * dir;
-                    if (l.Wall > 1e-12 && wallDist >= 0 && wallDist < best) { best = wallDist; wallLevel = l; stopLevel = null; meta = null; }
+                    if (l.Wall > 1e-12 && wallDist >= 0 && wallDist < best) { best = wallDist; wallLevel = l; stopLevel = null; meta = null; zone = null; }
                     double stopDist = (l.Log + dir * offset - pos) * dir;
-                    if (l.Stops > 1e-12 && stopDist >= 0 && stopDist < best) { best = stopDist; stopLevel = l; wallLevel = null; meta = null; }
+                    if (l.Stops > 1e-12 && stopDist >= 0 && stopDist < best) { best = stopDist; stopLevel = l; wallLevel = null; meta = null; zone = null; }
                 }
                 foreach (MetaOrder m in f.Metas)
                 {
                     if (m.Side == dir || m.Passive <= 1e-12) continue; // only the other side's resting orders stand in the way
                     double peg = Peg(m, price, sd);
                     double d = (peg - pos) * dir;
-                    if (d >= 0 && d < best) { best = d; meta = m; wallLevel = stopLevel = null; }
+                    if (d >= 0 && d < best) { best = d; meta = m; wallLevel = stopLevel = null; zone = null; }
+                }
+                foreach (Zone z in f.Zones.All)
+                {
+                    // Demand (buyers) stands in the way of selling, supply of buying.
+                    if (z.Side == dir || z.Interest <= 1e-12 || !z.Live) continue;
+                    double d = (z.Entry - pos) * dir;
+                    if (d < 0 && pos >= z.Low && pos <= z.High) d = 0; // past the entry but still inside: the rest is right here
+                    if (d >= 0 && d < best) { best = d; zone = z; wallLevel = stopLevel = null; meta = null; }
                 }
 
                 double reach = remaining / liquidity;
@@ -235,7 +281,16 @@ namespace OpeningBell.Market
                     meta.Remaining -= take;
                     remaining -= take;
                     absorbed += take;
+                    f.Absorbed += meta.Side * take;
                     if (remaining <= 1e-12) break; // absorbed by the institution
+                }
+                else if (zone != null)
+                {
+                    double take = Math.Min(remaining, zone.Interest);
+                    zone.Interest -= take;
+                    remaining -= take;
+                    absorbed += take;
+                    if (remaining <= 1e-12) break; // the zone held (this time)
                 }
                 if (pos > f.PathHigh) f.PathHigh = pos;
                 if (pos < f.PathLow) f.PathLow = pos;
@@ -275,6 +330,15 @@ namespace OpeningBell.Market
                 // the first break leaves trapped traders' stops behind.
                 double freshness = 1.0 / (1 + 1.5 * l.Touches);
                 f.Burst += dir * Math.Min(1, l.Strength) * BreakoutScale * sd * f.Day.Breakout * RegimeBreakout(f.Regime) * freshness * participation;
+                // Straight back through a level it only just broke: the break failed and the liquidity beyond was a
+                // sweep. The trapped traders' stops fire on their own (they rest here); sweep traders, who wait for
+                // exactly this, fade the failed move. They only show up where levels are respected.
+                if (l.Touches > 0 && l.SinceBreak < SweepMinutes)
+                    f.Burst += dir * Math.Min(1, l.Strength) * SweepScale * sd * f.Day.LevelRespect * participation;
+                // A swing high taken out upward is a bullish break of structure, a swing low downward bearish.
+                if ((l.Kind == LevelKind.SwingHigh || l.Kind == LevelKind.DayHigh) && dir > 0) f.Structure = 1;
+                else if ((l.Kind == LevelKind.SwingLow || l.Kind == LevelKind.DayLow) && dir < 0) f.Structure = -1;
+                l.SinceBreak = 0;
                 l.Side = side;
                 l.Wall = 0;
                 l.Stops = l.Touches == 0 ? Math.Min(1, l.Strength) * StopScale * sd : 0;
@@ -307,6 +371,7 @@ namespace OpeningBell.Market
             foreach (Level l in f.Levels.Mutable)
             {
                 l.Age++;
+                if (l.SinceBreak < double.MaxValue) l.SinceBreak++;
                 l.Strength *= l.Kind == LevelKind.SwingHigh || l.Kind == LevelKind.SwingLow ? 0.9993 : 0.99985;
                 bool near = Math.Abs(price - l.Log) < 0.15 * sd;
                 double wallTarget = l.Strength * WallScale * sd * respect;
@@ -319,7 +384,7 @@ namespace OpeningBell.Market
 
             // Institutions: finished orders leave; new ones arrive, mostly on the side fair value points to.
             f.Metas.RemoveAll(m => m.Remaining <= 1e-9 && m.Passive <= 1e-9);
-            double arrival = MetaArrivalPerMinute * f.Day.Institutional * Math.Sqrt(step.ProfileVolume);
+            double arrival = MetaArrivalPerMinute * f.Day.Institutional * step.Institutional * Math.Sqrt(step.ProfileVolume);
             if (f.Metas.Count < MaxMetas && rng.NextDouble() < arrival)
                 f.Metas.Add(NewMeta(sec, price, rng, step));
 
@@ -329,7 +394,9 @@ namespace OpeningBell.Market
 
             UpdateRegime(f, rng);
             TrackSession(sec, price, step);
-            DetectSwings(sec, price);
+            DetectSwings(sec, price, participation);
+            DetectHourlySwings(sec, price);
+            UpdateZones(sec, price, participation);
         }
 
         /// <summary>
@@ -388,7 +455,8 @@ namespace OpeningBell.Market
             FlowState f = sec.Flow;
             double sd = sec.Spec.DailyVolatility;
             double gap = (sec.FairLog - price) / (0.25 * sd);
-            double lean = step.Regular ? Math.Sign(f.Day.DriftAt(step.MinutesSinceOpen)) * 0.6 : 0;
+            // Institutions lean with the day's information and with money rotating into (or out of) the group.
+            double lean = step.Regular ? Math.Sign(f.Day.DriftAt(step.MinutesSinceOpen)) * 0.6 + 0.5 * Math.Tanh(0.7 * GroupZ(f)) : 0;
             double pBuy = 1 / (1 + Math.Exp(-(gap + lean)));
             int side = rng.NextDouble() < pBuy ? 1 : -1;
             double total = sd * 0.25 * Math.Exp(0.7 * rng.NextGaussian() - 0.25);
@@ -426,7 +494,28 @@ namespace OpeningBell.Market
                 f.Regime = Regime.Expansion;
                 f.RegimeMinutes = 0;
             }
+
+            // News changes who is trading, not the candles: market makers pull quotes (wider spread, thinner book),
+            // retail and momentum traders pile in, more institutions show up, and the resting orders in the way of
+            // the news are pulled, so a strong headline can run straight through levels and zones that would
+            // normally hold. Each effect saturates; the day's weights carry the rest of the session.
+            double z = Math.Abs(immediate) / sd;
+            if (z < 1e-9) return;
+            int dir = Math.Sign(immediate);
+            f.Withdraw = Math.Min(1.5, f.Withdraw + Math.Min(1, 1.2 * z));
+            f.Day.Retail = Math.Min(3, f.Day.Retail * (1 + Math.Min(1, 1.5 * z)));
+            f.Day.Momentum = Math.Min(2.5, f.Day.Momentum * (1 + Math.Min(0.5, z)));
+            f.Day.Institutional = Math.Min(2.5, f.Day.Institutional * (1 + Math.Min(0.6, z)));
+            double keep = 1 / (1 + 3 * z);
+            foreach (Level l in f.Levels.All)
+                if (l.Side == dir) l.Wall *= keep;
+            foreach (Zone zn in f.Zones.All)
+                if (zn.Side == -dir) zn.Interest *= keep;
         }
+
+        /// <summary>The market + sector move over the last half hour, in its own standard deviations.</summary>
+        private double GroupZ(FlowState f) =>
+            f.SectorVar > 0 ? f.SectorMom * Math.Sqrt(30 * _stepsPerMinute) / Math.Sqrt(f.SectorVar) : 0;
 
         // ------------------------------------------------------------------ regimes
 
@@ -548,7 +637,7 @@ namespace OpeningBell.Market
         }
 
         /// <summary>Swing highs/lows from 5-minute bars (a bar with two lower highs, or higher lows, each side).</summary>
-        private static void DetectSwings(SecurityRuntimeState sec, double price)
+        private static void DetectSwings(SecurityRuntimeState sec, double price, double participation)
         {
             FlowState f = sec.Flow;
             CandleSeries bars = sec.Candles.Get(Timeframe.Minute5);
@@ -577,6 +666,148 @@ namespace OpeningBell.Market
                 double size = (Math.Log((double)Math.Max(bars.Completed[n - 5].High, bars.Completed[n - 1].High)) - log) / sd;
                 f.Levels.Add(LevelKind.SwingLow, log, Math.Min(0.8, 0.25 + size), price > log ? -1 : 1, 0.04 * sd);
             }
+            DetectZones(sec, bars, n, participation);
+        }
+
+        /// <summary>
+        /// Swing highs/lows on hourly bars (two lower highs, or higher lows, each side): the higher timeframe's
+        /// structure. More traders watch them than 5-minute swings, so they start stronger and more stops rest beyond.
+        /// </summary>
+        private static void DetectHourlySwings(SecurityRuntimeState sec, double price)
+        {
+            FlowState f = sec.Flow;
+            CandleSeries bars = sec.Candles.Get(Timeframe.Hour1);
+            int n = bars.Completed.Count;
+            if (n < 5 || bars.Completed[n - 1].Start.Ticks == f.LastHourSwingTicks) return;
+            f.LastHourSwingTicks = bars.Completed[n - 1].Start.Ticks;
+            Candle c = bars.Completed[n - 3];
+            double sd = sec.Spec.DailyVolatility;
+            bool high = true, low = true;
+            for (int k = n - 5; k < n; k++)
+            {
+                if (k == n - 3) continue;
+                Candle o = bars.Completed[k];
+                if (o.High >= c.High) high = false;
+                if (o.Low <= c.Low) low = false;
+            }
+            if (high)
+            {
+                double log = Math.Log((double)c.High);
+                f.Levels.Add(LevelKind.SwingHigh, log, 0.75, price > log ? -1 : 1, 0.04 * sd);
+            }
+            if (low)
+            {
+                double log = Math.Log((double)c.Low);
+                f.Levels.Add(LevelKind.SwingLow, log, 0.75, price > log ? -1 : 1, 0.04 * sd);
+            }
+        }
+
+        /// <summary>
+        /// New zones from the bar that just completed. A displacement (a wide, full-bodied bar on heavy volume) marks
+        /// the base it launched from as demand or supply: the imbalance there left unfilled orders, and traders who
+        /// missed the move rest orders to get in on a return. A three-bar fair value gap marks the gap itself.
+        /// </summary>
+        private static void DetectZones(SecurityRuntimeState sec, CandleSeries bars, int n, double participation)
+        {
+            if (n < 14) return;
+            FlowState f = sec.Flow;
+            double sd = sec.Spec.DailyVolatility;
+            double range = 0, volume = 0;
+            for (int k = n - 13; k < n - 1; k++)
+            {
+                range += Math.Log((double)bars.Completed[k].High / (double)bars.Completed[k].Low);
+                volume += bars.Completed[k].Volume;
+            }
+            range /= 12;
+            volume /= 12;
+            if (range <= 0) return;
+
+            Candle d = bars.Completed[n - 1], b = bars.Completed[n - 2], a = bars.Completed[n - 3];
+            double dRange = Math.Log((double)d.High / (double)d.Low);
+            double body = Math.Log((double)d.Close / (double)d.Open);
+            double volRatio = volume > 0 ? d.Volume / volume : 1;
+            double respect = f.Day.LevelRespect * participation;
+            if (dRange > 1.8 * range && Math.Abs(body) > 0.6 * dRange && volRatio > 1.2)
+            {
+                int side = body > 0 ? 1 : -1;
+                double strength = Math.Min(1.2, 0.25 + Math.Abs(body) / (0.3 * sd) + 0.1 * Math.Min(3, volRatio));
+                AddZone(f, side > 0 ? ZoneKind.Demand : ZoneKind.Supply, Math.Log((double)b.Low), Math.Log((double)b.High), side,
+                    strength, strength * ZoneScale * sd * respect, volRatio, d.Start.Ticks);
+            }
+
+            double gap = Math.Log((double)d.Low / (double)a.High), gapDown = Math.Log((double)a.Low / (double)d.High);
+            if (gap > 0.25 * range)
+            {
+                double strength = Math.Min(1, 0.3 + gap / (0.15 * sd));
+                AddZone(f, ZoneKind.BullishGap, Math.Log((double)a.High), Math.Log((double)d.Low), 1,
+                    strength, strength * ZoneScale * GapShare * sd * respect, volRatio, b.Start.Ticks);
+            }
+            else if (gapDown > 0.25 * range)
+            {
+                double strength = Math.Min(1, 0.3 + gapDown / (0.15 * sd));
+                AddZone(f, ZoneKind.BearishGap, Math.Log((double)d.High), Math.Log((double)a.Low), -1,
+                    strength, strength * ZoneScale * GapShare * sd * respect, volRatio, b.Start.Ticks);
+            }
+        }
+
+        private static void AddZone(FlowState f, ZoneKind kind, double low, double high, int side, double strength,
+            double interest, double volume, long ticks)
+        {
+            if (high <= low || interest <= 0) return;
+            f.Zones.Add(new Zone
+            {
+                Kind = kind, Low = low, High = high, Side = side, Strength = strength, Interest = interest, Initial = interest,
+                CreationVolume = volume, CreatedTicks = ticks,
+            });
+        }
+
+        /// <summary>
+        /// Once a minute: retests are counted, used-up zones are mitigated, a close through the far side invalidates
+        /// (an order block then flips once into a breaker, where trapped traders exit at break-even), and where an
+        /// institution soaked up heavy flow this minute a new absorption zone appears.
+        /// </summary>
+        private static void UpdateZones(SecurityRuntimeState sec, double price, double participation)
+        {
+            FlowState f = sec.Flow;
+            double sd = sec.Spec.DailyVolatility;
+            foreach (Zone z in f.Zones.Mutable)
+            {
+                z.Age++;
+                z.Strength *= 0.9995;
+                if (!z.Live) continue;
+                bool inside = price >= z.Low && price <= z.High;
+                if (inside && !z.Inside) z.Retests++;
+                z.Inside = inside;
+
+                bool through = z.Side > 0 ? price < z.Low - ZoneBreakMargin * sd : price > z.High + ZoneBreakMargin * sd;
+                if (through)
+                {
+                    if (z.IsGap) z.State = ZoneState.Mitigated; // traded all the way through: the gap is filled
+                    else if (!z.Flipped && z.Kind != ZoneKind.Absorption)
+                    {
+                        z.Side = -z.Side;
+                        z.Kind = z.Kind == ZoneKind.Demand ? ZoneKind.Supply : ZoneKind.Demand;
+                        z.Strength *= 0.5;
+                        z.Interest = z.Initial = z.Strength * ZoneScale * sd * f.Day.LevelRespect * participation;
+                        z.Retests = 0;
+                        z.State = ZoneState.Untouched;
+                        z.Flipped = true;
+                        z.Inside = false;
+                    }
+                    else z.State = ZoneState.Invalidated;
+                }
+                else if (z.Interest <= 0.02 * z.Initial) z.State = ZoneState.Mitigated;
+                else if (z.Interest < 0.95 * z.Initial) z.State = ZoneState.PartlyMitigated;
+            }
+            f.Zones.Mutable.RemoveAll(z => !z.Live || z.Strength < 0.1);
+
+            if (Math.Abs(f.Absorbed) > AbsorptionZone * sd)
+            {
+                double strength = Math.Min(0.8, 0.3 + Math.Abs(f.Absorbed) / (0.04 * sd));
+                AddZone(f, ZoneKind.Absorption, price - 0.03 * sd, price + 0.03 * sd, Math.Sign(f.Absorbed), strength,
+                    strength * ZoneScale * sd * f.Day.LevelRespect * participation, 1, 0);
+            }
+            f.Absorbed = 0;
         }
 
         // ------------------------------------------------------------------ day roll
@@ -598,6 +829,12 @@ namespace OpeningBell.Market
                      })
                 book.Remove(k);
             foreach (Level l in book.Mutable) l.Strength *= 0.8;
+            foreach (Zone z in f.Zones.Mutable)
+            {
+                z.Strength *= 0.8;
+                z.Inside = price >= z.Low && price <= z.High;
+            }
+            f.Absorbed = 0;
 
             if (!double.IsNaN(f.SessionHigh))
             {
@@ -646,6 +883,8 @@ namespace OpeningBell.Market
             f.OpenAuctionDone = false;
             var fives = sec.Candles.Get(Timeframe.Minute5).Completed;
             f.LastSwingTicks = fives.Count > 0 ? fives[fives.Count - 1].Start.Ticks : 0;
+            var hours = sec.Candles.Get(Timeframe.Hour1).Completed;
+            f.LastHourSwingTicks = hours.Count > 0 ? hours[hours.Count - 1].Start.Ticks : 0;
         }
 
         /// <summary>

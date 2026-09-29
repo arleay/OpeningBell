@@ -38,6 +38,17 @@ namespace OpeningBell
         public ChartDrawingsSaveData Drawings = new ChartDrawingsSaveData();
         public bool HasHome;
         public global::OpeningBell.Home.HomeSaveData Home = new global::OpeningBell.Home.HomeSaveData();
+        /// <summary>Prop firm accounts (PROP_SPEC). Additive: older saves have none.</summary>
+        public bool HasProp;
+        public PropSaveData Prop = new PropSaveData();
+        public bool HasJob;
+        public JobSaveData Job = new JobSaveData();
+        /// <summary>Chips, records and any unfinished blackjack hand at The Meridian (CASINO_SPEC §88). Additive.</summary>
+        public bool HasCasino;
+        public global::OpeningBell.Casino.CasinoSaveData Casino = new global::OpeningBell.Casino.CasinoSaveData();
+        /// <summary>The player's hedge fund (FUND_SPEC): company, people, desks, ledger. Additive: older saves have none.</summary>
+        public bool HasFund;
+        public global::OpeningBell.Fund.FundSaveData Fund = new global::OpeningBell.Fund.FundSaveData();
         /// <summary>Places and districts found on the map (names; districts prefixed "district:"). Additive: older saves start blank.</summary>
         public List<string> Discovered = new List<string>();
     }

@@ -63,17 +63,25 @@ namespace OpeningBell.City
             Transform body = Find(car.transform, "body");
             if (body == null || !body.TryGetComponent(out Renderer r)) return;
             Material[] mats = r.sharedMaterials;
+            // Detailed cars name their body paint "… [paint]" (Tools/Blender/convert_car.py --paint): only that changes.
+            // Their other materials carry names like "phong2" or "fond voiture" that no skip list can catch, and
+            // painting them turned lights, grilles and interiors the new colour too.
+            bool tagged = System.Array.Exists(mats, m => m != null && m.name.Contains(PaintTag));
             for (int i = 0; i < mats.Length; i++)
             {
                 if (mats[i] == null) continue;
                 string n = mats[i].name.ToLowerInvariant();
-                if (System.Array.Exists(NotPaint, x => n.Contains(x))) continue;
+                if (tagged ? !mats[i].name.Contains(PaintTag) : System.Array.Exists(NotPaint, x => n.Contains(x))) continue;
                 mats[i] = new Material(mats[i]) { name = mats[i].name + " (paint)" };
+                // A respray covers what was there (a livery, bare carbon): the colour alone, not a tint of the old art.
+                if (tagged && mats[i].HasProperty("_BaseMap")) mats[i].SetTexture("_BaseMap", null);
                 if (mats[i].HasProperty("_BaseColor")) mats[i].SetColor("_BaseColor", colour);
                 else mats[i].color = colour;
             }
             r.sharedMaterials = mats;
         }
+
+        public const string PaintTag = "[paint]";
 
         // Everyday paint, weighted like a real car park: mostly white, black, grey and silver.
         private static readonly (Color Colour, int Weight)[] StreetPaints =

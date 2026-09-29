@@ -35,7 +35,8 @@ namespace OpeningBell
         [Tooltip("yyyy-MM-dd. Should be a weekday.")]
         [SerializeField] private string startDate = "2030-01-07";
         [SerializeField] private int startMinuteOfDay = 6 * 60;
-        [SerializeField] private double startingCash = 10000;
+        [Tooltip("Personal brokerage cash for a new game. PROP_SPEC: you start broke and work (0).")]
+        [SerializeField] private double startingCash = 0;
 
         [Tooltip("In-game seconds per real second while seated at the workstation during market sessions.")]
         [SerializeField] private float tradingTimeScale = 10f;
@@ -60,6 +61,23 @@ namespace OpeningBell
         public TradingDayRecorder Days { get; private set; }
         public EconomySystem Economy { get; private set; }
         public Inbox Inbox { get; private set; }
+        /// <summary>Prop firm accounts and their rules (PROP_SPEC.md).</summary>
+        public PropDesk Prop { get; private set; }
+        /// <summary>The counter job at Sal's Pizza (PROP_SPEC §5).</summary>
+        public Job Job { get; } = new Job("Sal's Pizza", 15m);
+        /// <summary>Chips and tables at The Meridian (CASINO_SPEC). Chips are bought from and cashed into the bank.</summary>
+        public global::OpeningBell.Casino.CasinoFloor Casino { get; } = new global::OpeningBell.Casino.CasinoFloor();
+        /// <summary>The player's hedge fund (FUND_SPEC): exists once registered; company money is separate from the bank.</summary>
+        public global::OpeningBell.Fund.HedgeFund Fund { get; private set; }
+
+        /// <summary>
+        /// New-game money in place of the configured $0 (brokerage cash, bank). Scene tests set it so the many tests
+        /// that trade the personal account keep the classic $10,000 / $1,800 start.
+        /// </summary>
+        public static (decimal Cash, decimal Bank)? StartingMoneyOverride { get; set; }
+
+        /// <summary>On shift at a job: time runs at the working pace (like trading at the desk).</summary>
+        public bool IsWorking => Job.OnShift;
         /// <summary>What the player has drawn on charts, per symbol (saved with the game).</summary>
         public ChartDrawings Drawings { get; } = new ChartDrawings();
         /// <summary>Furniture and tech bought (wherever it is), the store's loaner, and the homes owned.</summary>
@@ -127,19 +145,46 @@ namespace OpeningBell
             Account = new Account(Market);
             Orders = new OrderManager(Market, Account, brokerRules);
             // New game: deposit before the day recorder opens day 1, so savings aren't counted as profit.
-            if (save == null) Account.Deposit((decimal)startingCash, "Starting savings");
+            decimal cash = StartingMoneyOverride?.Cash ?? (decimal)startingCash;
+            if (save == null && cash > 0m) Account.Deposit(cash, "Starting savings");
             Days = new TradingDayRecorder(Market, Account, Orders);
             Seed = worldSeed;
 
             // A save without economy data (older build) gets a fresh, funded economy from its load date.
             bool restoreEconomy = save != null && save.HasEconomy;
-            Economy = new EconomySystem(economySettings.Config, economySettings.StoreItems, Account, start, fundBank: !restoreEconomy);
+            Economy = new EconomySystem(economySettings.Config, economySettings.StoreItems, Account, start,
+                fundBank: !restoreEconomy && StartingMoneyOverride == null);
             if (restoreEconomy) Economy.RestoreState(save.Economy);
+            else if (StartingMoneyOverride is { Bank: > 0m } money) Economy.Receive(money.Bank, "Opening balance", start);
 
             Inbox = new Inbox();
             if (save != null && save.HasInbox) Inbox.RestoreState(save.Inbox);
+
+            // Evaluations, activations and resets are paid from the bank; payouts land there.
+            Prop = new PropDesk(Market, brokerRules, worldSeed)
+            {
+                Charge = (amount, what) => Economy.Spend(amount, what, Market.Now),
+                Pay = (amount, what) => Economy.Receive(amount, what, Market.Now),
+            };
+            Prop.Notice += (account, title, body) =>
+                Inbox.Deliver($"prop:{account.Id}:{Market.Now.Ticks}:{title}", Market.Now, account.Firm.Name, title, body);
+            if (save != null && save.HasProp) Prop.RestoreState(save.Prop);
+            if (save != null && save.HasJob) Job.RestoreState(save.Job);
+            if (save != null && save.HasCasino) Casino.RestoreState(save.Casino);
             _emails = new EmailDirector(emailLibrary != null ? emailLibrary.Emails : Array.Empty<EmailDefinition>(),
                 Inbox, Account, Orders, Economy, ConfiguredStart().Date);
+
+            // The fund's owner money moves through the bank, like everything else personal.
+            Fund = new global::OpeningBell.Fund.HedgeFund(Market, brokerRules, Belongings, worldSeed)
+            {
+                ChargeOwner = (amount, what) => Economy.Spend(amount, what, Market.Now),
+                PayOwner = (amount, what) => Economy.Receive(amount, what, Market.Now),
+            };
+            Fund.Noticed += notice =>
+            {
+                if (notice.Level == global::OpeningBell.Fund.NoticeLevel.Routine) return;
+                Inbox.Deliver($"fund:{notice.Time}:{notice.Title}:{notice.Employee}", Market.Now, Fund.Exists ? Fund.Name : "Ledgerline", notice.Title, notice.Body);
+            };
 
             Vehicles = new global::OpeningBell.Vehicles.Fleet(vehicleLibrary != null ? vehicleLibrary.CreateCatalog()
                 : new global::OpeningBell.Vehicles.VehicleCatalog(Array.Empty<global::OpeningBell.Vehicles.VehicleModel>(),
@@ -164,9 +209,13 @@ namespace OpeningBell
                     Rental.RestoreState(save.Home.Rental);
                     Estate.RestoreState(save.Home.Estate);
                 }
+                if (save.HasFund && save.Fund != null) Fund.RestoreState(save.Fund);
                 if (save.HasPlayer) PlacePlayer(save.Player);
                 Debug.Log($"Loaded save '{saveSlot}' (day {Days.DayNumber}, {Clock.Now:ddd MMM d HH:mm}).");
             }
+            // -fundtest: enough in the bank to register ($150k) and furnish a floor, until the fund exists.
+            if (FundTest && !Fund.Exists && Economy.Bank.Balance < 500_000m)
+                Economy.DevDeposit(500_000m - Economy.Bank.Balance, Clock.Now);
         }
 
         public ulong Seed { get; private set; }
@@ -190,6 +239,14 @@ namespace OpeningBell
                 Look = Look ?? new PlayerLook(),
                 HasDrawings = true,
                 Drawings = Drawings.CaptureState(),
+                HasProp = true,
+                Prop = Prop.CaptureState(),
+                HasJob = true,
+                Job = Job.CaptureState(),
+                HasCasino = true,
+                Casino = Casino.CaptureState(),
+                HasFund = true,
+                Fund = Fund.CaptureState(),
                 Discovered = new List<string>(Discovered),
                 HasHome = true,
                 Home = new global::OpeningBell.Home.HomeSaveData
@@ -263,17 +320,47 @@ namespace OpeningBell
             Clock.JumpTo(target);
             Market.AdvanceTo(Clock.Now);
             Economy.AdvanceTo(Clock.Now);
+            Fund.AdvanceTo(Clock.Now);
             _emails.Update(Clock.Now);
+        }
+
+        /// <summary>
+        /// The career milestone for business ownership (FUND_SPEC §1): trading days with at least one fill (personal or
+        /// prop), and proven profit (personal realized net of commissions, plus prop payouts received).
+        /// </summary>
+        /// <summary>The -fundtest launch flag: the business milestone counts as met (playtesting only).</summary>
+        public static bool FundTest => Environment.GetCommandLineArgs().Contains("-fundtest");
+
+        public (int TradingDays, decimal ProvenProfit) Career
+        {
+            get
+            {
+                var days = new HashSet<DateTime>();
+                foreach (TradingDayReport r in Days.Completed) if (r.Fills > 0) days.Add(r.Date.Date);
+                decimal paid = 0m;
+                foreach (PropAccount a in Prop.Accounts)
+                {
+                    paid += a.TotalPaidOut;
+                    foreach (PropDay d in a.Days) if (d.Traded) days.Add(d.Date.Date);
+                }
+                (int, decimal) career = (days.Count, Account.RealizedPnL - Account.TotalCommissions + paid);
+                // Playtesting the fund without earning the milestone first: launch with -fundtest.
+                if (FundTest) career = (Math.Max(career.Item1, Fund.Config.RequiredTradingDays), Math.Max(career.Item2, Fund.Config.RequiredProvenProfit));
+                return career;
+            }
         }
 
         private void Update()
         {
-            float baseScale = Market.Session == MarketSession.Closed ? closedTimeScale
+            // Working a shift runs at the desk's pace whatever the market is doing: a shift is a few hours you live through.
+            float baseScale = IsWorking ? tradingTimeScale
+                : Market.Session == MarketSession.Closed ? closedTimeScale
                 : IsAtWorkstation ? tradingTimeScale : walkingTimeScale;
             Clock.TimeScale = baseScale * SpeedMultiplier;
             Clock.Advance(Mathf.Min(Time.unscaledDeltaTime, maxFrameSeconds));
             Market.AdvanceTo(Clock.Now);
             Economy.AdvanceTo(Clock.Now);
+            Fund.AdvanceTo(Clock.Now);
             _emails.Update(Clock.Now);
         }
     }

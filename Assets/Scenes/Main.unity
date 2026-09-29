@@ -6099,7 +6099,7 @@ MonoBehaviour:
   seed: 18492
   startDate: 2030-01-07
   startMinuteOfDay: 360
-  startingCash: 10000
+  startingCash: 0
   tradingTimeScale: 10
   walkingTimeScale: 30
   closedTimeScale: 120

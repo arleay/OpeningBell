@@ -51,7 +51,10 @@ namespace OpeningBell.City
 
         // ---- homes ----
 
-        public bool Owns(HomeSpec h) => h != null && (h.Id == HomeSpec.ApartmentId || Estate.Owns(h.Id));
+        public bool Owns(HomeSpec h) => h != null && (h.Id == HomeSpec.ApartmentId || Estate.Owns(h.Id) || (h.Kind == HomeKind.Office && OfficeHeld));
+
+        /// <summary>The fund holds Level 26 (leased or owned): the player can furnish it.</summary>
+        public bool OfficeHeld => Game.Fund != null && Game.Fund.Exists && Game.Fund.Tenure != OpeningBell.Fund.OfficeTenure.None;
 
         /// <summary>The home of yours that <paramref name="world"/> is in (indoors or on its lot), or null.</summary>
         public HomeSpec HomeAt(Vector3 world)
@@ -92,7 +95,7 @@ namespace OpeningBell.City
             {
                 HomeSpec best = Find(HomeSpec.ApartmentId);
                 foreach (HomeSpec h in _c.Homes)
-                    if (h.Id != HomeSpec.ApartmentId && Estate.Owns(h.Id)) best = h;
+                    if (h.Id != HomeSpec.ApartmentId && h.Kind != HomeKind.Office && Estate.Owns(h.Id)) best = h;
                 return best;
             }
         }
@@ -264,19 +267,35 @@ namespace OpeningBell.City
         {
             var waiting = Belongings.In(ItemState.AtPickup);
             if (waiting.Count == 0) return "Nothing's waiting to be delivered.";
-            HomeSpec home = MainHome;
-            string error = Game.Economy.Spend(DeliveryFee, "Timberline Home delivery", Game.Clock.Now);
+            HomeSpec home = MainHome, office = OfficeHeld ? Find(OpeningBell.Fund.HedgeFund.OfficeId) : null;
+            // Company purchases go to the office on the company's account; the rest home on yours.
+            bool allCompany = office != null && waiting.TrueForAll(i => i.Owner == "fund");
+            string target = DeliveryTarget;
+            string error = allCompany ? Game.Fund.BuyEquipment(DeliveryFee, "Timberline Home delivery")
+                : Game.Economy.Spend(DeliveryFee, "Timberline Home delivery", Game.Clock.Now);
             if (error != null) return error;
             DateTime at = DeliveryTime(Game.Clock.Now);
             foreach (OwnedItem i in waiting)
             {
                 i.State = ItemState.Delivering;
                 i.DeliverAt = at.Ticks;
-                i.Property = home.Id;
+                i.Property = office != null && i.Owner == "fund" ? office.Id : home.Id;
             }
             Belongings.Touch();
-            Say($"{waiting.Count} item{(waiting.Count == 1 ? "" : "s")} to {home.Name}, {at:ddd h tt}.");
+            Say($"{waiting.Count} item{(waiting.Count == 1 ? "" : "s")} to {target}, {at:ddd h tt}.");
             return null;
+        }
+
+        /// <summary>Where waiting pickup items would be delivered (home, the office for company purchases, or both).</summary>
+        public string DeliveryTarget
+        {
+            get
+            {
+                var waiting = Belongings.In(ItemState.AtPickup);
+                bool company = OfficeHeld && waiting.Exists(i => i.Owner == "fund");
+                bool personal = waiting.Exists(i => i.Owner != "fund") || !OfficeHeld;
+                return company && personal ? $"{MainHome.Name} and Level 26" : company ? "Level 26" : MainHome.Name;
+            }
         }
 
         private void Deliveries()

@@ -99,8 +99,14 @@ namespace OpeningBell.Tests
             v.Zoom(0.0001f);
             Assert.AreEqual(ChartViewport.MinVisible, v.VisibleCount);
 
+            // Dragged left past the newest candle: empty space on the right, but a few candles always stay in view.
             v.Pan(-50, 500);
-            Assert.AreEqual(0f, v.RightOffset);
+            Assert.Less(v.RightOffset, 0f);
+            v.VisibleRange(500, out int first, out int count);
+            Assert.AreEqual(500, first + count, "the newest candle is still shown");
+            Assert.GreaterOrEqual(count, 1);
+            Assert.AreEqual(v.VisibleCount, count + v.BlankSlots, "candles plus empty space fill the view");
+            v.FollowLive();
             v.Pan(10_000, 500);
             Assert.AreEqual(500 - ChartViewport.MinVisible, v.RightOffset);
         }

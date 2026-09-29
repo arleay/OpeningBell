@@ -14,6 +14,7 @@ namespace OpeningBell.Market
         private readonly List<SecurityRuntimeState> _securities = new List<SecurityRuntimeState>();
         private readonly Dictionary<string, SecurityRuntimeState> _byTicker = new Dictionary<string, SecurityRuntimeState>(StringComparer.Ordinal);
         private readonly PriceEngine _engine;
+        internal PriceEngine Engine => _engine;
         private readonly TimeSpan _tick;
 
         public MarketConfig Config { get; }

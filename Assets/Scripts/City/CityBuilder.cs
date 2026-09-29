@@ -113,6 +113,7 @@ namespace OpeningBell.City
             Home.Configure(_c, player, player.GetComponentInChildren<PlayerInteractor>() ?? FindAnyObjectByType<PlayerInteractor>());
             HomeStores.Build(_c, Home);
             HomeSales.Build(_c, Home);
+            FundWorld.Build(_c, Home);
             RegisterPlaces();
 
             // Places (doors, benches) are registered by the builders above; the street pass adds benches too,
@@ -136,6 +137,22 @@ namespace OpeningBell.City
                 if (t.name == "Interior" || t.name == "Yard" || t.name.EndsWith(" clutter")) merge.Add(t);
             int folded = 0;
             foreach (Transform t in merge) folded += MeshMerge.Merge(t);
+            // The town's own fabric (facades, kerbs, trim, walls, signs): ~10,000 small renderers a frame, each sorted,
+            // prepared and drawn (and again for shadows), made the CPU the bottleneck. Merged per 60 m cell and material;
+            // colliders stay behind, invisible. Groups with runtime-swapped renderers (lifts, signals, casino bulbs) aren't
+            // listed, and anything under a script is skipped anyway.
+            foreach (string group in new[] { "Town", "Foundry", "Streets", "Street signs", "Landmarks", "Buildings", "Highway strip", "Apartments",
+                "Kell Auto & Body", "Railside Auto Sales", "Hillside Cycles" })
+            {
+                Transform t = _c.Static.Find(group);
+                if (t != null) folded += MeshMerge.Merge(t, 120f);
+            }
+            // Shop contents are under a roof: the sun never reaches them, so casting sun shadows was pure cost (the
+            // room lights don't cast). Thousands fewer shadow casters.
+            foreach (Transform t in merge)
+                if (t.name == "Interior")
+                    foreach (Renderer r in t.GetComponentsInChildren<Renderer>())
+                        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             StaticBatchingUtility.Combine(_c.Static.gameObject);
             Debug.Log($"Town built in {buildTime.ElapsedMilliseconds} ms ({_c.Static.GetComponentsInChildren<Renderer>().Length} static renderers after merging {folded}, {_c.RoomLights.Count} room lights).");
 
@@ -210,7 +227,7 @@ namespace OpeningBell.City
             _c.PlaceInfo["Westgate Motors"] = (PlaceCategory.Shop, Dealerships.DealerHours);
             _c.PlaceInfo[MechanicShop.Name] = (PlaceCategory.Shop, MechanicShop.ShopHours);
             _c.PlaceInfo["Port Kell Freight"] = (PlaceCategory.Work, Hours.Of(6, 18));
-            _c.PlaceInfo["Silver Tide Casino"] = (PlaceCategory.Night, null);
+            _c.PlaceInfo[Meridian.Name] = (PlaceCategory.Night, null);
             _c.PlaceInfo["Harborview Tower"] = (PlaceCategory.Home, null);
         }
 

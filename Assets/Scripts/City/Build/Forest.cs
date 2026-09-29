@@ -15,6 +15,8 @@ namespace OpeningBell.City
         private sealed class Part
         {
             public Mesh Mesh;
+            /// <summary>The mesh at each LOD level (see <see cref="Lod"/>), made on first use.</summary>
+            public readonly Mesh[] Levels = new Mesh[LodDistances.Length + 1];
             public int Submesh;
             public Material Material;
             public Matrix4x4 Local;
@@ -32,6 +34,19 @@ namespace OpeningBell.City
         }
 
         private const float ChunkSize = 100f, DrawDistance = 900f, ShadowDistance = 180f;
+
+        /// <summary>
+        /// Chunk distances at which trees drop a mesh-LOD level (each level has half the triangles). Full detail within
+        /// 80 m; beyond 600 m a sixteenth. The forest was ~50 million triangles a frame drawn at full detail to 900 m.
+        /// </summary>
+        private static readonly float[] LodDistances = { 80f, 170f, 320f, 600f };
+
+        private static int Lod(float distance)
+        {
+            int level = 0;
+            while (level < LodDistances.Length && distance > LodDistances[level]) level++;
+            return level;
+        }
         private readonly List<List<Part>> _kinds = new List<List<Part>>();
         private readonly Dictionary<Vector2Int, Chunk> _chunks = new Dictionary<Vector2Int, Chunk>();
         private readonly Plane[] _planes = new Plane[6];
@@ -213,6 +228,7 @@ namespace OpeningBell.City
                 float distance = Mathf.Sqrt(chunk.Bounds.SqrDistance(eye));
                 if (distance > DrawDistance || !GeometryUtility.TestPlanesAABB(_planes, chunk.Bounds)) continue;
                 ShadowCastingMode shadows = distance < ShadowDistance ? ShadowCastingMode.On : ShadowCastingMode.Off;
+                int lod = Lod(distance);
                 for (int kind = 0; kind < _kinds.Count; kind++)
                 {
                     List<Matrix4x4> trees = chunk.ByKind[kind];
@@ -220,11 +236,12 @@ namespace OpeningBell.City
                     foreach (Part part in _kinds[kind])
                     {
                         var rp = new RenderParams(part.Material) { shadowCastingMode = shadows, receiveShadows = true, worldBounds = chunk.Bounds };
+                        Mesh mesh = part.Levels[lod] ??= MeshMerge.Level(part.Mesh, lod);
                         for (int start = 0; start < trees.Count; start += _batch.Length)
                         {
                             int n = Mathf.Min(_batch.Length, trees.Count - start);
                             for (int i = 0; i < n; i++) _batch[i] = trees[start + i] * part.Local;
-                            Graphics.RenderMeshInstanced(rp, part.Mesh, part.Submesh, _batch, n);
+                            Graphics.RenderMeshInstanced(rp, mesh, part.Submesh, _batch, n);
                         }
                     }
                 }

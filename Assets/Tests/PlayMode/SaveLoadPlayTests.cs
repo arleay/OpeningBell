@@ -60,6 +60,7 @@ namespace OpeningBell.Tests
 
             yield return null; // terminal builds its UI in Start
             var terminal = Find<TradingTerminal>();
+            OpenApp(terminal, "broker"); // the computer boots to its desktop
             terminal.RefreshAll();
             Assert.NotNull(terminal.Root.Q("pos-APEX"), "terminal shows the loaded position");
         }

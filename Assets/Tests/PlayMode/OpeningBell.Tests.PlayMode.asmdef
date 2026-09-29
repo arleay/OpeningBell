@@ -14,7 +14,11 @@
         "OpeningBell.Vehicles",
         "OpeningBell.Home",
         "OpeningBell.City",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime",
+        "OpeningBell.Casino",
+        "OpeningBell.Fund"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

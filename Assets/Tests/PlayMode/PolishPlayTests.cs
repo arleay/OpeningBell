@@ -109,6 +109,7 @@ namespace OpeningBell.Tests
             var terminal = Find<TradingTerminal>();
             yield return SitDown(Find<WorkstationController>());
             RenderTerminalOffscreen(terminal);
+            OpenApp(terminal, "broker");
             game.SkipTo(game.Clock.Now.Date.AddHours(9).AddMinutes(45));
             game.SpeedMultiplier = 30f; // 300 game-seconds per real second: ~150 market ticks/s
             for (int i = 0; i < 30; i++) yield return null; // warm-up

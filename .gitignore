@@ -28,3 +28,15 @@ sysinfo.txt
 
 # Raw third-party downloads, cleaned up before they go into Assets
 /Imports/
+
+# Scenes the Unity test runner leaves behind (never commit)
+/Assets/InitTestScene*.unity
+/Assets/InitTestScene*.unity.meta
+
+# Local secrets, if any ever appear
+.env
+.env.*
+*.pem
+*.pfx
+*.p12
+*.keystore

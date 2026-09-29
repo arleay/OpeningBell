@@ -7,7 +7,9 @@
         "OpeningBell.Trading",
         "OpeningBell.Economy",
         "OpeningBell.Vehicles",
-        "OpeningBell.Home"
+        "OpeningBell.Home",
+        "OpeningBell.Casino",
+        "OpeningBell.Fund"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

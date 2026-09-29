@@ -135,6 +135,12 @@ namespace OpeningBell.Home
             F("chair_office", "Task Chair", "Office", Tier.Budget, 99m, "chairDesk", 0.6f, 0.6f, 1f, variants: Metal).Seat = true;
             F("chair_ergo", "Ergo Mesh Chair", "Office", Tier.Premium, 690m, "chairDesk", 0.68f, 0.68f, 1.15f, variants: Metal).Seat = true;
             F("filing", "Filing Cabinet", "Office", Tier.Budget, 119m, "sideTableDrawers", 0.45f, 0.55f, 0.7f, variants: Metal, surface: 0.7f);
+            // For a company floor (FUND_SPEC §7, §20): the coffee point, reception seating, a meeting table.
+            F("coffee_station", "Espresso Station", "Office", Tier.Mid, 1480m, "", 1.1f, 0.6f, 1.05f, variants: Wood);
+            F("water_cooler", "Water Cooler", "Office", Tier.Budget, 189m, "office_watercooler_cube_246_cube", 0.35f, 0.35f, 1.25f);
+            F("waiting_bench", "Reception Bench", "Office", Tier.Mid, 540m, "bench", 1.6f, 0.55f, 0.46f, variants: Fabric).Seat = true;
+            F("meeting_table", "Meeting Table", "Office", Tier.Premium, 1690m, "table", 2.6f, 1.1f, 0.75f, variants: Wood, surface: 0.75f);
+            F("whiteboard", "Whiteboard", "Office", Tier.Budget, 149m, "", 1.8f, 0.04f, 1.1f, Support.Wall);
             // Dining and entry.
             F("dining_table", "Four-Seat Table", "Dining", Tier.Mid, 399m, "table", 1.4f, 0.85f, 0.75f, variants: Wood, surface: 0.75f);
             F("dining_chair", "Dining Chair", "Dining", Tier.Budget, 59m, "chair", 0.45f, 0.5f, 0.9f, variants: Wood).Seat = true;

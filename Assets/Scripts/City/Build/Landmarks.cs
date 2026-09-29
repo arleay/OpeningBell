@@ -359,25 +359,23 @@ namespace OpeningBell.City
 
         // ---- the night ----
 
-        /// <summary>The Silver Tide casino's shell and its 26 m sign, lit up with chasing bulbs (the district's landmark).</summary>
+        /// <summary>The Meridian casino's lot, marquee and 26 m sign, lit up with chasing bulbs (the district's landmark); the building is <see cref="Meridian"/>.</summary>
         private static void Casino(CityContext c, Transform root)
         {
             Kit k = c.Kit;
             Rect lot = CasinoLot;
             const float y = 1.5f;
-            Transform cas = Kit.Group(root, "Silver Tide Casino", V(0f, y, 0f));
+            Transform cas = Kit.Group(root, "Casino lot", V(0f, y, 0f));
             Material wall = c.P.Lit(new Color(0.16f, 0.2f, 0.3f), 0.3f);
-            Material gold = c.P.Lit(new Color(0.85f, 0.7f, 0.3f), 0.5f);
-            Material roof = c.P.Lit(new Color(0.18f, 0.18f, 0.2f));
+            Material gold = c.P.Metal(new Color(0.72f, 0.53f, 0.3f), 0.75f);
             k.Span(cas, "Lot", V(lot.xMin, -0.05f, lot.yMin), V(lot.xMax, 0.01f, lot.yMax), c.P.Lit(new Color(0.22f, 0.22f, 0.23f), 0.1f)).AddComponent<SurfaceTag>().Roughness = 0.25f;
-            k.Facade(cas, "Casino", V(478f, 0f, 8f), V(552f, 11f, 40f), c.P.Facade(FacadeStyle.Glass, true), roof);
             k.Span(cas, "Marquee", V(496f, 4.2f, 3f), V(534f, 5f, 8f), gold, collider: false);
+            k.Span(cas, "Marquee soffit", V(496.3f, 4.18f, 3.3f), V(533.7f, 4.2f, 7.9f), c.P.Glow(new Color(1f, 0.8f, 0.5f), 1.2f), collider: false);
             // Bulbs change material, so they stay out of the static batch.
             Transform lights = Kit.Group(c.Dynamic, "Casino lights", V(0f, y, 0f));
             var bulbs = new List<Renderer>();
             for (float x = 497f; x < 534f; x += 1.2f)
                 bulbs.Add(k.Sphere(lights, "Bulb", V(x, 4.1f, 3.1f), 0.22f, c.P.Glow(new Color(1f, 0.85f, 0.45f))).GetComponent<Renderer>());
-            k.Text(cas, "SILVER TIDE", V(515f, 8.6f, 7.9f), 0f, 1.3f, new Color(0.85f, 0.9f, 1f));
             // The sign: a tall pylon by Maple, its name in lights, a star on top.
             Vector3 p = V(466f, 0f, 2f);
             k.Box(cas, "Sign pole", p + V(0f, 11f, 0f), V(1.4f, 22f, 1.4f), wall);
@@ -392,8 +390,7 @@ namespace OpeningBell.City
             k.Box(cas, "Neon edge", p + V(0f, 12.8f, 0f), V(4.4f, 0.2f, 1.1f), neon, collider: false);
             k.Sphere(cas, "Star", p + V(0f, 26.5f, 0f), 1.6f, c.P.Glow(new Color(1f, 0.9f, 0.5f), 2.4f));
             lights.gameObject.AddComponent<Chaser>().Configure(bulbs, c.P.Glow(new Color(1f, 0.85f, 0.45f)), c.P.Unlit(new Color(0.35f, 0.3f, 0.2f)));
-            c.Place(V(515f, y, 2f), PlaceKind.Door, "Silver Tide Casino");
-            c.Anchor("casino_front", V(515f, y, -2f));
+            Meridian.Build(c, root);
         }
 
         /// <summary>A billboard on the highway into town, facing traffic coming out of the hills.</summary>

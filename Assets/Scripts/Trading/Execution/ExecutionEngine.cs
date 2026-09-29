@@ -24,6 +24,7 @@ namespace OpeningBell.Trading
     public sealed class ExecutionEngine
     {
         private readonly BrokerRules _rules;
+        private long _depthTaken;
 
         public ExecutionEngine(BrokerRules rules)
         {
@@ -32,8 +33,11 @@ namespace OpeningBell.Trading
 
         /// <param name="stopsActive">Stops only trigger when true (the regular session): a thin premarket print
         /// shouldn't set off a stop-loss.</param>
-        public void Evaluate(Order order, in Quote quote, List<Execution> results, bool stopsActive = true)
+        /// <param name="depthTaken">Contracts other desks sharing a <see cref="LiquidityShare"/> already took from this
+        /// side of the book this tick: the walk starts behind them.</param>
+        public void Evaluate(Order order, in Quote quote, List<Execution> results, bool stopsActive = true, long depthTaken = 0)
         {
+            _depthTaken = depthTaken;
             results.Clear();
             long remaining = order.RemainingQuantity;
             if (remaining <= 0) return;
@@ -88,12 +92,22 @@ namespace OpeningBell.Trading
 
             long remaining = quantity;
             long fixedTotal = 0;
+            long skip = _depthTaken;
             for (int level = 0; level < _rules.BookLevelsPerTick && remaining > 0; level++)
             {
                 if (price <= 0m) break;
                 if (limit.HasValue && (buy ? price > limit.Value : price < limit.Value)) break;
 
                 long size = (long)Math.Round(insideSize * (1 + _rules.BookLevelSizeGrowth * level));
+                // Depth someone else already took this tick is gone.
+                long gone = Math.Min(size, skip);
+                skip -= gone;
+                size -= gone;
+                if (size <= 0)
+                {
+                    price = buy ? price + step : price - step;
+                    continue;
+                }
                 long take = Math.Min(size, remaining);
                 if (fixedPrice.HasValue) fixedTotal += take;
                 else results.Add(new Execution(price, take));

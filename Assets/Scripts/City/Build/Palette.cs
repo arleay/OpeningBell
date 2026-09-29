@@ -223,6 +223,35 @@ namespace OpeningBell.City
         }
 
         /// <summary>
+        /// A generated pattern (casino carpet) projected in world space like <see cref="Surface"/>: one tile per
+        /// <paramref name="metres"/>, its own colours kept. A plain textured material where the triplanar shader is missing.
+        /// </summary>
+        public Material Pattern(string name, Texture2D albedo, float metres, float smoothness = 0.05f)
+        {
+            string key = $"pattern{name}";
+            if (_cache.TryGetValue(key, out Material m)) return m;
+            if (!_triplanarLoaded)
+            {
+                _triplanarLoaded = true;
+                _triplanar = Resources.Load<Material>("Surfaces/Triplanar");
+            }
+            if (_triplanar == null) return _cache[key] = Textured(name, albedo, Color.white, smoothness);
+            // The shader normalises the photo to its average colour and re-tints it: tint with that average, keep the hue.
+            Color average = Color.black;
+            Color[] pixels = albedo.GetPixels();
+            foreach (Color p in pixels) average += p;
+            average /= pixels.Length;
+            m = new Material(_triplanar) { name = "City " + name, color = average };
+            m.SetTexture(BaseMap, albedo);
+            m.SetFloat(BumpScale, 0f);
+            m.SetFloat(Contrast, 1f);
+            m.SetFloat(PhotoColour, 1f);
+            m.SetFloat(Smoothness, smoothness);
+            m.SetVector(BaseMapSt, new Vector4(1f / metres, 0f, 0f, 0f));
+            return _cache[key] = m;
+        }
+
+        /// <summary>
         /// Metres one texture tile covers (matched to the photo: brick courses ~7.5 cm, 60 cm paving slabs, 15 cm
         /// siding boards), how much of its contrast survives (lower = calmer, more stylised), normal strength, and
         /// how much of the photo's own hue variation to keep (0 for painted finishes: the paint colour is the tint's).

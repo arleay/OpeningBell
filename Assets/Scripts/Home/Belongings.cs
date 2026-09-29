@@ -55,6 +55,8 @@ namespace OpeningBell.Home
         /// <summary>A box: where its flaps were last closed ("yard", a home id, "" if elsewhere). Set down in a
         /// different home, [E] opens it rather than picking it up.</summary>
         public string ClosedAt = "";
+        /// <summary>Who paid: "" the player, "fund" the company (its card; sale proceeds go back to it).</summary>
+        public string Owner = "";
 
         public HomeItem Item => HomeCatalog.Find(ItemId);
         public bool IsBox => Item?.IsBox == true;

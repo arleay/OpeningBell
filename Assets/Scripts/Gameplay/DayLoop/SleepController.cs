@@ -73,6 +73,16 @@ namespace OpeningBell.Gameplay
             if (CanSleep) StartCoroutine(SleepRoutine());
         }
 
+        private (Vector3 Position, float Yaw)? _wakeAt;
+
+        /// <summary>Sleeps somewhere other than home (a hotel bed): wakes up at <paramref name="position"/>.</summary>
+        public void SleepAt(Vector3 position, float yaw)
+        {
+            if (!CanSleep) return;
+            _wakeAt = (position, yaw);
+            StartCoroutine(SleepRoutine());
+        }
+
         private IEnumerator SleepRoutine()
         {
             State = SleepState.FallingAsleep;
@@ -90,7 +100,9 @@ namespace OpeningBell.Gameplay
             var days = game.Days.Completed;
             ShowRecap(days.Count > _recappedDays ? days[days.Count - 1] : null, wake);
             _recappedDays = days.Count;
-            player.PlaceAt(wakePoint.position, wakePoint.eulerAngles.y);
+            if (_wakeAt is { } away) player.PlaceAt(away.Position, away.Yaw);
+            else player.PlaceAt(wakePoint.position, wakePoint.eulerAngles.y);
+            _wakeAt = null;
             game.Save(); // autosave: end of day
 
             float until = Time.realtimeSinceStartup + recapSeconds;

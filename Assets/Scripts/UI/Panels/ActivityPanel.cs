@@ -55,7 +55,18 @@ namespace OpeningBell.UI
             Header(fillsSection, "TIME", "SYMBOL", "SIDE", "QTY", "PRICE", "COMMISSION", "REALIZED");
             _fillsView = List(_fillItems, MakeFillRow, BindFillRow, fillsSection);
 
-            context.Orders.OrderUpdated += _ => _ordersDirty = true;
+            // Follow whichever account is active (the terminal switches between personal and prop accounts).
+            OrderManager watched = context.Orders;
+            Action<Order> dirty = _ => _ordersDirty = true;
+            watched.OrderUpdated += dirty;
+            context.ActiveChanged += () =>
+            {
+                watched.OrderUpdated -= dirty;
+                watched = context.Orders;
+                watched.OrderUpdated += dirty;
+                _ordersDirty = true;
+                _knownFills = -1;
+            };
             SetTab(Tab.Positions);
         }
 
@@ -143,19 +154,27 @@ namespace OpeningBell.UI
             return row;
         }
 
-        /// <summary>Market order in the regular session; outside it, a limit at the bid (market orders are not accepted then).</summary>
+        /// <summary>
+        /// Market order in the regular session; outside it, a limit at the bid (market orders are not accepted then).
+        /// Followers close their own position in the symbol, whatever its size.
+        /// </summary>
         private void ClosePosition(string ticker)
         {
-            long qty = Context.Orders.AvailableToClose(ticker);
-            if (qty <= 0 || !Context.Market.TryGetQuote(ticker, out Quote quote)) return;
-
-            // A long closes by selling (at the bid outside the session), a short by buying back (at the ask).
-            bool shortPosition = Context.Account.Portfolio.QuantityOf(ticker) < 0;
-            OrderSide side = shortPosition ? OrderSide.Buy : OrderSide.Sell;
-            Order order = Context.Market.Session == MarketSession.Regular
-                ? Context.Orders.SubmitMarket(ticker, side, qty)
-                : Context.Orders.SubmitLimit(ticker, side, qty, shortPosition ? quote.Ask : quote.Bid);
-            _orderPlaced?.Invoke(order);
+            if (Context.Orders.AvailableToClose(ticker) <= 0 || !Context.Market.TryGetQuote(ticker, out Quote quote)) return;
+            bool regular = Context.Market.Session == MarketSession.Regular;
+            List<Order> placed = Context.PlaceMany(om =>
+            {
+                long qty = om.AvailableToClose(ticker);
+                if (qty <= 0) return new List<Order>(); // a follower with nothing to close does nothing
+                // A long closes by selling (at the bid outside the session), a short by buying back (at the ask).
+                bool shortPosition = om.PositionQuantity(ticker) < 0;
+                OrderSide side = shortPosition ? OrderSide.Buy : OrderSide.Sell;
+                return new List<Order>
+                {
+                    regular ? om.SubmitMarket(ticker, side, qty) : om.SubmitLimit(ticker, side, qty, shortPosition ? quote.Ask : quote.Bid),
+                };
+            });
+            if (placed.Count > 0) _orderPlaced?.Invoke(placed[0]);
         }
 
         private int CountOpenPositions()
@@ -174,7 +193,7 @@ namespace OpeningBell.UI
             for (int i = 0; i < 9; i++) Ui.Label(i == 1 ? "c c-left symbol" : "c", row);
             var cell = Ui.Box("c c-btn", row);
             var cancel = Ui.Button("CANCEL", null, "row-btn", cell);
-            cancel.clicked += () => Context.Orders.Cancel((long)cancel.userData);
+            cancel.clicked += () => Context.Cancel((long)cancel.userData);
             return row;
         }
 

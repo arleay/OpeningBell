@@ -47,8 +47,19 @@ namespace OpeningBell.City
         /// </summary>
         public static readonly Color DefaultSkin = new Color(0.94f, 0.76f, 0.62f);
 
+        /// <summary>
+        /// Top of a Tiny character (hair included) over its head bone's height: 1.43–1.52 across the set, measured in
+        /// Blender. Their chibi heads are half the figure, so sizing the head bone like a real adult's (1.5–1.65 m)
+        /// made people 2.2–2.4 m tall. Sizes are set by overall height instead: <see cref="Scale"/>.
+        /// </summary>
+        public const float TopOverHead = 1.47f;
+
+        /// <summary>The model scale that makes a character with its head bone at <paramref name="headY"/> stand <paramref name="height"/> m tall.</summary>
+        public static float Scale(float height, float headY) => height / (Mathf.Max(0.3f, headY) * TopOverHead);
+
         /// <summary>Tints a character instance (its own material copies) to the look (null: just fixes a missing skin).</summary>
-        public static void Apply(GameObject character, OpeningBell.PlayerLook look)
+        /// <param name="top">An outfit colour outside the creator's palette (an employee's suit), overriding the look's.</param>
+        public static void Apply(GameObject character, OpeningBell.PlayerLook look, Color? top = null)
         {
             look ??= new OpeningBell.PlayerLook();
             foreach (SkinnedMeshRenderer r in character.GetComponentsInChildren<SkinnedMeshRenderer>(true))
@@ -58,9 +69,10 @@ namespace OpeningBell.City
                 for (int i = 0; i < mats.Length; i++)
                 {
                     string n = mats[i].name;
-                    if (n.Contains("Skin") && look.Skin == 0 && mats[i].color.maxColorComponent < 0.05f) mats[i].color = DefaultSkin;
+                    if (n.Contains("Skin") && look.Skin == 0 && mats[i].color.maxColorComponent < 0.2f) mats[i].color = DefaultSkin; // the pack's black (0.12 once imported as sRGB)
                     if (n.Contains("Skin") && look.Skin > 0) mats[i].color = Skins[look.Skin % Skins.Length];
                     else if (n.Contains("Hair") && look.Hair > 0) mats[i].color = Hairs[look.Hair % Hairs.Length];
+                    else if (i == main && top.HasValue) mats[i].color = top.Value;
                     else if (i == main && look.Top > 0) mats[i].color = Tops[look.Top % Tops.Length];
                 }
                 r.materials = mats;

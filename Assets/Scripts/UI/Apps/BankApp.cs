@@ -64,7 +64,7 @@ namespace OpeningBell.UI
             Ui.SetText(_balance, Fmt.Money(balance));
             Ui.SetSign(_balance, balance < 0m ? -1m : 0m);
             Ui.Show(_overdrawn, economy.Bank.IsOverdrawn);
-            Ui.SetText(_brokerageFree, $"Brokerage cash free to transfer: {Fmt.Money(System.Math.Max(0m, Context.Account.BuyingPower))}");
+            Ui.SetText(_brokerageFree, $"Brokerage cash free to transfer: {Fmt.Money(System.Math.Max(0m, Context.Game.Account.BuyingPower))}");
 
             var transactions = economy.Bank.Transactions;
             long day = Context.Clock.Now.Date.Ticks;

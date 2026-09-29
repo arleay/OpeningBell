@@ -13,7 +13,9 @@
         "OpeningBell.Economy",
         "OpeningBell.Vehicles",
         "OpeningBell.Home",
-        "OpeningBell.City"
+        "OpeningBell.City",
+        "OpeningBell.Casino",
+        "OpeningBell.Fund"
     ],
     "includePlatforms": [
         "Editor"

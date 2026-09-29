@@ -6,18 +6,34 @@ namespace OpeningBell.Market
     {
         public readonly double Volatility;
         public readonly double Volume;
+        /// <summary>Book depth, institutional arrivals and spread relative to normal (time macros).</summary>
+        public readonly double Liquidity, Institutional, Spread;
 
-        public ActivityProfile(double volatility, double volume)
+        public ActivityProfile(double volatility, double volume, double liquidity = 1, double institutional = 1, double spread = 1)
         {
             Volatility = volatility;
             Volume = volume;
+            Liquidity = liquidity;
+            Institutional = institutional;
+            Spread = spread;
         }
     }
 
-    /// <summary>Time-of-day multipliers for volatility and volume.</summary>
+    /// <summary>Time-of-day multipliers: the session's U-shape, then the configured time macros on top.</summary>
     internal static class IntradayProfile
     {
         public static ActivityProfile Evaluate(MarketConfig c, MarketSchedule schedule, MarketSession session, DateTime time)
+        {
+            ActivityProfile shape = Shape(c, schedule, session, time);
+            if (c.TimeMacros == null || session == MarketSession.Closed) return shape;
+            double minute = time.TimeOfDay.TotalMinutes;
+            foreach (TimeMacro m in c.TimeMacros)
+                if (minute >= m.StartMinute && minute < m.EndMinute)
+                    return new ActivityProfile(shape.Volatility * m.Volatility, shape.Volume * m.Volume, m.Liquidity, m.Institutional, m.Spread);
+            return shape;
+        }
+
+        private static ActivityProfile Shape(MarketConfig c, MarketSchedule schedule, MarketSession session, DateTime time)
         {
             switch (session)
             {

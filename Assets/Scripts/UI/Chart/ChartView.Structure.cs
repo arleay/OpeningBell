@@ -53,10 +53,25 @@ namespace OpeningBell.UI
                     Text(_plot.xMax - 40, Y(price) - 15, name, LiquidityColor);
                 }
 
+            if (_prefs.ShowSignal && _security != null)
+            {
+                // TEMPORARY cheat: strong reads say BUY / SELL, weak ones WAIT.
+                double sig = _security.CheatSignal;
+                string word = sig > 0.35 ? "▲ BUY" : sig < -0.35 ? "▼ SELL" : "• WAIT";
+                Color col = sig > 0.35 ? BullZone : sig < -0.35 ? BearZone : Ink;
+                Text(_plot.xMax - 130, _plot.y + 8, $"{word}  {Math.Abs(sig) * 100:0}%", col, new Color(0, 0, 0, 0.7f));
+            }
+
             if (_prefs.ShowDebug && Debug.isDebugBuild && _security != null)
             {
                 Text(_plot.x + 4, _plot.y + 36, $"[debug] day {_security.DayType} · regime {_security.Regime} · levels {_security.Levels.All.Count}",
                     new Color(1f, 0.4f, 1f), new Color(0, 0, 0, 0.6f));
+                Text(_plot.x + 4, _plot.y + 54, "[debug] " + _security.DebugSummary, new Color(1f, 0.4f, 1f), new Color(0, 0, 0, 0.6f));
+                foreach (Zone z in _security.Zones.All)
+                {
+                    double hi = Math.Exp(z.High);
+                    if (hi >= _min && hi <= _max) Text(_plot.xMin + 4, Y(hi) - 14, $"{z.Kind} {z.State} r{z.Retests}", new Color(1f, 0.4f, 1f));
+                }
             }
         }
 
@@ -145,11 +160,25 @@ namespace OpeningBell.UI
                         HorizontalLine(p, Math.Exp(l.Log), new Color(LiquidityColor.r, LiquidityColor.g, LiquidityColor.b, 0.55f), 1f, dashed: true);
         }
 
-        /// <summary>Developer view: every remembered level with its resting wall (bar) and stops (tick) sizes.</summary>
+        /// <summary>
+        /// Developer view: every remembered level with its resting wall (bar) and stops (tick) sizes, and every live
+        /// zone as a band (green demand, red supply) whose opacity is the share of its interest still resting.
+        /// </summary>
         private void PaintDebug(Painter2D p)
         {
             if (!_prefs.ShowDebug || !Debug.isDebugBuild || _security == null) return;
             double sd = _security.Spec.DailyVolatility;
+            foreach (Zone z in _security.Zones.All)
+            {
+                double lo = Math.Exp(z.Low), hi = Math.Exp(z.High);
+                if (hi < _min || lo > _max) continue;
+                Color c = z.Side > 0 ? BullZone : BearZone;
+                p.fillColor = new Color(c.r, c.g, c.b, 0.05f + 0.25f * (float)(z.Initial > 0 ? z.Interest / z.Initial : 0));
+                float y0 = Y(hi), y1 = Y(lo);
+                p.BeginPath();
+                PathRect(p, _plot.xMin, y0, _plot.width, Math.Max(1f, y1 - y0));
+                p.Fill();
+            }
             foreach (Level l in _security.Levels.All)
             {
                 double price = Math.Exp(l.Log);

@@ -138,6 +138,8 @@ namespace OpeningBell.UI
         public bool ShowFvg, ShowStructure, ShowSweeps, ShowEqualHighsLows, ShowLiquidity;
         /// <summary>Developer-only: the hidden market state (day type, regime, walls, stops). Never on in normal play.</summary>
         public bool ShowDebug;
+        /// <summary>TEMPORARY: buy/sell signal read from the hidden market. Remove before release.</summary>
+        public bool ShowSignal;
 
         public event Action Changed;
 

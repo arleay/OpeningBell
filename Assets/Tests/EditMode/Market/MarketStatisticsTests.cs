@@ -167,6 +167,60 @@ namespace OpeningBell.Tests
                 }
             report.AppendLine($"\n== First tests of remembered levels: held {held} (of which swept then held {swept}), broke {broke}, hold rate {held / (double)Math.Max(1, held + broke):P0}");
 
+            // Gaps: opens at least half a σ away from yesterday's close. How often does the session trade back to it?
+            int gaps = 0, filled = 0;
+            // Opening-range breakouts: first break of the 30-minute range; follow-through = 0.3 σ further before
+            // price closes back inside the range.
+            int orBreaks = 0, orFollow = 0;
+            foreach (DayRecord r in records)
+            {
+                List<Candle> session = r.Minutes.Where(c => c.Start.TimeOfDay >= TimeSpan.FromHours(9.5) && c.Start.TimeOfDay < TimeSpan.FromHours(16)).ToList();
+                if (session.Count < 60) continue;
+                double open = (double)session[0].Open, prev = (double)r.PrevClose;
+                if (prev > 0 && Math.Abs(Math.Log(open / prev)) > 0.5 * r.Sd)
+                {
+                    gaps++;
+                    if (session.Any(c => (double)c.Low <= prev && (double)c.High >= prev)) filled++;
+                }
+                double orHigh = (double)session.Take(30).Max(c => c.High), orLow = (double)session.Take(30).Min(c => c.Low);
+                for (int i = 30; i < session.Count; i++)
+                {
+                    int dir = (double)session[i].Close > orHigh ? 1 : (double)session[i].Close < orLow ? -1 : 0;
+                    if (dir == 0) continue;
+                    orBreaks++;
+                    double edge = dir > 0 ? orHigh : orLow, target = edge * Math.Exp(dir * 0.3 * r.Sd);
+                    for (int j = i + 1; j < session.Count; j++)
+                    {
+                        double close = (double)session[j].Close;
+                        if (dir > 0 ? (double)session[j].High >= target : (double)session[j].Low <= target) { orFollow++; break; }
+                        if (close <= orHigh && close >= orLow) break;
+                    }
+                    break;
+                }
+            }
+            // Fair value gaps on the 5-minute charts: how far later trading filled them.
+            int fvgs = 0, untouched = 0, partial = 0, half = 0, full = 0;
+            var structure = new StructureResult();
+            foreach (SecurityRuntimeState s in sim.Securities)
+            {
+                CandleSeries m5 = s.Candles.Get(Timeframe.Minute5);
+                StructureDetector.Detect(m5, 0, m5.Count, structure, 0);
+                foreach (FairValueGap g in structure.Gaps)
+                {
+                    fvgs++;
+                    if (g.Filled <= 0) untouched++;
+                    else if (g.Filled < 0.5) partial++;
+                    else if (g.Filled < 1) half++;
+                    else full++;
+                }
+            }
+            double gapFill = filled / (double)Math.Max(1, gaps), follow = orFollow / (double)Math.Max(1, orBreaks), fullShare = full / (double)Math.Max(1, fvgs);
+            report.AppendLine($"Gaps over 0.5σ: {gaps}, filled the same session {gapFill:P0}");
+            report.AppendLine($"Opening-range breaks: {orBreaks}, followed through 0.3σ {follow:P0}");
+            report.AppendLine($"5m FVGs: {fvgs}: untouched {untouched}, under half {partial}, half+ {half}, fully filled {full} ({fullShare:P0})");
+            int zoneCount = sim.Securities.Sum(s => s.Zones.All.Count);
+            report.AppendLine($"Live zones at the end: {zoneCount}");
+
             Directory.CreateDirectory(Results);
             File.WriteAllText(Path.Combine(Results, "market-stats.txt"), report.ToString());
             TestContext.WriteLine(report.ToString());
@@ -179,6 +233,10 @@ namespace OpeningBell.Tests
                 Assert.That(Sd(dailyReturns[spec.Ticker]), Is.InRange(spec.DailyVolatility * 0.6, spec.DailyVolatility * 1.6), spec.Ticker);
             double holdRate = held / (double)Math.Max(1, held + broke);
             Assert.That(holdRate, Is.InRange(0.3, 0.8), "levels matter, but no level is guaranteed");
+            // Nothing is scripted either way: setups sometimes work, sometimes don't.
+            Assert.That(gapFill, Is.InRange(0.1, 0.9), "some gaps fill, some run");
+            Assert.That(follow, Is.InRange(0.2, 0.9), "some breakouts follow through, some fail");
+            Assert.That(fullShare, Is.InRange(0.05, 0.95), "some gaps get filled, others are left behind");
         }
 
         [Test]

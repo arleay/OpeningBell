@@ -37,6 +37,12 @@ namespace OpeningBell.Trading
         public event Action<Order> OrderUpdated;
         public event Action<Fill> OrderFilled;
 
+        /// <summary>
+        /// Extra checks an account's owner adds on top of the broker's (a prop firm's contract limit, a failed
+        /// account). Returns a rejection reason, or null to accept.
+        /// </summary>
+        public Func<Order, string> Gate { get; set; }
+
         public OrderManager(IMarketData market, Account account, BrokerRules rules)
         {
             _market = market;
@@ -96,6 +102,22 @@ namespace OpeningBell.Trading
             if (takeProfit > 0m) created.Add(Submit(ticker, side, OrderType.Limit, quantity, takeProfit, 0m, true, group));
             if (stopLoss > 0m) created.Add(Submit(ticker, side, OrderType.Stop, quantity, 0m, stopLoss, true, group));
             return created;
+        }
+
+        /// <summary>
+        /// Adds one protective leg (a take-profit limit or a stop-loss stop) to the position, e.g. dragged out of the
+        /// chart's position bar. It joins the symbol's existing bracket, so it stays one-cancels-other with the leg
+        /// already there, or starts a new bracket covering everything still open to close.
+        /// </summary>
+        public Order SubmitProtection(string ticker, bool stopLoss, decimal price)
+        {
+            Order existing = _open.Find(o => o.Ticker == ticker && o.OcoGroup != 0);
+            long group = existing?.OcoGroup ?? _nextOcoGroup++;
+            long quantity = existing?.RemainingQuantity ?? AvailableToClose(ticker);
+            OrderSide side = _account.Portfolio.QuantityOf(ticker) < 0 ? OrderSide.Buy : OrderSide.Sell;
+            return stopLoss
+                ? Submit(ticker, side, OrderType.Stop, quantity, 0m, price, true, group)
+                : Submit(ticker, side, OrderType.Limit, quantity, price, 0m, true, group);
         }
 
         private Order Submit(string ticker, OrderSide side, OrderType type, long quantity, decimal limitPrice, decimal stopPrice,
@@ -205,6 +227,9 @@ namespace OpeningBell.Trading
 
             if (order.Side == OrderSide.Buy) order.ReservePrice = ReservePrice(order, quote);
 
+            string gated = Gate?.Invoke(order);
+            if (gated != null) return gated;
+
             // Protective orders (brackets) only ever close: they may not open a position the other way.
             if (order.OcoGroup != 0)
             {
@@ -240,9 +265,17 @@ namespace OpeningBell.Trading
             return null;
         }
 
+        /// <summary>
+        /// Book depth shared with other order managers (a firm's desks): taking liquidity here leaves less for them this
+        /// tick. Null (the default) = this manager sees the whole book every tick.
+        /// </summary>
+        public LiquidityShare SharedLiquidity { get; set; }
+
         private void Evaluate(Order order, in Quote quote)
         {
-            _engine.Evaluate(order, quote, _executions, _market.Session == MarketSession.Regular);
+            bool buySide = order.Side == OrderSide.Buy;
+            long depthTaken = SharedLiquidity?.Taken(order.Ticker, buySide, _market.Now) ?? 0;
+            _engine.Evaluate(order, quote, _executions, _market.Session == MarketSession.Regular, depthTaken);
             // Taking liquidity moves the market (negligible for retail size, real for a huge order), reported once per
             // evaluation since impact grows with the whole order, not each book level; a resting limit that got filled
             // provided liquidity instead.
@@ -266,6 +299,7 @@ namespace OpeningBell.Trading
             // Impact is sized by exposure: a contract moves the market like point-value shares.
             if (aggressive && taken > 0)
             {
+                SharedLiquidity?.Take(order.Ticker, buySide, taken, _market.Now);
                 long exposure = (long)(taken * _account.Contract(order.Ticker).PointValue);
                 _market.ReportAggressiveFlow(order.Ticker, order.Side == OrderSide.Buy ? exposure : -exposure);
             }
@@ -329,6 +363,9 @@ namespace OpeningBell.Trading
             long held = _account.Portfolio.QuantityOf(ticker);
             return side == OrderSide.Sell ? held > 0 : held < 0;
         }
+
+        /// <summary>Net contracts held in a symbol (negative = short).</summary>
+        public long PositionQuantity(string ticker) => _account.Portfolio.QuantityOf(ticker);
 
         /// <summary>Contracts of an order that would open new exposure (beyond closing what's held on the other side).</summary>
         public long OpeningQuantity(string ticker, OrderSide side, long quantity)
@@ -422,6 +459,15 @@ namespace OpeningBell.Trading
             return PriceTick.RoundUp(basis * (1m + (decimal)_rules.MarketBuyReservePercent / 100m), PriceTick.For(basis));
         }
 
+
+        /// <summary>Cancels every working order and closes every position at the last price (a prop firm liquidation).</summary>
+        public void LiquidateAll(string reason)
+        {
+            _scratch.Clear();
+            _scratch.AddRange(_open);
+            foreach (Order o in _scratch) Close(o, OrderStatus.Cancelled, reason);
+            FlattenAll(reason);
+        }
 
         /// <summary>
         /// End of day: cancels the orders of every held symbol and closes each position in full at the closing

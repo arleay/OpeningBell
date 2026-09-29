@@ -207,6 +207,9 @@ namespace OpeningBell.UI
             if (range <= 0) range = Math.Max(_max * 0.01, 0.01);
             _min -= range * 0.06;
             _max += range * 0.06;
+            // Dragged up or down: the auto-fit range moves with it.
+            _min += _priceShift;
+            _max += _priceShift;
 
             LayoutPriceAxis();
             LayoutTimeAxis();
@@ -809,7 +812,9 @@ namespace OpeningBell.UI
         private enum Drag { None, Pan, Order, Create, MoveDrawing, Handle }
 
         private Drag _drag;
-        private float _dragAnchorX;
+        private float _dragAnchorX, _dragAnchorY;
+        /// <summary>Vertical pan (price units) on top of the auto-fit range; a double-click resets it.</summary>
+        private double _priceShift;
 
         private void OnWheel(WheelEvent e)
         {
@@ -826,6 +831,7 @@ namespace OpeningBell.UI
             if (e.clickCount == 2 && Tool == null)
             {
                 _viewport.FollowLive();
+                _priceShift = 0;
                 Rebuild();
                 return;
             }
@@ -838,6 +844,7 @@ namespace OpeningBell.UI
                 Select(null);
                 _drag = Drag.Pan;
                 _dragAnchorX = pos.x;
+                _dragAnchorY = pos.y;
             }
             this.CapturePointer(e.pointerId);
             Rebuild();
@@ -857,6 +864,10 @@ namespace OpeningBell.UI
                             _viewport.Pan(candles, _series.Count);
                             _dragAnchorX += candles * _slot;
                         }
+                        // Dragging down shows higher prices (the chart moves with the pointer).
+                        if (_plot.height > 0)
+                            _priceShift += (e.localPosition.y - _dragAnchorY) * (_max - _min) / _plot.height;
+                        _dragAnchorY = e.localPosition.y;
                     }
                     break;
                 case Drag.Order:
@@ -915,10 +926,10 @@ namespace OpeningBell.UI
         // ---------------- helpers ----------------
 
         private float X(double index) =>
-            (float)(_plot.x + (_viewport.VisibleCount - _count + (index - _first) + 0.5) * _slot);
+            (float)(_plot.x + (_viewport.VisibleCount - _count - _viewport.BlankSlots + (index - _first) + 0.5) * _slot);
 
         /// <summary>Fractional candle index under an x position (inverse of X).</summary>
-        private double IndexAt(float x) => (x - _plot.x) / _slot - 0.5 - (_viewport.VisibleCount - _count) + _first;
+        private double IndexAt(float x) => (x - _plot.x) / _slot - 0.5 - (_viewport.VisibleCount - _count - _viewport.BlankSlots) + _first;
 
         private float Y(double price) => (float)(_plot.y + (_max - price) / (_max - _min) * _plot.height);
 
@@ -974,6 +985,8 @@ namespace OpeningBell.UI
             Place(l, x, y, text);
             l.style.color = color;
             l.style.backgroundColor = background ?? Color.clear;
+            l.style.fontSize = StyleKeyword.Null; // pooled: undo any bold/large text from the last rebuild
+            l.style.unityFontStyleAndWeight = StyleKeyword.Null;
             l.style.paddingLeft = l.style.paddingRight = background.HasValue ? 4 : 0;
             l.style.borderTopLeftRadius = l.style.borderTopRightRadius = l.style.borderBottomLeftRadius = l.style.borderBottomRightRadius = 3;
             return l;

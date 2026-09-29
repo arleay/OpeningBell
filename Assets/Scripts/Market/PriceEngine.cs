@@ -258,7 +258,7 @@ namespace OpeningBell.Market
             if (newsNow != 0) _flow.OnNews(sec, newsNow, price);
             bool openingCross = regular && !flow.OpenAuctionDone;
             if (openingCross) _flow.OnOpen(sec, price);
-            var step = new FlowStep(regular, minutesSinceOpen, profile.Volume, sigma, systematic + leg);
+            var step = new FlowStep(regular, minutesSinceOpen, profile, sigma, systematic + leg, systematic);
             double newLog = Math.Max(MinLogPrice, _flow.Step(sec, price, step, out double gross));
             sec.DeviationLog = newLog - sec.FairLog;
             if ((time.TimeOfDay.TotalSeconds + _dt) % 60 < 1e-6) _flow.Minute(sec, newLog, step);
@@ -391,7 +391,7 @@ namespace OpeningBell.Market
         /// wide because liquidity is thin, so the low time-of-day volatility must not narrow them.
         /// </summary>
         private double SpreadScale(bool regular, ActivityProfile profile, double activity) =>
-            regular ? Math.Sqrt(profile.Volatility * activity) : _config.ExtendedSpreadMultiplier * Math.Sqrt(activity);
+            profile.Spread * (regular ? Math.Sqrt(profile.Volatility * activity) : _config.ExtendedSpreadMultiplier * Math.Sqrt(activity));
 
         private void ComputeQuote(SecurityRuntimeState sec, double mid, double spreadScale, ActivityProfile profile,
             out decimal bid, out decimal ask, out long bidSize, out long askSize)

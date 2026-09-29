@@ -60,6 +60,7 @@ namespace OpeningBell.UI
         private Order _lastOrder;
 
         private readonly Label _symbol, _quote, _estimate, _hint, _status, _position, _priceCaption;
+        private string _copyNote = ""; // what happened to the copies of the last order
         private readonly Button _buy, _sell, _market, _limit, _stop, _submit;
         private readonly TextField _quantity, _limitPrice;
         private readonly VisualElement _limitSection;
@@ -197,7 +198,7 @@ namespace OpeningBell.UI
                 OrderStatus.Cancelled => $"Cancelled{(o.FilledQuantity > 0 ? $" after {Fmt.Shares(o.FilledQuantity)} filled" : "")}: {o.StatusReason}",
                 _ => o.Status.ToString(),
             };
-            Ui.SetText(_status, text);
+            Ui.SetText(_status, _copyNote.Length > 0 ? text + "\n" + _copyNote : text);
             _status.EnableInClassList("error", o.Status == OrderStatus.Rejected);
             _status.EnableInClassList("ok", o.Status == OrderStatus.Filled);
         }
@@ -223,9 +224,14 @@ namespace OpeningBell.UI
             decimal limit = 0m;
             if (_type != OrderType.Market && !TicketInput.TryParsePrice(_limitPrice.value, out limit)) return;
 
-            _lastOrder = _type == OrderType.Stop
-                ? Context.Orders.SubmitStop(Context.SelectedTicker, _side, qty, limit)
-                : Context.Orders.Submit(Context.SelectedTicker, _side, _type, qty, limit);
+            // Placed on the active account and copied to any checked followers.
+            string ticker = Context.SelectedTicker;
+            OrderSide side = _side;
+            OrderType type = _type;
+            _lastOrder = Context.Place(om => type == OrderType.Stop
+                ? om.SubmitStop(ticker, side, qty, limit)
+                : om.Submit(ticker, side, type, qty, limit));
+            _copyNote = Context.CopyNote;
             Refresh();
         }
 
@@ -233,6 +239,7 @@ namespace OpeningBell.UI
         public void Track(Order order)
         {
             _lastOrder = order;
+            _copyNote = Context.CopyNote;
             Refresh();
         }
 
