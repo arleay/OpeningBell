@@ -585,12 +585,24 @@ namespace OpeningBell.City
             string thought = Thought();
             if (string.IsNullOrEmpty(thought)) return;
             _bubbleText.text = thought;
-            _bubbleBack.localScale = new Vector3(0.05f * thought.Length + 0.12f, 0.16f, 0.005f);
+            // The card fits the text: its longest line across, a line's height per line.
+            string[] lines = thought.Split('\n');
+            int longest = 0;
+            foreach (string l in lines) longest = Mathf.Max(longest, l.Length);
+            _bubbleBack.localScale = new Vector3(0.05f * longest + 0.12f, 0.1f * lines.Length + 0.06f, 0.005f);
             _bubble.localPosition = new Vector3(0f, _phase == Phase.AtSpot && _target.Kind == Kind.Seat ? 1.6f : 2.05f, 0f);
             _bubble.gameObject.SetActive(true);
             _bubbleUntil = Time.time + 4.5f;
             _w.BubblesShown++;
         }
+
+        private static readonly string[] NoCapital =
+        {
+            "When's the boss giving me\ncapital to trade with?",
+            "Can't trade on zero dollars...",
+            "Nice desk. Now I just\nneed some capital",
+            "Watching setups I can't take.\nNeed an allocation",
+        };
 
         private string Thought()
         {
@@ -601,6 +613,11 @@ namespace OpeningBell.City
                     return string.IsNullOrEmpty(why) ? "Waiting for a desk" : why.Split('.')[0];
                 case Activity.RiskLocked: return "Hit my loss limit for today";
                 case Activity.Training: return _w.Fund.CurrentTrainingLabel(_e);
+                case Activity.Trading:
+                case Activity.Preparing:
+                    // At the desk with nothing allocated: nothing to trade with.
+                    if (_e.Base <= 0m && _e.DeskEquity <= 0m) return NoCapital[_rng.Next(NoCapital.Length)];
+                    break;
             }
             if (_e.Satisfaction < 40)
             {

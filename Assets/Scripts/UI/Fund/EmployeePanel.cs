@@ -192,7 +192,8 @@ namespace OpeningBell.UI
             _live.Add(() =>
             {
                 var (text, _) = FundUi.Status(Fund, e);
-                string reason = e.Activity == Activity.RiskLocked ? " · " + e.LockReason : "";
+                string reason = e.Activity == Activity.RiskLocked ? " · " + e.LockReason
+                    : (e.Activity == Activity.Trading || e.Activity == Activity.Preparing) && e.Base <= 0m && e.DeskEquity <= 0m ? " · no capital allocated" : "";
                 Ui.SetText(activity, text + reason);
                 Workstation w = Fund.StationOf(e);
                 Ui.SetText(desk, e.Desk == 0 ? "None assigned" : w != null ? $"Desk #{e.Desk} · quality {w.Quality * 100:0}%" : $"Desk #{e.Desk} · {Fund.StationProblem(e)}");

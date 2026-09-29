@@ -64,7 +64,7 @@ namespace OpeningBell.UI
             Menu = Ui.Box("account-menu");
             Menu.name = "account-menu";
             _trader = Ui.Label("account-menu-trader", Menu);
-            Ui.Label("muted account-menu-help", Menu, "Click an account to trade it. Tick others to copy every trade you place on the active one.");
+            Ui.Label("muted account-menu-help", Menu, "Click an account to make it the leader (the one you trade). Tick others to copy every trade the leader places. Your personal account only trades when it leads or is ticked.");
             _menuList = Ui.Box("account-menu-list", Menu);
             Ui.Show(Menu, false);
 
@@ -175,6 +175,9 @@ namespace OpeningBell.UI
                 Ui.Show(Menu, false);
             });
 
+            if (a == Context.Active) Ui.Label("account-row-lead", row, "LEADER").tooltip = "The account you trade; ticked accounts copy it";
+            else if (a.Tradeable) Ui.Button("LEAD", () => { Context.SetActive(a); Ui.Show(Menu, false); }, "account-row-make-lead", row, "lead-" + a.Id)
+                .tooltip = "Trade this account instead; the ticked accounts copy it";
             Ui.Label("account-row-balance", row);
             if (a.Prop != null)
             {

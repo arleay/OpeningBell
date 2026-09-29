@@ -58,12 +58,20 @@ namespace OpeningBell.UI
             }
         }
 
+        /// <summary>
+        /// Makes <paramref name="account"/> the one you trade (the leader). While copying, the group carries on under
+        /// the new leader: a prop account that was leading stays in it as a follower, but the personal account doesn't,
+        /// so the funded accounts can trade together without your own money.
+        /// </summary>
         public void SetActive(TradingAccount account)
         {
             if (account == null || account == Active) return;
+            TradingAccount old = Active;
+            bool copying = FollowerCount > 0;
             _choseAccount = true;
             Active = account;
             _followers.Remove(account.Id);
+            if (copying && old != null && old.Prop != null && old.Tradeable) _followers.Add(old.Id);
             ActiveChanged?.Invoke();
             AccountsChanged?.Invoke();
         }

@@ -1120,6 +1120,8 @@
 .account-row-text { flex-grow: 1; }
 .account-row-id { -unity-font-style: bold; color: #ffffff; }
 .account-row-balance { width: 110px; -unity-text-align: middle-right; -unity-font-style: bold; }
+.account-row-lead { font-size: 10px; -unity-font-style: bold; color: #3fb68b; margin-left: 6px; padding: 2px 6px; border-radius: 3px; background-color: #1d3a2e; }
+.account-row-make-lead { font-size: 10px; -unity-font-style: bold; margin: 0 0 0 6px; padding: 2px 6px; border-radius: 3px; }
 .account-row-status {
     margin-left: 10px;
     padding: 1px 6px;
