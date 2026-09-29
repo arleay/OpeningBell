@@ -230,6 +230,7 @@ namespace OpeningBell.Tests
             OwnedItem bare = rig.Station(0, 0, chair: false, tower: false, monitor: false, peripherals: false);
             Workstation w = rig.Fund.Stations.First(s => s.Desk == bare.Uid);
             CollectionAssert.IsSupersetOf(w.Problems, new[] { "Computer missing.", "Monitor missing.", "No chair assigned.", "Keyboard missing." });
+            StringAssert.StartsWith("Missing: computer, monitor, keyboard, mouse.", w.Summary, "the panels' one-line summary");
 
             OwnedItem full = rig.Station(6, 0);
             Assert.IsTrue(rig.Fund.Stations.First(s => s.Desk == full.Uid).Valid, rig.Fund.Stations.First(s => s.Desk == full.Uid).Summary);

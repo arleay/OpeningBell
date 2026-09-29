@@ -44,6 +44,8 @@ namespace OpeningBell.Home
         public bool Outdoor;
         /// <summary>Something you sit on: never on a bed, a table or another seat.</summary>
         public bool Seat;
+        /// <summary>Floor-standing, but fine on a desk or table top too (a tower PC).</summary>
+        public bool OnTops;
         public string[] Variants = { "Default" };
         /// <summary>The moving box: free with pickup orders, not on sale; holds any amount (Variant 0 open, 1 closed).</summary>
         public bool IsBox;
@@ -171,7 +173,7 @@ namespace OpeningBell.Home
             T("keyboard", "Keyboard", "Peripherals", Tier.Budget, 39m, "computerKeyboard", 0.44f, 0.15f, 0.03f, brand: "Keyfort");
             T("keyboard_mech", "Mechanical Keyboard", "Peripherals", Tier.Premium, 169m, "computerKeyboard", 0.44f, 0.15f, 0.04f, brand: "Keyfort");
             T("mouse", "Mouse", "Peripherals", Tier.Budget, 25m, "computerMouse", 0.07f, 0.12f, 0.04f, brand: "Keyfort");
-            T("pc_tower", "Tower PC", "Computers", Tier.Mid, 1299m, "", 0.22f, 0.45f, 0.48f, Support.Floor, "Northbyte");
+            T("pc_tower", "Tower PC", "Computers", Tier.Mid, 1299m, "", 0.22f, 0.45f, 0.48f, Support.Floor, "Northbyte").OnTops = true;
             T("laptop", "Laptop", "Computers", Tier.Mid, 999m, "laptop", 0.34f, 0.24f, 0.02f, brand: "Northbyte");
             T("speakers", "Desk Speakers", "Audio", Tier.Mid, 119m, "speakerSmall", 0.14f, 0.16f, 0.24f, brand: "Tonebox");
             return all;

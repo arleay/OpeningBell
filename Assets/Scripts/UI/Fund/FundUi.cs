@@ -101,7 +101,9 @@ namespace OpeningBell.UI
         {
             var row = Ui.Box("fund-line " + classes, parent);
             Ui.Label("fund-line-caption", row, caption);
-            Ui.Box("spacer", row);
+            // No spacer: the value itself takes the rest of the row (basis 0, grow 1) and right-aligns, so a long value
+            // wraps inside a known width and the row grows to fit. A percentage max-width wrapped the text without
+            // telling layout, and the extra lines spilled over the rows below.
             return Ui.Label("fund-line-value", row, value);
         }
 

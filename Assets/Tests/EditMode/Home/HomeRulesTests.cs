@@ -113,6 +113,9 @@ namespace OpeningBell.Tests
             Assert.IsNull(PlacementRules.Check(I("desk_lamp"), Under.Item, I("nightstand"), true), "lamp on a nightstand");
             Assert.IsNotNull(PlacementRules.Check(I("mon_24"), Under.Floor, null, true), "monitor on the floor");
             Assert.IsNotNull(PlacementRules.Check(I("mon_24"), Under.Item, I("sofa_mid"), true), "monitor on a sofa");
+            Assert.IsNull(PlacementRules.Check(I("pc_tower"), Under.Floor, null, true), "tower on the floor");
+            Assert.IsNull(PlacementRules.Check(I("pc_tower"), Under.Item, I("desk_standard"), true), "tower on a desk");
+            Assert.IsNotNull(PlacementRules.Check(I("pc_tower"), Under.Item, I("sofa_mid"), true), "tower on a sofa");
             Assert.IsNotNull(PlacementRules.Check(I("wall_art"), Under.Floor, null, true));
             Assert.IsNull(PlacementRules.Check(I("wall_art"), Under.Wall, null, true));
             Assert.IsNull(PlacementRules.Check(I("ceiling_lamp"), Under.Ceiling, null, true));

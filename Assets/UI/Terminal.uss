@@ -1240,8 +1240,8 @@
 .fund-card-danger { border-color: #fecdca; background-color: #fffbfa; }
 
 .fund-line { flex-direction: row; align-items: center; padding: 6px 0; border-bottom-width: 1px; border-color: #f2f4f7; }
-.fund-line-caption { color: #475467; }
-.fund-line-value { color: #101828; -unity-font-style: bold; -unity-text-align: middle-right; white-space: normal; max-width: 60%; }
+.fund-line-caption { color: #475467; flex-shrink: 0; margin-right: 16px; }
+.fund-line-value { color: #101828; -unity-font-style: bold; -unity-text-align: middle-right; white-space: normal; flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-width: 0; }
 .fund-line-total .fund-line-caption { -unity-font-style: bold; color: #101828; }
 .fund-line-big .fund-line-value { font-size: 17px; }
 .fund-sep { height: 1px; background-color: #e4e7ec; margin: 8px 0; }

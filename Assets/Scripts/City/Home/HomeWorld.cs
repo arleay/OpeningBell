@@ -161,14 +161,14 @@ namespace OpeningBell.City
                 t.localRotation = Quaternion.Euler(0f, i.Yaw, 0f);
                 view.Vehicle = bed.Vehicle;
                 // Cargo is part of the vehicle now: a trigger (still aimable) so it doesn't reshape its physics.
-                view.Solid.isTrigger = true;
+                view.SetTrigger(true);
             }
             else
             {
                 t.SetParent(_root, true);
                 t.SetPositionAndRotation(local, Quaternion.Euler(0f, i.Yaw, 0f));
                 view.Vehicle = null;
-                view.Solid.isTrigger = false;
+                view.SetTrigger(false);
             }
             // Monitors on an arm hang by their backs: no stand.
             bool onArm = i.MountedOn != 0 && Belongings.Get(i.MountedOn)?.Item?.IsArm == true;

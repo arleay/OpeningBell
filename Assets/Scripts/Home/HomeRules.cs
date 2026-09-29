@@ -21,6 +21,7 @@ namespace OpeningBell.Home
             {
                 case Support.Floor:
                     if (under == Under.Floor || under == Under.Ground) return null;
+                    if (under == Under.Item && item.OnTops && onto != null && onto.Surface > 0f) return null;
                     if (under == Under.Item) return item.Seat ? "Seats go on the floor." : $"The {item.Name.ToLowerInvariant()} goes on the floor.";
                     return "Stand it on the floor.";
                 case Support.Surface:

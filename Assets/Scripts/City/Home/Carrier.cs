@@ -107,7 +107,7 @@ namespace OpeningBell.City
         public void Hold(ItemView v)
         {
             _held = v;
-            v.Solid.enabled = false;
+            v.SetSolid(false);
             SetLayer(v.transform, 2); // Ignore Raycast: the aim looks past what you're holding
             HomeItem spec = v.Spec;
             bool large = spec.Large && !v.Item.Boxed;
@@ -134,7 +134,7 @@ namespace OpeningBell.City
         private void Release()
         {
             if (_held == null) return;
-            _held.Solid.enabled = true;
+            _held.SetSolid(true);
             _held.transform.localScale = _heldScale;
             SetLayer(_held.transform, 0);
             foreach (Renderer r in _held.GetComponentsInChildren<Renderer>()) r.enabled = true;
@@ -380,7 +380,8 @@ namespace OpeningBell.City
                 Vector3 centre = t.At + Vector3.up * (half.y + 0.05f);
                 foreach (Collider c in Physics.OverlapBox(centre, half, rot, ~0, QueryTriggerInteraction.Ignore))
                 {
-                    if (c == hit.collider || c.gameObject.layer == 2 || c is CharacterController || c is TerrainCollider) continue;
+                    // The thing it stands on doesn't count, either box of it (an L-shaped desk has two).
+                    if (c == hit.collider || (t.Onto != null && c.GetComponent<ItemView>() == t.Onto) || c.gameObject.layer == 2 || c is CharacterController || c is TerrainCollider) continue;
                     // In a bed: the vehicle's own body and sides don't count, only other cargo.
                     if (t.Bed != null && c.transform.IsChildOf(t.Bed.Vehicle) && c.GetComponentInParent<ItemView>() == null) continue;
                     t.Why = "Something's in the way.";

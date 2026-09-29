@@ -18,12 +18,31 @@ namespace OpeningBell.Fund
         public float X, Z, Yaw;
 
         public bool Valid => Problems.Count == 0;
-        public string Summary => Valid ? "Ready" : string.Join(" ", Problems);
+        /// <summary>
+        /// One short line for panels: the "X missing." problems fold into "Missing: x, y." so a bare desk reads as one
+        /// clause instead of four sentences; the other problems follow as they are.
+        /// </summary>
+        public string Summary
+        {
+            get
+            {
+                if (Valid) return "Ready";
+                var missing = new List<string>();
+                var rest = new List<string>();
+                foreach (string p in Problems)
+                {
+                    if (p.EndsWith(" missing.", StringComparison.Ordinal)) missing.Add(p.Substring(0, p.Length - " missing.".Length).ToLowerInvariant());
+                    else rest.Add(p);
+                }
+                if (missing.Count > 0) rest.Insert(0, "Missing: " + string.Join(", ", missing) + ".");
+                return string.Join(" ", rest);
+            }
+        }
     }
 
     /// <summary>
     /// Which desks in a property are complete workstations (FUND_SPEC §8): desk, a compatible chair in front of it, a
-    /// computer (tower beside it or a laptop on it), at least one powered monitor on it, keyboard and mouse (unless a
+    /// computer (a tower beside it or on it, or a laptop on it), at least one powered monitor on it, keyboard and mouse (unless a
     /// laptop), the office's power and network, and room to reach and sit. Distances are in the desk's own frame (its
     /// front faces -z, where the seat is).
     /// </summary>
@@ -83,7 +102,7 @@ namespace OpeningBell.Fund
                 }
                 if (chair != null) { usedChairs.Add(chair.Uid); w.Chair = chair.Uid; }
 
-                // A tower on the floor near the desk, unless a laptop's on it.
+                // A tower near the desk (on the floor or on the top), unless a laptop's on it.
                 if (!pad)
                 {
                     OwnedItem tower = null;
