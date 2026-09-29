@@ -326,6 +326,7 @@ namespace OpeningBell.City
             }
             for (float x = 255.5f; x + 2.6f <= 268.5f; x += 2.6f) bays.Add((x, 125.1f, 130.25f, 180f));
             StaffBays.Clear();
+            var overflow = new List<(Vector3, float)>();
             foreach (var (x0, z0, z1, yaw) in bays)
             {
                 float y = f + 0.006f;
@@ -341,8 +342,17 @@ namespace OpeningBell.City
                     k.Text(t, "LEVEL 26", V(x0 + 1.3f, f + 0.012f, z0 + 1.65f), 0f, 0.14f, new Color(0.95f, 0.8f, 0.2f)).transform.localRotation = Quaternion.Euler(90f, 180f, 0f);
                     continue;
                 }
+                // Level 26's overflow: the row east of the lift, kept free of the everyday parking.
+                if (z0 > 117f && x0 >= 255f)
+                {
+                    overflow.Add((bay, yaw));
+                    k.Text(t, "LEVEL 26", V(x0 + 1.3f, f + 0.012f, z1 - 1.2f), 0f, 0.14f, new Color(0.95f, 0.8f, 0.2f)).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    continue;
+                }
                 c.ParkingSpots.Add((bay, yaw, ParkingKind.Lot));
             }
+            ReservedBays = StaffBays.Count;
+            StaffBays.AddRange(overflow);
             lines.Build(t, "Bay lines", paint, collider: false);
             // Aisle arrows: yellow chevrons down the middle of the lane and the cross aisle, pointing the way round.
             var arrows = new MeshBuilder();
@@ -830,8 +840,12 @@ namespace OpeningBell.City
         public static Vector3 GarageCentre => V(252f, Grade + GarageFloor, 121f);
         public static Vector3 GarageLiftDoor => V(252f, Grade + GarageFloor, 120.2f);
 
-        /// <summary>The garage bays reserved for the fund's staff (world position of the bay centre on the floor, and yaw).</summary>
+        /// <summary>
+        /// The garage bays for the fund's staff (world position of the bay centre on the floor, and yaw): the reserved
+        /// row along the lane first (<see cref="ReservedBays"/> of them), then the overflow bays east of the lift.
+        /// </summary>
         public static readonly List<(Vector3 P, float Yaw)> StaffBays = new List<(Vector3, float)>();
+        public static int ReservedBays { get; private set; }
 
         private static Elevator Lift(CityContext c, Transform dyn, Vector3 at, float rise, float garage, float office)
         {

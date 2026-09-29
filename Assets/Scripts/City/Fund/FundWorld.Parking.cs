@@ -81,7 +81,7 @@ namespace OpeningBell.City
                     here.Remove(b.Employee);
                     continue;
                 }
-                if (b.Car != null && GarageWatched() && !Seen(RampTop(), cam)) Depart(b, spots[i]);
+                if (b.Car != null && i < HarborviewTower.ReservedBays && GarageWatched() && !Seen(RampTop(), cam)) Depart(b, spots[i]);
                 else if (!Seen(spots[i].P, cam)) Clear(b);
             }
             // New arrivals: a free bay; watched, they drive in; otherwise the car is just there.
@@ -91,7 +91,8 @@ namespace OpeningBell.City
                     Bay b = _bays[i];
                     if (b.Employee != 0 || Taken(spots[i].P)) continue;
                     bool justArrived = _lastActivity.TryGetValue(e.Id, out Activity was) && was < Activity.Arriving;
-                    if (justArrived && GarageWatched() && !Seen(RampTop(), cam)) Arrive(b, e, spots[i]);
+                    // The drive in is laid out for the reserved row; overflow cars are just there, out of view.
+                    if (justArrived && i < HarborviewTower.ReservedBays && GarageWatched() && !Seen(RampTop(), cam)) Arrive(b, e, spots[i]);
                     else if (!Seen(spots[i].P, cam)) Park(b, e, spots[i]);
                     else break; // in view: wait until the player looks away
                     break;
