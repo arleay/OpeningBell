@@ -171,18 +171,23 @@ namespace OpeningBell.City
             if (sec == null) { Apply(); _text.text = Shown = symbol + "\nno data"; return; }
             CandleSeries series = sec.Candles.Get(Timeframe.Minute1);
             int n = Mathf.Min(48, series.Count), first = series.Count - n;
-            decimal lo = decimal.MaxValue, hi = decimal.MinValue;
-            for (int k = first; k < series.Count; k++) { lo = System.Math.Min(lo, series[k].Low); hi = System.Math.Max(hi, series[k].High); }
+            // Centred on the current price: the scale is set by how far the last twenty minutes strayed from it (at least
+            // a quarter percent), so an old move far away (yesterday's close, a gap) doesn't squash today's action into a
+            // line. Whatever falls outside is clipped at the edges.
+            decimal last = sec.Last, reach = last * 0.0025m;
+            for (int k = Mathf.Max(first, series.Count - 20); k < series.Count; k++)
+                reach = System.Math.Max(reach, System.Math.Max(series[k].High - last, last - series[k].Low));
+            reach *= 1.15m;
+            decimal lo = last - reach, hi = last + reach;
             const int top = 128, bottom = 8;
-            // Grid.
-            for (int g = 1; g < 4; g++) Fill(0, bottom + g * (top - bottom) / 4, Width, bottom + g * (top - bottom) / 4 + 1, new Color32(30, 36, 48, 255));
             if (n > 0 && hi > lo)
             {
                 float step = (Width - 8f) / 48f;
-                int Y(decimal p) => bottom + Mathf.RoundToInt((float)((p - lo) / (hi - lo)) * (top - bottom));
+                int Y(decimal p) => Mathf.Clamp(bottom + Mathf.RoundToInt((float)((p - lo) / (hi - lo)) * (top - bottom)), bottom, top);
                 for (int k = 0; k < n; k++)
                 {
                     Candle c = series[first + k];
+                    if (c.Low > hi || c.High < lo) continue; // wholly off the chart (an old move): not drawn
                     bool up = c.Close >= c.Open;
                     var col = up ? new Color32(60, 200, 120, 255) : new Color32(230, 80, 70, 255);
                     int x = 4 + Mathf.RoundToInt(k * step);
@@ -191,8 +196,9 @@ namespace OpeningBell.City
                     int a = Y(c.Open), b = Y(c.Close);
                     Fill(x, Mathf.Min(a, b), x + w, Mathf.Max(a, b) + 1, col);
                 }
-                int last = Y(sec.Last);
-                Fill(0, last, Width, last + 1, new Color32(240, 200, 80, 255));
+                // The one line on the chart: the current price, through the middle.
+                int now = Y(last);
+                Fill(0, now, Width, now + 1, new Color32(240, 200, 80, 255));
             }
             Apply();
             _text.text = Shown = $"{symbol}  {sec.Last.ToString("0.00", C)}  {Signed(sec.ChangePercent)}%" + SessionTag(market);
