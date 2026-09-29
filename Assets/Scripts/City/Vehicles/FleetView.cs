@@ -33,11 +33,29 @@ namespace OpeningBell.City
             _use = use;
         }
 
-        public override string Prompt => _verb + " " + Vehicle.Name;
+        /// <summary>A car on its side or roof: [E] rolls it back over instead of getting in.</summary>
+        private CarController Tipped
+        {
+            get
+            {
+                var car = GetComponent<CarController>();
+                return car != null && car.Tipped ? car : null;
+            }
+        }
+
+        public override string Prompt => Tipped != null ? "Flip " + Vehicle.Name + " back over" : _verb + " " + Vehicle.Name;
         public override bool CanInteract => base.CanInteract && _canUse();
         public override string Details => Describe(Vehicle, _game);
 
-        public override void Interact() => _use(Vehicle);
+        public override void Interact()
+        {
+            CarController car = Tipped;
+            if (car == null) { _use(Vehicle); return; }
+            car.Upright();
+            // Parked where it now stands (the save keeps a parked car's pose).
+            Vector3 p = car.transform.position;
+            Vehicle.X = p.x; Vehicle.Y = p.y; Vehicle.Z = p.z; Vehicle.Yaw = car.transform.eulerAngles.y;
+        }
 
         public static string Describe(OwnedVehicle v, GameBootstrap game)
         {

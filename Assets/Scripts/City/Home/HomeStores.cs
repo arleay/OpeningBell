@@ -313,7 +313,7 @@ namespace OpeningBell.City
                 string size = $"{Item.Width:0.0#} × {Item.Depth:0.0#} × {Item.Height:0.0#} m";
                 string extra = Item.IsDesk ? $"\nTakes {Item.MonitorSlots} monitors standing (arms add more, 6 a desk)"
                     : Item.IsArm ? $"\nHolds {Item.Arms} monitor{(Item.Arms == 1 ? "" : "s")}; clamps to a desk"
-                    : Item.IsMonitor ? $"\n{Item.Inches}\" · shows charts, watchlists, news" : "";
+                    : Item.IsMonitor ? $"\n{Item.Inches}\" · shows charts, watchlists, news" : Item.IsLaptop ? "\nComputer and screen in one · shows charts, watchlists, news" : "";
                 string colour = Item.Variants.Length > 1 ? $"\nColour: {Item.Variants[Variant]} ([E] on the tag for another)" : "";
                 string where = Item.Outdoor ? "indoor or outdoor" : "indoor";
                 return $"{Item.Department} · {Item.Tier}{(Item.Brand != null ? " · " + Item.Brand : "")} · {size} · {where}{extra}{colour}";

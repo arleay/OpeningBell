@@ -170,7 +170,7 @@ namespace OpeningBell.UI
             Ui.Label("fund-note", amen, "Amenities lift morale a little every day; a better chair and screens add comfort and workflow, never guaranteed profit.");
 
             VisualElement stations = FundUi.Card(_page, "Workstations");
-            Ui.Label("fund-muted fund-wrap", stations, "A workstation is a desk with a work chair in front of it, a computer (tower beside it or a laptop on it), at least one monitor switched on, a keyboard and a mouse, the office's power and network, and room to reach the chair. Buy furniture at Timberline Home and tech at Circuit Stop; at the till, [F] bills the company card.");
+            Ui.Label("fund-muted fund-wrap", stations, "A workstation is a desk with a work chair in front of it, a computer (tower beside it or a laptop on it), at least one screen switched on (a monitor, or the laptop's own), a keyboard and a mouse (a laptop needs neither), the office's power and network, and room to reach the chair. Buy furniture at Timberline Home and tech at Circuit Stop; at the till, [F] bills the company card.");
             var list = Ui.Box("", stations);
             FundUi.Row(list, "fund-row-head", ("DESK", 80), ("STATUS", 0), ("QUALITY", 80), ("ASSIGNED TO", 230));
             var staff = Fund.Staff.ToList();

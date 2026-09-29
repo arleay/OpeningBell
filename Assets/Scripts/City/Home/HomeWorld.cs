@@ -137,7 +137,7 @@ namespace OpeningBell.City
             HomeModels.Build(_c, go.transform, item.Item, item.Variant, item.Boxed);
             var view = go.AddComponent<ItemView>();
             view.Configure(this, item);
-            if (item.Item.IsMonitor && !item.Boxed) go.AddComponent<MonitorScreen>().Configure(this, view);
+            if (item.Item.HasScreen && !item.Boxed) go.AddComponent<MonitorScreen>().Configure(this, view);
             _views[item.Uid] = view;
             Pose(view);
             return view;

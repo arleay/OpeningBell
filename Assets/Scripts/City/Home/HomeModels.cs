@@ -52,6 +52,7 @@ namespace OpeningBell.City
                 return root;
             }
             if (item.IsMonitor) Monitor(c, r, item, variant);
+            else if (item.IsLaptop) Laptop(c, r, item, variant);
             else if (item.IsArm) Arm(c, r, item, variant);
             else if (item.Id == "pc_tower")
             {
@@ -100,6 +101,30 @@ namespace OpeningBell.City
             float pw = w, ph = h * 0.75f;
             k.Box(panel, "Bezel", Vector3.zero, new Vector3(pw, ph, 0.03f), body, collider: false);
             GameObject screen = k.Box(panel, ScreenName, new Vector3(0f, 0f, -0.017f), new Vector3(pw - 0.03f, ph - 0.03f, 0.002f),
+                c.P.Unlit(new Color(0.02f, 0.02f, 0.03f)), collider: false);
+            screen.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
+        /// <summary>
+        /// A laptop open on the desk: the base with a keyboard deck and trackpad, the lid on a hinge at the back tilted
+        /// 15° away, its screen facing -z like a monitor's (a "Panel" holding the <see cref="ScreenName"/> quad, which
+        /// MonitorScreen draws on).
+        /// </summary>
+        private static void Laptop(CityContext c, Transform r, HomeItem item, int variant)
+        {
+            Kit k = c.Kit;
+            Material shell = c.P.Lit(ColourOf(item, variant) * 0.45f, 0.55f);
+            Material keys = c.P.Lit(new Color(0.07f, 0.07f, 0.08f), 0.2f);
+            float w = item.Width, d = item.Depth, t = 0.016f;
+            k.Box(r, "Base", new Vector3(0f, t / 2f, 0f), new Vector3(w, t, d), shell, collider: false);
+            k.Box(r, "Keys", new Vector3(0f, t + 0.001f, 0.02f), new Vector3(w - 0.04f, 0.002f, d * 0.45f), keys, collider: false);
+            k.Box(r, "Trackpad", new Vector3(0f, t + 0.001f, -d * 0.3f), new Vector3(w * 0.3f, 0.002f, d * 0.22f), keys, collider: false);
+            float lh = d - 0.01f; // the lid folds down over the base
+            Transform hinge = Kit.Group(r, "Hinge", new Vector3(0f, t, d / 2f - 0.004f));
+            hinge.localRotation = Quaternion.Euler(15f, 0f, 0f);
+            Transform panel = Kit.Group(hinge, "Panel", new Vector3(0f, lh / 2f, 0f));
+            k.Box(panel, "Lid", new Vector3(0f, 0f, 0.004f), new Vector3(w, lh, 0.008f), shell, collider: false);
+            GameObject screen = k.Box(panel, ScreenName, new Vector3(0f, 0.004f, -0.001f), new Vector3(w - 0.03f, lh - 0.035f, 0.002f),
                 c.P.Unlit(new Color(0.02f, 0.02f, 0.03f)), collider: false);
             screen.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }

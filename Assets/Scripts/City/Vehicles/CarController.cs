@@ -97,6 +97,40 @@ namespace OpeningBell.City
             _rb.WakeUp();
         }
 
+        /// <summary>On its side or roof (its up points less than 60° from the sky).</summary>
+        public bool Tipped => transform.up.y < 0.5f;
+
+        /// <summary>
+        /// Rolls a tipped car back onto its wheels where it lies: same heading, set down on whatever is under it (its
+        /// origin is at the tyres' contact), at rest.
+        /// </summary>
+        public void Upright()
+        {
+            Vector3 flat = transform.forward;
+            flat.y = 0f;
+            if (flat.sqrMagnitude < 1e-4f)
+            {
+                flat = transform.up; // nose straight up or down: the roof's heading
+                flat.y = 0f;
+            }
+            float yaw = flat.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(flat).eulerAngles.y : 0f;
+            Vector3 at = transform.position;
+            // The first surface below the car's middle (not the car itself, not a bridge far above it).
+            float ground = at.y, nearest = float.MaxValue;
+            foreach (RaycastHit h in Physics.RaycastAll(at + Vector3.up * 1.5f, Vector3.down, 5f, ~0, QueryTriggerInteraction.Ignore))
+                if (!h.collider.transform.IsChildOf(transform) && h.distance < nearest)
+                {
+                    nearest = h.distance;
+                    ground = h.point.y;
+                }
+            transform.SetPositionAndRotation(new Vector3(at.x, ground + 0.05f, at.z), Quaternion.Euler(0f, yaw, 0f));
+            _rb.position = transform.position;
+            _rb.rotation = transform.rotation;
+            if (_rb.isKinematic) return;
+            _rb.linearVelocity = Vector3.zero;
+            _rb.angularVelocity = Vector3.zero;
+        }
+
         private void FixedUpdate()
         {
             if (_rb.isKinematic || _spec == null) return;

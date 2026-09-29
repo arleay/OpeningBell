@@ -134,13 +134,13 @@ namespace OpeningBell.Home
                 if (i.MountedOn == uid) yield return i;
         }
 
-        /// <summary>Screens a desk carries: stood on it, plus those on its arms.</summary>
+        /// <summary>Screens a desk carries: stood on it (monitors and laptops), plus those on its arms.</summary>
         public int MonitorsOn(OwnedItem desk)
         {
             int n = 0;
             foreach (OwnedItem i in MountedOn(desk.Uid))
             {
-                if (i.Item?.IsMonitor == true) n++;
+                if (i.Item?.HasScreen == true) n++;
                 else if (i.Item?.IsArm == true) foreach (OwnedItem m in MountedOn(i.Uid)) if (m.Item?.IsMonitor == true) n++;
             }
             return n;

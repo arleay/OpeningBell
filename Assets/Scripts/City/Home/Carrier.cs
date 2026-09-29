@@ -650,12 +650,12 @@ namespace OpeningBell.City
             if (k == null || !(_interactor != null && _interactor.Current is ItemView v) || v.Item == null) return;
             OwnedItem i = v.Item;
             if (k.xKey.wasPressedThisFrame) Sell(v);
-            if (!v.Spec.IsMonitor || i.Boxed) return;
+            if (!v.Spec.HasScreen || i.Boxed) return;
             bool changed = false;
             if (k.fKey.wasPressedThisFrame) { i.Power = !i.Power; changed = true; }
             if (k.vKey.wasPressedThisFrame) { i.View = (MonitorView)(((int)i.View + 1) % System.Enum.GetValues(typeof(MonitorView)).Length); changed = true; }
             if (k.tKey.wasPressedThisFrame) { i.Symbol = NextSymbol(i.Symbol); changed = true; }
-            if (k.pKey.wasPressedThisFrame) { i.Portrait = !i.Portrait; _w.Pose(v); changed = true; }
+            if (k.pKey.wasPressedThisFrame && v.Spec.IsMonitor) { i.Portrait = !i.Portrait; _w.Pose(v); changed = true; }
             if (changed) _w.Belongings.Touch();
         }
 

@@ -136,8 +136,8 @@ namespace OpeningBell.City
                 string colour = Spec.Variants.Length > 1 ? Spec.Variants[Item.Variant] + " · " : "";
                 string line = $"{colour}{Spec.Tier} · {condition}";
                 if (Spec.IsDesk) line += $"\n{_world.Belongings.MonitorsOn(Item)} of {Belongings.MaxMonitorsPerDesk} screens · takes {Spec.MonitorSlots} standing";
-                if (Spec.IsMonitor && !Item.Boxed)
-                    line += $"\n{(Item.Power ? "On" : "Off")} · {Item.View}{(Item.View == MonitorView.Chart ? " " + Item.Symbol : "")}{(Item.Portrait ? " · portrait" : "")}\n[F] power  [V] view  [T] symbol  [P] rotate";
+                if (Spec.HasScreen && !Item.Boxed)
+                    line += $"\n{(Item.Power ? "On" : "Off")} · {Item.View}{(Item.View == MonitorView.Chart ? " " + Item.Symbol : "")}{(Item.Portrait ? " · portrait" : "")}\n[F] power  [V] view  [T] symbol" + (Spec.IsMonitor ? "  [P] rotate" : "");
                 return line + "\nSells for about $" + Belongings.ResaleValue(Item).ToString("N0", CultureInfo.InvariantCulture);
             }
         }

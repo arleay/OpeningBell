@@ -34,6 +34,8 @@ namespace OpeningBell.City
         private TextMesh _text;
         private Material _material;
         private Texture2D _texture;
+        /// <summary>The screen's size as built (landscape): a monitor's panel or a laptop's lid.</summary>
+        private Vector2 _size;
         private Color32[] _pixels;
         private float _next;
         private string _drawnKey;
@@ -48,6 +50,7 @@ namespace OpeningBell.City
             foreach (Transform t in GetComponentsInChildren<Transform>(true)) if (t.name == HomeModels.ScreenName) screen = t;
             if (screen == null) return;
             _screen = screen.GetComponent<Renderer>();
+            _size = new Vector2(screen.localScale.x, screen.localScale.y);
             // The display stays upright when the bezel turns for portrait.
             _display = Kit.Group(screen.parent.parent, "Display", screen.parent.localPosition);
             screen.SetParent(_display, true);
@@ -86,9 +89,7 @@ namespace OpeningBell.City
             if (_screen == null || _view == null || _view.Item == null) return;
             OwnedItem i = _view.Item;
             // Portrait: the screen area turns with the bezel.
-            HomeItem s = _view.Spec;
-            float pw = s.Width - 0.03f, ph = s.Height * 0.75f - 0.03f;
-            Vector2 size = i.Portrait ? new Vector2(ph, pw) : new Vector2(pw, ph);
+            Vector2 size = i.Portrait ? new Vector2(_size.y, _size.x) : _size;
             _screen.transform.localScale = new Vector3(size.x, size.y, 0.002f);
             _text.transform.localPosition = new Vector3(-size.x / 2f + 0.015f, size.y / 2f - 0.012f, -0.02f);
             _text.transform.localScale = Vector3.one * (Mathf.Min(size.x, size.y) / 0.36f);

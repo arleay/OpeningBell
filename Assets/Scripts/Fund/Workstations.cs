@@ -42,7 +42,7 @@ namespace OpeningBell.Fund
 
     /// <summary>
     /// Which desks in a property are complete workstations (FUND_SPEC §8): desk, a compatible chair in front of it, a
-    /// computer (a tower beside it or on it, or a laptop on it), at least one powered monitor on it, keyboard and mouse (unless a
+    /// computer (a tower beside it or on it, or a laptop on it), at least one powered screen on it (a monitor or the laptop's own), keyboard and mouse (unless a
     /// laptop), the office's power and network, and room to reach and sit. Distances are in the desk's own frame (its
     /// front faces -z, where the seat is).
     /// </summary>
@@ -142,7 +142,7 @@ namespace OpeningBell.Fund
             int n = 0;
             foreach (OwnedItem i in b.MountedOn(desk.Uid))
             {
-                if (i.Item?.IsMonitor == true && i.Power) n++;
+                if (i.Item?.HasScreen == true && i.Power) n++;
                 else if (i.Item?.IsArm == true) foreach (OwnedItem m in b.MountedOn(i.Uid)) if (m.Item?.IsMonitor == true && m.Power) n++;
             }
             return n;

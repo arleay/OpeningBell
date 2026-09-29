@@ -71,6 +71,11 @@ namespace OpeningBell.Tests
         public void Desks_TakeTheirSlots_ArmsAddMore_NeverOverSix()
         {
             var b = new Belongings();
+            // A laptop on a desk is a screen of its own (it shows charts, and the desk becomes somewhere to trade).
+            var lb = new Belongings();
+            OwnedItem work = lb.Add("desk_compact", 0, ItemState.Placed);
+            lb.Add("laptop", 0, ItemState.Placed).MountedOn = work.Uid;
+            Assert.AreEqual(1, lb.MonitorsOn(work), "a laptop counts as a screen");
             OwnedItem desk = b.Add("desk_compact", 0, ItemState.Placed);
             OwnedItem Monitor() => b.Add("mon_27", 0, ItemState.Placed);
             for (int i = 0; i < 2; i++)

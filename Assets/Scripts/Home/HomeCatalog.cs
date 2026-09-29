@@ -52,6 +52,10 @@ namespace OpeningBell.Home
 
         public bool IsDesk => MonitorSlots > 0;
         public bool IsMonitor => Inches > 0;
+        /// <summary>A laptop: a computer with its own screen, which shows what a monitor does (never on an arm).</summary>
+        public bool IsLaptop => Id == "laptop";
+        /// <summary>Anything with a live screen: monitors and laptops.</summary>
+        public bool HasScreen => IsMonitor || IsLaptop;
         public bool IsArm => Arms > 0;
         /// <summary>Anything big or heavy: carried slowly, and too bulky for a car's back seat.</summary>
         public bool Large => Math.Max(Width, Depth) > 1.2f || Width * Depth * Height > 0.4f;
