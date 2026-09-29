@@ -191,6 +191,8 @@ namespace OpeningBell.City
             new StreetDef("ALLEY", RoadClass.Alley, P(-140, -48), P(-45, -48)),
             new StreetDef("ALLEY", RoadClass.Alley, P(55, -49), P(135, -49)),
             new StreetDef("ALLEY", RoadClass.Alley, P(135, -49), P(215, -49)),
+            // Harborview's garage entrance: off Harbor Ave, across the sidewalk, to the top of the ramp (its lane is z 130.5-136).
+            new StreetDef("HARBORVIEW GARAGE", RoadClass.Alley, P(215, 133.25f), P(228.6f, 133.25f)),
             // Yard road through the Foundry, beside the rail line: trucks, the building supply, the mechanic's back lot.
             new StreetDef("YARD RD", RoadClass.Alley, P(-250, -80), P(-470, -80)),
             // Dirt: to the trailer park, up to the overlook, to the campsite, to the water tower.

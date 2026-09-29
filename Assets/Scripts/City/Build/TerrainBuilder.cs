@@ -194,7 +194,10 @@ namespace OpeningBell.City
             {
                 Vector2 p = drive.Points[i];
                 bool end = i == 0 || i == g.Length - 1;
-                g[i] = end && map.DistanceToStreet(p) < 1f ? map.StreetGrade(p) : TownTerrain.Natural(p.x, p.y);
+                g[i] = end && map.DistanceToStreet(p) < 1f ? map.StreetGrade(p)
+                    // Harborview's garage entrance meets the top of its ramp, at the lot's grade.
+                    : Landmarks.HarborviewLot.Contains(p) ? map.StreetGrade(Landmarks.HarborviewLot.center)
+                    : TownTerrain.Natural(p.x, p.y);
             }
             return g;
         }

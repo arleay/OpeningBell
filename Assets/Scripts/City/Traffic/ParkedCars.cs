@@ -109,8 +109,9 @@ namespace OpeningBell.City
         /// <summary>How likely a spot is taken at this hour.</summary>
         private static float Chance(ParkingKind kind, double hour) => kind switch
         {
-            ParkingKind.Commercial => hour >= 8 && hour < 20 ? 0.6f : hour >= 20 && hour < 23 ? 0.4f : 0.18f,
-            ParkingKind.Kerb => hour >= 8 && hour < 17 ? 0.28f : 0.45f,
+            // The kerbs about half as full as they were: busy enough to read as a town, with gaps to pull in and see past.
+            ParkingKind.Commercial => hour >= 8 && hour < 20 ? 0.32f : hour >= 20 && hour < 23 ? 0.22f : 0.1f,
+            ParkingKind.Kerb => hour >= 8 && hour < 17 ? 0.15f : 0.24f,
             _ => hour >= 7 && hour < 22 ? 0.65f : 0.12f,
         };
 
