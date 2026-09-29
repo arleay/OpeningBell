@@ -103,7 +103,8 @@ namespace OpeningBell.UI
             FundUi.Avatar(head, e.Person, 52f);
             var titles = Ui.Box("fund-titles", head);
             Ui.Label("fund-h2", titles, e.Name);
-            Ui.Label("fund-muted", titles, $"{e.Person.Seniority} · {Person.StrategyName(e.Person.Strategy)} · {Person.SectorName(e.Person.Specialty)}");
+            Ui.Label("fund-muted", titles, e.IsAdmin ? $"{HedgeFund.RoleName(e.Role)} · support staff · works from reception"
+                : $"{e.Person.Seniority} · {Person.StrategyName(e.Person.Strategy)} · {Person.SectorName(e.Person.Specialty)}");
             Ui.Box("spacer", head);
             var status = FundUi.Pill(head, "", "muted");
             status.name = "employee-status";
@@ -113,9 +114,13 @@ namespace OpeningBell.UI
                 FundUi.SetPill(status, text, kind);
             });
             var tabs = Ui.Box("fund-tabs", _root);
-            foreach (var (id, title) in new[] { ("overview", "Overview"), ("trading", "Trading"), ("skills", "Skills"), ("training", "Training"),
-                         ("contract", "Contract"), ("permissions", "Permissions"), ("history", "History") })
+            // Support staff don't trade: their card is the overview and their history.
+            var all = new[] { ("overview", "Overview"), ("trading", "Trading"), ("skills", "Skills"), ("training", "Training"),
+                ("contract", "Contract"), ("permissions", "Permissions"), ("history", "History") };
+            if (e.IsAdmin && _tab != "history") _tab = "overview";
+            foreach (var (id, title) in all)
             {
+                if (e.IsAdmin && id != "overview" && id != "history") continue;
                 string t = id;
                 _tabs[id] = Ui.Button(title, () => { _tab = t; Build(); }, "fund-tab", tabs, "emp-tab-" + id);
             }
@@ -147,12 +152,46 @@ namespace OpeningBell.UI
                 case "contract": ContractTab(); break;
                 case "permissions": Permissions(); break;
                 case "history": History(); break;
-                default: Overview(); break;
+                default:
+                    if (_e.IsAdmin) AdminOverview();
+                    else Overview();
+                    break;
             }
             Refresh();
         }
 
         // ------------------------------------------------------------------ overview
+
+        /// <summary>Support staff: where they are, what they do for the firm, their mood and pay, and for the office manager the cash check.</summary>
+        private void AdminOverview()
+        {
+            Employee e = _e;
+            var cols = Ui.Box("fund-cols", _body);
+            VisualElement now = FundUi.Card(cols, "Right now", "fund-grow");
+            Label activity = FundUi.Line(now, "Activity");
+            Label mood = FundUi.Line(now, "Satisfaction");
+            FundUi.Line(now, "Pay", e.Contract.Describe() + " (weekly payroll)");
+            var duty = Ui.Label("fund-muted fund-wrap", now, HedgeFund.RoleDuty(e.Role));
+            duty.style.marginTop = 8;
+            VisualElement money = FundUi.Card(cols, e.Role == Role.OfficeManager ? "Cash check" : "Front desk", "fund-side");
+            Label need = null, cash = null;
+            if (e.Role == Role.OfficeManager)
+            {
+                need = FundUi.Line(money, "Due by payday");
+                cash = FundUi.Line(money, "Operating cash");
+            }
+            else Ui.Label("fund-muted fund-wrap", money, "Traders feel the difference every day they're in, and new applications come through faster.");
+            _live.Add(() =>
+            {
+                Ui.SetText(activity, FundUi.Status(Fund, e).Text);
+                Ui.SetText(mood, $"{e.Satisfaction:0}/100" + (e.ResignationNotice > 0 ? $" · resigning in {e.ResignationNotice} days" : ""));
+                if (need == null) return;
+                decimal due = Fund.CashNeededByPayday(_game.Clock.Now, out DateTime payday);
+                Ui.SetText(need, $"{FundUi.Money(due)} by {payday:ddd}");
+                Ui.SetText(cash, FundUi.Money(Fund.Ledger.Cash));
+                cash.EnableInClassList("fund-down", Fund.Ledger.Cash < due);
+            });
+        }
 
         private void Overview()
         {

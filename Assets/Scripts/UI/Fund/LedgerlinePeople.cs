@@ -63,6 +63,23 @@ namespace OpeningBell.UI
             }
             if (Fund.Listings.Count == 0) Ui.Label("fund-muted", listings, "No listings yet.");
 
+            // Support staff: through an agency, the going rate, one of each; they work from the reception desk.
+            VisualElement support = FundUi.Card(_page, "Support staff");
+            Ui.Label("fund-muted fund-wrap", support, "Hired through an agency on the going hourly rate and starting the next business day. They don't trade and need no workstation: they work from the reception desk.");
+            foreach (Role role in new[] { Role.OfficeManager, Role.Receptionist })
+            {
+                Role r = role;
+                var row = Ui.Box("fund-course", support);
+                var text = Ui.Box("fund-course-text", row);
+                decimal hourly = HedgeFund.AdminHourly(r);
+                Ui.Label("fund-strong", text, $"{HedgeFund.RoleName(r)} · {FundUi.Money(hourly)}/h (about {FundUi.Money0(hourly * 40m)} a week)");
+                Ui.Label("fund-muted fund-wrap", text, HedgeFund.RoleDuty(r));
+                Employee holder = Fund.AdminOf(r);
+                if (holder != null) Ui.Label("fund-muted", row, holder.Activity == Activity.AwaitingStart ? $"{holder.Name} starts {new DateTime(holder.StartsOn):ddd MMM d}" : $"{holder.Name} is on the team");
+                else FundUi.Primary("HIRE", () => Act(Fund.HireAdmin(r), $"Hired a{(r == Role.OfficeManager ? "n" : "")} {HedgeFund.RoleName(r).ToLowerInvariant()}: they start next business day."),
+                    row, "hire-" + r.ToString().ToLowerInvariant());
+            }
+
             VisualElement apps = FundUi.Card(_page, "Applicants");
             var open = Fund.Applicants.Where(a => a.Status == ApplicantStatus.Open).OrderByDescending(a => a.Received).ToList();
             if (open.Count == 0) Ui.Label("fund-muted", apps, live > 0 ? "No applications yet: they arrive over the coming days." : "Post a job ad to receive applications.");
@@ -194,15 +211,20 @@ namespace OpeningBell.UI
             dots.clicked += () => Ui.Show(menu, menu.style.display == DisplayStyle.None);
             void Item(string text, Action act, string id) => Ui.Button(text, () => { Ui.Show(menu, false); act(); }, "fund-menu-item", menu, id + "-" + e.Id);
             Item("View profile", () => Browser.Navigate(Host + "/employee/" + e.Id), "mi-profile");
-            Item("Assign workstation", () => Act(Fund.AutoAssign(e), $"{e.Person.First} has a workstation."), "mi-assign");
-            Item("Adjust trading allocation", () => Browser.Navigate(Host + "/employee/" + e.Id + "/permissions"), "mi-capital");
-            Item("Start training", () => Browser.Navigate(Host + "/employee/" + e.Id + "/training"), "mi-training");
-            Item("Negotiate compensation", () => Browser.Navigate(Host + "/employee/" + e.Id + "/contract"), "mi-contract");
-            Item(e.Policy.Authorized ? "Pause trading" : "Resume trading", () =>
+            // Support staff don't trade: no workstation, capital, training or trading pause for them.
+            if (!e.IsAdmin)
             {
-                e.Policy.Authorized = !e.Policy.Authorized;
-                Act(null, e.Policy.Authorized ? $"{e.Person.First} may trade again." : $"{e.Person.First}'s trading is paused.");
-            }, "mi-pause");
+                Item("Assign workstation", () => Act(Fund.AutoAssign(e), $"{e.Person.First} has a workstation."), "mi-assign");
+                Item("Adjust trading allocation", () => Browser.Navigate(Host + "/employee/" + e.Id + "/permissions"), "mi-capital");
+                Item("Start training", () => Browser.Navigate(Host + "/employee/" + e.Id + "/training"), "mi-training");
+                Item("Negotiate compensation", () => Browser.Navigate(Host + "/employee/" + e.Id + "/contract"), "mi-contract");
+                Item(e.Policy.Authorized ? "Pause trading" : "Resume trading", () =>
+                {
+                    e.Policy.Authorized = !e.Policy.Authorized;
+                    Act(null, e.Policy.Authorized ? $"{e.Person.First} may trade again." : $"{e.Person.First}'s trading is paused.");
+                }, "mi-pause");
+            }
+            if (e.IsAdmin) collect.style.display = DisplayStyle.None;
             var letGo = Ui.Box("fund-menu-danger", menu);
             Label exit = Ui.Label("fund-note fund-wrap", letGo, "");
             FundUi.Armed("Let go…", $"Confirm: let {e.Name} go", () =>
@@ -216,7 +238,7 @@ namespace OpeningBell.UI
                 var (text, kind) = FundUi.Status(Fund, e);
                 if (e.Activity == Activity.WaitingForWorkstation) text += ": " + Fund.StationProblem(e);
                 FundUi.SetPill(status, text, kind);
-                Ui.SetText(desk, e.Desk == 0 ? "—" : "#" + e.Desk + (Fund.StationOf(e) == null ? " (incomplete)" : ""));
+                Ui.SetText(desk, e.IsAdmin ? "Reception" : e.Desk == 0 ? "—" : "#" + e.Desk + (Fund.StationOf(e) == null ? " (incomplete)" : ""));
                 Ui.SetText(capital, FundUi.Money0(e.Base));
                 FundUi.SetSigned(today, e.Today != null ? e.Today.Realized - e.Today.Fees + e.Unrealized : e.Unrealized);
                 decimal c = e.Collectible;

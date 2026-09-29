@@ -54,6 +54,9 @@ namespace OpeningBell.Fund
 
     public enum Strategy { Breakout, Reversion, TrendPullback, NewsMomentum, Scalping }
 
+    /// <summary>What someone was hired to do: trade, or support the office. Order is saved: append only.</summary>
+    public enum Role { Trader, OfficeManager, Receptionist }
+
     public enum SuitColour { Black, Charcoal, Navy, Grey }
 
     /// <summary>How an employee looks: which of the art library's suits, tints. Kept for life.</summary>

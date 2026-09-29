@@ -40,6 +40,7 @@ namespace OpeningBell.Fund
 
             foreach (Employee e in _employees) Tick(e, t, m);
 
+            if (m == 9 * 60 + 5 && _market.Schedule.IsTradingDay(t.Date)) AdminMorning(t);
             if (t.DayOfWeek == Config.PayDay && m == Config.PayMinute) Payroll(t);
             if (m == 17 * 60 + 30 && _market.Schedule.IsTradingDay(t.Date)) EndDay(t);
             if (WindingUp) TryFinishWindUp(t);
@@ -151,6 +152,7 @@ namespace OpeningBell.Fund
                 case Activity.Training:
                 case Activity.Preparing:
                 case Activity.RiskLocked:
+                case Activity.Admin:
                     e.Fatigue = Math.Min(1, e.Fatigue + 0.0021 * (1.35 - stamina));
                     break;
                 case Activity.OnBreak:
@@ -192,6 +194,8 @@ namespace OpeningBell.Fund
                 return Activity.OnBreak;
             }
             e.Break = BreakKind.None;
+            // Support staff work from the front desk: no workstation, no trading.
+            if (e.IsAdmin) return Activity.Admin;
             if (station == null) return Activity.WaitingForWorkstation;
             if (e.SettleUntil > t.Ticks) return Activity.SettlingIn;
 
@@ -208,7 +212,7 @@ namespace OpeningBell.Fund
             Activity was = e.Activity;
             e.Activity = a;
             e.ActivitySince = t.Ticks;
-            if (was == Activity.Arriving && (a == Activity.WaitingForWorkstation || a == Activity.Preparing || a == Activity.Training || a == Activity.Trading))
+            if (was == Activity.Arriving && (a == Activity.WaitingForWorkstation || a == Activity.Preparing || a == Activity.Training || a == Activity.Trading || a == Activity.Admin))
             {
                 Notify(NoticeLevel.Routine, "Traders arrived", $"{e.Name} is in the office.", e.Id, "arrived");
                 if (a == Activity.WaitingForWorkstation)
@@ -326,13 +330,14 @@ namespace OpeningBell.Fund
                 Notify(NoticeLevel.Urgent, "Network cut off", "The connectivity bill went unpaid, so the office is offline: nobody can trade until it's paid.");
             }
             int seats = 0;
-            foreach (Employee e in Staff) if (e.Activity != Activity.AwaitingStart) seats++;
+            foreach (Employee e in Staff) if (e.Activity != Activity.AwaitingStart && !e.IsAdmin) seats++; // support staff need no terminal
             if (seats > 0) Pay(t, CashKind.MarketData, ExpenseKind.MarketData, Config.MarketDataPerSeat * seats, $"{month} market data ({seats} seat{(seats == 1 ? "" : "s")})");
         }
 
         /// <summary>Weekly payroll: overdue first, then this week's wages and commissions. What can't be paid stays owed.</summary>
         private void Payroll(DateTime t)
         {
+            BeforePayroll(t);
             decimal paid = 0m, short_ = 0m;
             foreach (Employee e in _employees)
             {
@@ -456,9 +461,12 @@ namespace OpeningBell.Fund
         {
             Person p = e.Person;
             // Pay against what the market would pay them now.
-            decimal fair = Negotiation.Value(p, Negotiation.Asking(p, Reputation));
-            double ratio = fair <= 0m ? 1 : (double)(Negotiation.Value(p, e.Contract) / fair);
+            // Support staff are paid the going hourly rate for their job (traders against their trading market value).
+            decimal fair = e.IsAdmin ? AdminHourly(e.Role) : Negotiation.Value(p, Negotiation.Asking(p, Reputation));
+            decimal mine = e.IsAdmin ? e.Contract.Hourly : Negotiation.Value(p, e.Contract);
+            double ratio = fair <= 0m ? 1 : (double)(mine / fair);
             double ambition = p.Trait(Trait.Ambition) / 100.0;
+            if (!e.IsAdmin && Worked(Role.Receptionist, t)) e.Feel(t, "Friendly front desk", 0.5);
             if (ratio < 0.9) e.Feel(t, "Pay below market", -(0.9 - ratio) * 12 * (0.5 + ambition));
             else if (ratio > 1.1) e.Feel(t, "Well paid", Math.Min(1.2, (ratio - 1.1) * 6));
 

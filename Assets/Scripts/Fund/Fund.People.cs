@@ -86,6 +86,8 @@ namespace OpeningBell.Fund
             {
                 if (!l.Live(now)) continue;
                 double perDay = ChannelRate(l.Channel) * repBoost * (l.AnySector ? 1.0 : 0.7) * (l.AnyStrategy ? 1.0 : 0.75);
+                // A receptionist answering the phone and screening the post: applications come through faster.
+                if (Worked(Role.Receptionist, now)) perDay *= 1.25;
                 if (!_market.Schedule.IsTradingDay(now.Date)) perDay *= 0.4;
                 long hour = now.Ticks / TimeSpan.TicksPerHour;
                 if (!_rng.Sub("apply").Sub(l.Id).Chance(perDay / 12.0, hour)) continue;
@@ -181,7 +183,7 @@ namespace OpeningBell.Fund
 
         internal Person MakePerson(double level) => PeopleFactory.Make(_rng.Sub("people"), _nextPersonId++, level, null, null);
 
-        private void Hire(Applicant a, Contract contract, DateTime now)
+        private void Hire(Applicant a, Contract contract, DateTime now, Role role = Role.Trader)
         {
             a.Status = ApplicantStatus.Hired;
             Contract signed = contract.Copy();
@@ -193,6 +195,7 @@ namespace OpeningBell.Fund
                 HiredOn = now.Ticks,
                 StartsOn = Math.Max(a.AvailableFrom, NextWorkday(now.Date.AddDays(1)).Ticks),
                 Activity = Activity.AwaitingStart,
+                Role = role,
                 Satisfaction = 62 + 18 * a.Interest,
                 Policy = new RiskPolicy
                 {
@@ -202,8 +205,9 @@ namespace OpeningBell.Fund
             };
             Wire(e);
             _employees.Add(e);
-            a.Person.Note(now, $"Hired as {a.Person.Seniority.ToLowerInvariant()} on {signed.Describe()}");
-            Notify(NoticeLevel.Important, "New hire", $"{a.Person.Name} signed ({signed.Describe()}) and starts {new DateTime(e.StartsOn):ddd MMM d}. Give them a workstation and trading capital.", e.Id);
+            a.Person.Note(now, $"Hired as {Title(e).ToLowerInvariant()} on {signed.Describe()}");
+            Notify(NoticeLevel.Important, "New hire", $"{a.Person.Name} signed ({signed.Describe()}) and starts {new DateTime(e.StartsOn):ddd MMM d}. "
+                + (e.IsAdmin ? "They'll work from the reception desk." : "Give them a workstation and trading capital."), e.Id);
         }
 
         /// <summary>

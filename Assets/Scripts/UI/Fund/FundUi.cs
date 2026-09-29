@@ -163,6 +163,7 @@ namespace OpeningBell.UI
                 case Activity.Preparing: return (f.CurrentTrainingLabel(e) ?? "Preparing for the open", "info");
                 case Activity.WrappingUp: return ("End-of-day tasks", "info");
                 case Activity.SettlingIn: return ("Walking to their desk", "info");
+                case Activity.Admin: return ("At the front desk", "ok");
                 case Activity.Commuting: return ("Commuting", "muted");
                 case Activity.Arriving: return ("Arriving", "muted");
                 case Activity.Leaving: return (e.Former ? "Leaving the company" : "Leaving for the day", "muted");

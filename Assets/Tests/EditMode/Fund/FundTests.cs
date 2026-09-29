@@ -299,6 +299,30 @@ namespace OpeningBell.Tests
         }
 
         [Test]
+        public void SupportStaff_WorkTheFrontDesk_OneOfEach_AndNeverTrade()
+        {
+            var rig = new FundRig();
+            rig.Register();
+            Assert.IsNull(rig.Fund.HireAdmin(Role.Receptionist));
+            Assert.IsNotNull(rig.Fund.HireAdmin(Role.Receptionist), "one of each role");
+            Assert.IsNull(rig.Fund.HireAdmin(Role.OfficeManager));
+            Assert.IsNotNull(rig.Fund.HireAdmin(Role.Trader), "traders come through listings");
+            Employee r = rig.Fund.AdminOf(Role.Receptionist);
+            Assert.AreEqual(Activity.AwaitingStart, r.Activity);
+            Assert.AreEqual(HedgeFund.AdminHourly(Role.Receptionist), r.Contract.Hourly);
+
+            DateTime tuesday = Monday.AddDays(1);
+            rig.RunTo(tuesday.AddHours(10));
+            Assert.That(r.Activity, Is.EqualTo(Activity.Admin).Or.EqualTo(Activity.OnBreak), "no workstation needed: straight to the front desk");
+            Assert.Greater(r.WagesAccrued, 0m, "paid by the hour");
+            Assert.AreEqual(0, r.Trades.Count);
+            decimal need = rig.Fund.CashNeededByPayday(tuesday.AddHours(10), out DateTime payday);
+            Assert.AreEqual(DayOfWeek.Friday, payday.DayOfWeek);
+            Assert.Greater(need, r.WagesAccrued, "the rest of the week's wages count too");
+            rig.AssertBooksTie();
+        }
+
+        [Test]
         public void Payroll_PaysOnFriday_AndExpensesAreCountedOnce()
         {
             var rig = new FundRig();

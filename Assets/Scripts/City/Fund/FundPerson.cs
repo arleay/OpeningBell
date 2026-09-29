@@ -132,6 +132,7 @@ namespace OpeningBell.City
                 case Activity.Preparing: return "Preparing for the open";
                 case Activity.WaitingForWorkstation: return "Waiting: " + _w.Fund.StationProblem(_e);
                 case Activity.Training: return _w.Fund.CurrentTrainingLabel(_e);
+                case Activity.Admin: return OpeningBell.Fund.HedgeFund.RoleName(_e.Role) + " · at the front desk";
                 case Activity.OnBreak: return "On a break";
                 case Activity.RiskLocked: return "Daily loss limit reached";
                 case Activity.WrappingUp: return "Wrapping up the day";
@@ -228,7 +229,10 @@ namespace OpeningBell.City
                     return _phase == Phase.Away ? default : Exit();
                 case Activity.OnBreak:
                     return Break();
+                case Activity.Admin:
+                    return FrontDesk();
             }
+            if (_e.IsAdmin) return FrontDesk(); // arriving: straight to the front desk
             Spot seat = DeskSeat();
             return seat.Kind == Kind.Seat ? seat : Waiting();
         }
@@ -272,10 +276,24 @@ namespace OpeningBell.City
             };
         }
 
+        /// <summary>
+        /// Support staff behind the reception counter, facing the entrance: the receptionist left of centre, the office
+        /// manager right, at the keyboard mostly (now and then on the phone).
+        /// </summary>
+        private Spot FrontDesk()
+        {
+            float x = _e.Role == OpeningBell.Fund.Role.Receptionist ? -0.8f : 0.9f;
+            Vector3 at = Plan(new Vector2(x, 3.8f));
+            Vector3 face = Plan(new Vector2(x, 5.8f)) - at;
+            face.y = 0f;
+            float yaw = face.sqrMagnitude > 0.01f ? Quaternion.LookRotation(face).eulerAngles.y : 0f;
+            return Stand("frontdesk" + x, at, yaw, NpcPose.Typing);
+        }
+
         /// <summary>No desk to go to: a seat in reception if there's a bench free, else a marked spot to stand.</summary>
         private Spot Waiting()
         {
-            int rank = Rank(e => e.Activity != Activity.OnBreak && e.Activity != Activity.Leaving && !e.Former && e.Activity > Activity.Commuting && !HasSeat(e));
+            int rank = Rank(e => e.Activity != Activity.OnBreak && e.Activity != Activity.Leaving && !e.Former && e.Activity > Activity.Commuting && !e.IsAdmin && !HasSeat(e));
             int k = 0;
             foreach (OwnedItem i in _w.Home.Belongings.Items)
             {
@@ -413,7 +431,12 @@ namespace OpeningBell.City
                     HarborviewTower.ResidentsLift?.Request(HarborviewTower.StopOffice);
                     break;
                 default:
-                    _phase = Phase.AtSpot;
+                    // Slide the last bit onto the spot (behind a counter the mesh may stop short of it).
+                    _phase = Phase.Settling;
+                    _settle = 0f;
+                    StopAgent();
+                    _settleFrom = transform.position;
+                    _settleRotFrom = transform.rotation;
                     break;
             }
         }
@@ -425,7 +448,7 @@ namespace OpeningBell.City
             float k = Mathf.SmoothStep(0f, 1f, _settle);
             transform.position = Vector3.Lerp(_settleFrom, _target.Pos, k);
             transform.rotation = Quaternion.Slerp(_settleRotFrom, Quaternion.Euler(0f, _target.Yaw, 0f), k);
-            _body.Animate(_settle > 0.5f ? NpcPose.Sit : NpcPose.Walk, Time.time, 0.4f);
+            _body.Animate(_settle > 0.5f && _target.Kind == Kind.Seat ? NpcPose.Sit : _settle > 0.5f ? _target.Pose : NpcPose.Walk, Time.time, 0.4f);
             if (_settle >= 1f) _phase = Phase.AtSpot;
         }
 

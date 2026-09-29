@@ -103,6 +103,7 @@ namespace OpeningBell.Fund
         public string LeftReason, LockReason;
         public string Base, NetRealized, HighWater, CommissionAccrued, WagesAccrued, WagesOverdue, CommissionOverdue;
         public string Collected, WagesPaid, CommissionPaid, DayStartEquity;
+        public int Role;
         public int Desk, Activity, Break, ConsecutiveLosses, ConsecutiveWins, ResignationNotice, TradesToday;
         public bool LockedToday, RaiseRequested, Flattened, FrequencyNoted, GreedNoted, ImpulseNoted;
         public long LastEntry;
@@ -280,6 +281,7 @@ namespace OpeningBell.Fund
                     MaxRisk = S(e.Policy.MaxRiskPerTrade), MaxDailyLoss = S(e.Policy.MaxDailyLoss), Instruments = new List<string>(e.Policy.Instruments),
                     Authorized = e.Policy.Authorized, PreferQuality = e.Policy.PreferQuality,
                 },
+                Role = (int)e.Role,
                 HiredOn = e.HiredOn, StartsOn = e.StartsOn, LeftOn = e.LeftOn, LeftReason = e.LeftReason, ActivitySince = e.ActivitySince, MentorOf = e.MentorOf,
                 LockReason = e.LockReason, Base = S(e.Base), NetRealized = S(e.NetRealized), HighWater = S(e.HighWater),
                 CommissionAccrued = S(e.CommissionAccrued), WagesAccrued = S(e.WagesAccrued), WagesOverdue = S(e.WagesOverdue), CommissionOverdue = S(e.CommissionOverdue),
@@ -330,6 +332,7 @@ namespace OpeningBell.Fund
                     MaxRiskPerTrade = D(s.Policy.MaxRisk), MaxDailyLoss = D(s.Policy.MaxDailyLoss), Instruments = s.Policy.Instruments ?? new List<string>(),
                     Authorized = s.Policy.Authorized, PreferQuality = s.Policy.PreferQuality,
                 },
+                Role = (Role)s.Role,
                 HiredOn = s.HiredOn, StartsOn = s.StartsOn, LeftOn = s.LeftOn, LeftReason = s.LeftReason ?? "", ActivitySince = s.ActivitySince, MentorOf = s.MentorOf,
                 LockReason = s.LockReason ?? "", Base = D(s.Base), NetRealized = D(s.NetRealized), HighWater = D(s.HighWater),
                 CommissionAccrued = D(s.CommissionAccrued), WagesAccrued = D(s.WagesAccrued), WagesOverdue = D(s.WagesOverdue), CommissionOverdue = D(s.CommissionOverdue),

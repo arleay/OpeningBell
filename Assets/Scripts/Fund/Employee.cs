@@ -23,6 +23,8 @@ namespace OpeningBell.Fund
         Former,
         /// <summary>Walking from wherever they were to a newly assigned desk.</summary>
         SettlingIn,
+        /// <summary>Support staff at work at the front desk (the office manager and the receptionist).</summary>
+        Admin,
     }
 
     public enum BreakKind { None, Coffee, Restroom, Lunch, Chat, Rest }
@@ -142,6 +144,9 @@ namespace OpeningBell.Fund
     {
         public Person Person;
         public Contract Contract;
+        /// <summary>Trader, or support staff (who don't trade, need no workstation and work from reception).</summary>
+        public Role Role;
+        public bool IsAdmin => Role != Role.Trader;
         public RiskPolicy Policy = new RiskPolicy();
         public long HiredOn, StartsOn, LeftOn;
         public string LeftReason = "";
