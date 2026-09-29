@@ -198,13 +198,13 @@ namespace OpeningBell.City
             c.SwingDoor(p, "Meeting room", V(-7f, 0f, 4.5f), 1f, 2.4f, m.Glass, 270f, glass: true);
             k.Span(p, "Meeting screen", V(-13.9f, 1.1f, 6.2f), V(-13.84f, 2.3f, 8.8f), m.Dark, collider: false);
             k.Span(p, "Whiteboard", V(-12.8f, 1f, HD - 0.18f), V(-9f, 2.2f, HD - 0.15f), m.White, collider: false);
-            k.Text(p, "MEETING / TRAINING", V(-6.97f, 2.55f, 5f), 270f, 0.07f, new Color(0.3f, 0.3f, 0.32f));
+            DoorSign(c, p, "MEETING / TRAINING", V(-6.97f, 2.55f, 5f), 270f, 0.07f);
 
             // Private office (north-east) for the owner.
             k.WallZ(p, "Office glass", 3.5f, HD, 7f, 0f, Ceiling, 0.03f, m.Glass, Opening.Door(5f, 1f, 0f, 2.4f));
             k.WallX(p, "Office glass", 7f, HW, 3.5f, 0f, Ceiling, 0.03f, m.Glass);
             c.SwingDoor(p, "Private office", V(7f, 0f, 5.5f), 1f, 2.4f, m.Glass, 90f, glass: true);
-            k.Text(p, "PRINCIPAL", V(6.97f, 2.55f, 5f), 90f, 0.07f, new Color(0.3f, 0.3f, 0.32f));
+            DoorSign(c, p, "PRINCIPAL", V(6.97f, 2.55f, 5f), 90f, 0.07f);
 
             // Restrooms: two single rooms north-east of the lobby.
             k.WallX(p, "Restroom wall", 3f, 7f, 8f, 0f, Ceiling, 0.15f, m.Plaster, Opening.Door(4f, 0.9f), Opening.Door(6f, 0.9f));
@@ -217,7 +217,7 @@ namespace OpeningBell.City
                 k.Span(p, "Basin", V(x + 0.45f, 0.8f, 9f), V(x + 0.85f, 0.9f, 9.5f), m.White);
                 k.Span(p, "Mirror", V(x + 0.9f, 1.15f, 8.9f), V(x + 0.93f, 1.95f, 9.6f), m.White, collider: false);
                 c.PointLight(p, V(x, 3.2f, 10f), 4f, 0.5f, new Color(1f, 0.97f, 0.92f));
-                k.Text(p, "RESTROOM", V(x, 2.3f, 7.91f), 0f, 0.06f, new Color(0.3f, 0.3f, 0.32f));
+                DoorSign(c, p, "RESTROOM", V(x, 2.3f, 7.91f), 0f, 0.06f, person: true);
             }
 
             // Storage and data room north-west of the lobby: shelving and the comms rack that feeds the floor boxes.
@@ -228,8 +228,32 @@ namespace OpeningBell.City
             k.Span(p, "Comms rack", V(-4.3f, 0f, 10.8f), V(-3.3f, 2f, 11.7f), m.Dark);
             for (int i = 0; i < 6; i++)
                 k.Box(p, "Rack light", V(-3.8f, 0.4f + i * 0.28f, 10.78f), V(0.5f, 0.02f, 0.01f), c.P.Glow(new Color(0.3f, 0.9f, 0.5f), 1.5f), collider: false);
-            k.Text(p, "STORAGE / DATA", V(-5f, 2.3f, 7.91f), 0f, 0.06f, new Color(0.3f, 0.3f, 0.32f));
+            DoorSign(c, p, "STORAGE / DATA", V(-5f, 2.3f, 7.91f), 0f, 0.06f);
             c.PointLight(p, V(-5f, 3.2f, 10f), 5f, 0.5f, new Color(0.95f, 0.97f, 1f));
+        }
+
+        /// <summary>
+        /// A door sign to match the lift signs: a brushed-steel frame standing off the wall, a dark blue face and white
+        /// letters, with the restrooms' person pictogram beside the word. <paramref name="at"/> is the letters' centre
+        /// just off the wall; the sign faces its reader (local -z after <paramref name="yaw"/>).
+        /// </summary>
+        private static void DoorSign(CityContext c, Transform p, string text, Vector3 at, float yaw, float size, bool person = false)
+        {
+            Kit k = c.Kit;
+            Transform s = Kit.Group(p, text + " sign", at, yaw);
+            float icon = person ? size * 1.6f : 0f;
+            float w = text.Length * size * 0.72f + icon + size * 1.6f, h = size * 2.6f;
+            k.Box(s, "Frame", new Vector3(0f, 0f, 0.014f), new Vector3(w, h, 0.012f), c.P.Lit(new Color(0.72f, 0.73f, 0.75f), 0.8f), collider: false);
+            k.Box(s, "Face", new Vector3(0f, 0f, 0.006f), new Vector3(w - 0.02f, h - 0.02f, 0.006f), c.P.Lit(new Color(0.07f, 0.13f, 0.27f), 0.45f), collider: false);
+            k.Text(s, text, new Vector3(icon / 2f, 0f, 0.001f), 0f, size, Color.white);
+            if (!person) return;
+            // The standard WC figure: a round head over a body with arms and legs, in white.
+            Material white = c.P.Lit(Color.white, 0.3f);
+            float x = -w / 2f + size * 1.3f;
+            k.Cylinder(s, "Head", new Vector3(x, size * 0.72f, 0.001f), size * 0.36f, 0.004f, white).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            k.Box(s, "Body", new Vector3(x, size * 0.12f, 0.001f), new Vector3(size * 0.5f, size * 0.72f, 0.004f), white, collider: false);
+            foreach (float side in new[] { -1f, 1f })
+                k.Box(s, "Leg", new Vector3(x + side * size * 0.13f, -size * 0.62f, 0.001f), new Vector3(size * 0.18f, size * 0.8f, 0.004f), white, collider: false);
         }
 
         /// <summary>The coffee point: a built-in counter with a sink along the meeting room's back (the machine is bought).</summary>
@@ -242,7 +266,7 @@ namespace OpeningBell.City
             k.Box(p, "Tap", V(-12.85f, 1.1f, 3.38f), V(0.04f, 0.3f, 0.04f), m.Steel, collider: false);
             k.Span(p, "Upper cabinets", V(-13.8f, 1.6f, 3.1f), V(-9.4f, 2.4f, 3.45f), m.Dark, collider: false);
             k.Span(p, "Under light", V(-13.8f, 1.58f, 3.1f), V(-9.4f, 1.6f, 3.4f), m.Glow, collider: false);
-            k.Text(p, "COFFEE", V(-11.6f, 2.55f, 3.47f), 0f, 0.07f, new Color(0.3f, 0.3f, 0.32f));
+            DoorSign(c, p, "COFFEE", V(-11.6f, 2.55f, 3.47f), 0f, 0.07f);
             c.PointLight(p, V(-11.5f, 3.2f, 0.5f), 7f, 0.7f, new Color(1f, 0.93f, 0.84f));
         }
 
