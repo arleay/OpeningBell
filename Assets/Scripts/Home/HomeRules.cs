@@ -244,6 +244,7 @@ namespace OpeningBell.Home
         public BelongingsSaveData Belongings = new BelongingsSaveData();
         public RentalSaveData Rental = new RentalSaveData();
         public CartSaveData Cart = new CartSaveData();
+        public ShopSaveData Shop = new ShopSaveData();
         public EstateSaveData Estate = new EstateSaveData();
     }
 }

@@ -267,7 +267,7 @@ namespace OpeningBell.City
         /// <summary>Everything waiting at the store goes on the van. An error, or null.</summary>
         public string BookDelivery()
         {
-            var waiting = Belongings.In(ItemState.AtPickup);
+            var waiting = Belongings.AtCounter();
             if (waiting.Count == 0) return "Nothing's waiting to be delivered.";
             HomeSpec home = MainHome, office = OfficeHeld ? Find(OpeningBell.Fund.HedgeFund.OfficeId) : null;
             // Company purchases go to the office on the company's account; the rest home on yours.
@@ -293,7 +293,7 @@ namespace OpeningBell.City
         {
             get
             {
-                var waiting = Belongings.In(ItemState.AtPickup);
+                var waiting = Belongings.AtCounter();
                 bool company = OfficeHeld && waiting.Exists(i => i.Owner == "fund");
                 bool personal = waiting.Exists(i => i.Owner != "fund") || !OfficeHeld;
                 return company && personal ? $"{MainHome.Name} and Level 26" : company ? "Level 26" : MainHome.Name;
@@ -306,7 +306,8 @@ namespace OpeningBell.City
             int row = 0;
             foreach (OwnedItem i in Belongings.Items)
             {
-                if (i.State != ItemState.Delivering || now.Ticks < i.DeliverAt) continue;
+                // Online orders come on their own truck (ShopDeliveries).
+                if (i.State != ItemState.Delivering || i.Order != 0 || now.Ticks < i.DeliverAt) continue;
                 HomeSpec home = Find(i.Property) ?? MainHome;
                 // Stacked just inside the front door, in rows.
                 Vector3 spot = home.Root.TransformPoint(home.DoorLocal + new Vector3((row % 3 - 1) * 1.1f, 0f, 1.6f + row / 3 * 1.2f));
@@ -320,7 +321,7 @@ namespace OpeningBell.City
             Say($"Your delivery is in: {row} item{(row == 1 ? "" : "s")} inside the front door.");
         }
 
-        private static float GroundAt(Vector3 p) =>
+        internal static float GroundAt(Vector3 p) =>
             Physics.Raycast(p + Vector3.up * 1.5f, Vector3.down, out RaycastHit hit, 4f, ~0, QueryTriggerInteraction.Ignore) ? hit.point.y : p.y;
 
         private void Reminders()

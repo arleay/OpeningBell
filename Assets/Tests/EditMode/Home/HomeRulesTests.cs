@@ -220,5 +220,42 @@ namespace OpeningBell.Tests
             c2.Return();
             Assert.IsFalse(c2.Out, "sent back: the next use is paid again");
         }
+
+        [Test]
+        public void Shop_CartCheckoutAndDeliveryTimes()
+        {
+            var shop = new HomeShop();
+            var b = new Belongings();
+            var now = new DateTime(2026, 3, 2, 14, 0, 0);
+            shop.Add(HomeStore.Tech, "mon_27", 0, 2);
+            shop.Add(HomeStore.Tech, "mon_27", 0);
+            shop.Add(HomeStore.Tech, "sofa_mid", 0);
+            Assert.AreEqual(3, shop.CartCount(HomeStore.Tech), "same item merges; furniture stays out of the tech cart");
+
+            // Half an hour for one thing, never over an hour however much or with the move-in.
+            Assert.AreEqual(30, HomeShop.DeliveryMinutes(1, false));
+            Assert.AreEqual(60, HomeShop.DeliveryMinutes(40, true));
+            ShopQuote q = HomeShop.Quote(shop.Cart(HomeStore.Tech), Fulfilment.Delivery, true, now);
+            Assert.AreEqual(3 * 329m, q.Goods);
+            Assert.AreEqual(HomeShop.DeliveryFee + HomeShop.ServiceFee(3), q.Delivery + q.Service);
+            Assert.That((q.Due - now).TotalMinutes, Is.InRange(30, 60));
+
+            decimal paid = 0m;
+            var (order, error) = shop.Place(HomeStore.Tech, shop.Cart(HomeStore.Tech), Fulfilment.Delivery, "penthouse", "Harborview", true, now, b,
+                (amount, _) => { paid = amount; return null; });
+            Assert.IsNull(error);
+            Assert.AreEqual(q.Total, paid);
+            Assert.AreEqual(3, b.Items.Count(i => i.Order == order.Id && i.State == ItemState.Delivering && i.Property == "penthouse"));
+            Assert.AreEqual(0, b.AtCounter().Count, "online goods never wait at the till's counter");
+
+            var (pickup, _) = shop.Place(HomeStore.Furniture, new[] { new CartLine { ItemId = "sofa_mid", Qty = 1 } }, Fulfilment.Pickup, "", "", true, now, b, (_, __) => null);
+            Assert.AreEqual(0m, pickup.DeliveryFee + pickup.ServiceFee, "pickup is free; no move-in without delivery");
+            Assert.AreEqual(2, pickup.Items.Count, "furniture picked up comes with a moving box");
+            Assert.AreEqual(now.AddMinutes(HomeShop.PickupMinutes).Ticks, pickup.Due);
+
+            var (none, declined) = shop.Place(HomeStore.Tech, new[] { new CartLine { ItemId = "mouse" } }, Fulfilment.Pickup, "", "", false, now, b, (_, __) => "Insufficient funds.");
+            Assert.IsNull(none);
+            Assert.AreEqual("Insufficient funds.", declined);
+        }
     }
 }

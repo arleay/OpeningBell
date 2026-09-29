@@ -84,6 +84,15 @@ namespace OpeningBell
         public global::OpeningBell.Home.Belongings Belongings { get; } = new global::OpeningBell.Home.Belongings();
         public global::OpeningBell.Home.Rental Rental { get; } = new global::OpeningBell.Home.Rental();
         public global::OpeningBell.Home.MovingCart Cart { get; } = new global::OpeningBell.Home.MovingCart();
+        /// <summary>Timberline Home's and Circuit Stop's online stores: carts and orders.</summary>
+        public global::OpeningBell.Home.HomeShop Shop { get; } = new global::OpeningBell.Home.HomeShop();
+        /// <summary>Homes an online order can be delivered to (id, name), filled in by the city; empty without it.</summary>
+        public Func<IReadOnlyList<(string Id, string Name)>> ShopDestinations { get; set; }
+        /// <summary>
+        /// A picture of a product (item id, colour), rendered by the city on request and handed to the callback
+        /// (possibly a frame or two later); never called back without the city.
+        /// </summary>
+        public Action<string, int, Action<Texture2D>> ProductPreview { get; set; }
         public global::OpeningBell.Home.Estate Estate { get; } = new global::OpeningBell.Home.Estate();
         /// <summary>What the player has found on the map (the city's discovery fills it; saved with the game).</summary>
         public HashSet<string> Discovered { get; } = new HashSet<string>(StringComparer.Ordinal);
@@ -209,6 +218,7 @@ namespace OpeningBell
                     Belongings.RestoreState(save.Home.Belongings);
                     Rental.RestoreState(save.Home.Rental);
                     Cart.RestoreState(save.Home.Cart);
+                    Shop.RestoreState(save.Home.Shop);
                     Estate.RestoreState(save.Home.Estate);
                 }
                 if (save.HasFund && save.Fund != null) Fund.RestoreState(save.Fund);
@@ -253,7 +263,7 @@ namespace OpeningBell
                 HasHome = true,
                 Home = new global::OpeningBell.Home.HomeSaveData
                 {
-                    Belongings = Belongings.CaptureState(), Rental = Rental.CaptureState(), Cart = Cart.CaptureState(), Estate = Estate.CaptureState(),
+                    Belongings = Belongings.CaptureState(), Rental = Rental.CaptureState(), Cart = Cart.CaptureState(), Shop = Shop.CaptureState(), Estate = Estate.CaptureState(),
                 },
             };
             if (player != null)

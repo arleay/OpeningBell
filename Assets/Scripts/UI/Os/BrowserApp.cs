@@ -77,6 +77,12 @@ namespace OpeningBell.UI
                 Keywords = "store shop buy equipment chair monitor computer desk services lease office classifieds used cars car",
                 Glyph = GlyphKind.Store,
                 Page = new SiteFrame(this, "site-market", GlyphKind.Store, "Valley Market", "Equipment, services and local classifieds", store, scroll: true) });
+            AddSite(new Site { Host = ShopSite.FurnitureHost, Id = "timberline", Bookmark = "Timberline Home", Title = "Timberline Home · Furniture for every room",
+                Keywords = "furniture sofa bed desk chair table lamp home delivery timberline order online",
+                Glyph = GlyphKind.Store, Page = new ShopSite(this, OpeningBell.Home.HomeStore.Furniture) });
+            AddSite(new Site { Host = ShopSite.TechHost, Id = "circuitstop", Bookmark = "Circuit Stop", Title = "Circuit Stop · Monitors, computers and desk tech",
+                Keywords = "tech monitor computer pc laptop keyboard mouse arm speakers circuit stop order online delivery",
+                Glyph = GlyphKind.Store, Page = new ShopSite(this, OpeningBell.Home.HomeStore.Tech) });
             AddSite(new Site { Host = TickerSite.Host, Id = "tickerpage", Bookmark = "Tickerpage", Title = "Tickerpage · Stock quotes and market data",
                 Keywords = "stocks stock quotes quote market markets ticker prices shares data movers",
                 Glyph = GlyphKind.Chart, Page = new TickerSite(this) });
@@ -381,6 +387,8 @@ namespace OpeningBell.UI
         {
             "kvcu.com" => "Check your balance, move money to and from your brokerage, and see upcoming bills.",
             "valleymarket.com" => "Desk equipment, services and office leases, plus used cars from private sellers.",
+            ShopSite.FurnitureHost => "Sofas, beds, desks and chairs. Order online: pick up in 20 minutes or delivered in under an hour.",
+            ShopSite.TechHost => "Monitors, arms, laptops and PCs. Order online: pick up in 20 minutes or delivered in under an hour.",
             TickerSite.Host => "Live quotes, today's movers, company data and the latest headlines for every listed stock.",
             "ridgebackfunding.com" => "Trading Challenge from $49/mo. Hit the target, get an Express Funded account, keep 90% of payouts.",
             "profitharbor.com" => "Tests from $150/mo. Pass, go PRO and withdraw daily once you've built your buffer. 80/20 split.",

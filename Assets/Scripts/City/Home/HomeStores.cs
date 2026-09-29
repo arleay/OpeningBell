@@ -28,6 +28,23 @@ namespace OpeningBell.City
         /// <summary>Bays where collected items are set out.</summary>
         public static Vector3 PickupSlot(int i) => new Vector3(-330f + (i % 6) * 3f, 0f, 36f + (i / 6) * 3.2f);
 
+        /// <summary>Sets things out in the pickup bays behind the stores, each in the next empty one.</summary>
+        public static void SetOut(HomeWorld w, IEnumerable<OwnedItem> items)
+        {
+            int slot = 0;
+            Physics.SyncTransforms();
+            foreach (OwnedItem i in items)
+            {
+                Vector3 at;
+                do at = PickupSlot(slot++);
+                while (slot < 60 && Physics.CheckBox(at + Vector3.up * 0.6f, new Vector3(1.1f, 0.5f, 1.2f), Quaternion.identity, ~0, QueryTriggerInteraction.Ignore));
+                i.State = ItemState.Placed;
+                i.Property = "yard";
+                i.X = at.x; i.Y = at.y; i.Z = at.z; i.Yaw = 0f;
+            }
+            w.Belongings.Touch();
+        }
+
         public static void AddPads(CityContext c) =>
             c.Pads.Add(Pad.FromRect(Rect.MinMaxRect(-351f, -5.5f, -259f, 61.5f), 0f));
 
@@ -350,7 +367,7 @@ namespace OpeningBell.City
             _desk = desk;
         }
 
-        private int Waiting => _w.Belongings.Count(ItemState.AtPickup);
+        private int Waiting => _w.Belongings.AtCounter().Count;
 
         public override string Prompt => Waiting == 0 ? "Home delivery (nothing waiting)" : $"Deliver {Waiting} item{(Waiting == 1 ? "" : "s")} to {_w.DeliveryTarget} · {HomeWorld.Dollars(HomeWorld.DeliveryFee)}";
 
@@ -376,26 +393,14 @@ namespace OpeningBell.City
             _desk = desk;
         }
 
-        private int Waiting => _w.Belongings.Count(ItemState.AtPickup);
+        private int Waiting => _w.Belongings.AtCounter().Count;
         public override string Prompt => Waiting == 0 ? "Pickup (nothing waiting)" : $"Collect {Waiting} item{(Waiting == 1 ? "" : "s")}";
 
         public override void Interact()
         {
             if (Waiting == 0) { _w.Say("Nothing waiting for you."); return; }
             if (!_desk.Open) { _w.Say("The pickup window's shut. " + _desk.Hours.Describe()); return; }
-            int slot = 0;
-            foreach (OwnedItem i in _w.Belongings.Items)
-            {
-                if (i.State != ItemState.AtPickup) continue;
-                // The next empty bay.
-                Vector3 at;
-                do at = HomeStores.PickupSlot(slot++);
-                while (slot < 60 && Physics.CheckBox(at + Vector3.up * 0.6f, new Vector3(1.1f, 0.5f, 1.2f), Quaternion.identity, ~0, QueryTriggerInteraction.Ignore));
-                i.State = ItemState.Placed;
-                i.Property = "yard";
-                i.X = at.x; i.Y = at.y; i.Z = at.z; i.Yaw = 0f;
-            }
-            _w.Belongings.Touch();
+            HomeStores.SetOut(_w, _w.Belongings.AtCounter());
             _w.Say("It's out in the pickup bays. Load up!");
         }
     }

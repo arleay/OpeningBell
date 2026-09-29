@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 namespace OpeningBell.City
 {
     /// <summary>The phone's apps (home screen order).</summary>
-    public enum PhoneAppId { Home, Messages, Calls, Maps, PennyBridge, News, Garage }
+    public enum PhoneAppId { Home, Messages, Calls, Maps, PennyBridge, News, Garage, Timberline, CircuitStop }
 
     /// <summary>
     /// Look and building blocks for the phone: dark-mode system colours, rounded glass panels, text, and the app
@@ -138,6 +138,8 @@ namespace OpeningBell.City
             PhoneAppId.PennyBridge => "PennyBridge",
             PhoneAppId.News => "News",
             PhoneAppId.Garage => "My Cars",
+            PhoneAppId.Timberline => "Timberline",
+            PhoneAppId.CircuitStop => "Circuit Stop",
             _ => "",
         };
 
@@ -157,6 +159,8 @@ namespace OpeningBell.City
                 PhoneAppId.PennyBridge => (new Color(0.1f, 0.22f, 0.4f), BrokerNavy),
                 PhoneAppId.News => (new Color(1f, 0.33f, 0.38f), new Color(0.93f, 0.16f, 0.25f)),
                 PhoneAppId.Garage => (new Color(0.35f, 0.62f, 1f), new Color(0.12f, 0.38f, 0.9f)),
+                PhoneAppId.Timberline => (new Color(0.3f, 0.55f, 0.38f), new Color(0.16f, 0.36f, 0.24f)),
+                PhoneAppId.CircuitStop => (new Color(0.3f, 0.52f, 0.92f), new Color(0.12f, 0.3f, 0.66f)),
                 _ => (Color.gray, Color.gray),
             };
             tile.generateVisualContent += ctx => Paint(ctx.painter2D, app, size, top, bottom);
@@ -315,6 +319,43 @@ namespace OpeningBell.City
                         p.Arc(new Vector2(x * u, 41f * u), 2.4f * u, Angle.Degrees(0f), Angle.Degrees(360f));
                         p.Fill();
                     }
+                    break;
+                case PhoneAppId.Timberline:
+                    // A sofa: back, seat, arms.
+                    p.fillColor = Color.white;
+                    foreach (Rect r in new[] { new Rect(16f, 20f, 28f, 12f), new Rect(14f, 30f, 32f, 9f), new Rect(10f, 26f, 7f, 16f), new Rect(43f, 26f, 7f, 16f),
+                                 new Rect(13f, 42f, 3f, 4f), new Rect(44f, 42f, 3f, 4f) })
+                    {
+                        p.BeginPath();
+                        p.MoveTo(new Vector2(r.xMin * u, r.yMin * u));
+                        p.LineTo(new Vector2(r.xMax * u, r.yMin * u));
+                        p.LineTo(new Vector2(r.xMax * u, r.yMax * u));
+                        p.LineTo(new Vector2(r.xMin * u, r.yMax * u));
+                        p.ClosePath();
+                        p.Fill();
+                    }
+                    break;
+                case PhoneAppId.CircuitStop:
+                    // A monitor on its stand.
+                    p.fillColor = Color.white;
+                    foreach (Rect r in new[] { new Rect(11f, 14f, 38f, 25f), new Rect(28f, 39f, 4f, 6f), new Rect(21f, 45f, 18f, 3f) })
+                    {
+                        p.BeginPath();
+                        p.MoveTo(new Vector2(r.xMin * u, r.yMin * u));
+                        p.LineTo(new Vector2(r.xMax * u, r.yMin * u));
+                        p.LineTo(new Vector2(r.xMax * u, r.yMax * u));
+                        p.LineTo(new Vector2(r.xMin * u, r.yMax * u));
+                        p.ClosePath();
+                        p.Fill();
+                    }
+                    p.fillColor = new Color(0.12f, 0.3f, 0.66f);
+                    p.BeginPath();
+                    p.MoveTo(new Vector2(14f * u, 17f * u));
+                    p.LineTo(new Vector2(46f * u, 17f * u));
+                    p.LineTo(new Vector2(46f * u, 36f * u));
+                    p.LineTo(new Vector2(14f * u, 36f * u));
+                    p.ClosePath();
+                    p.Fill();
                     break;
             }
         }

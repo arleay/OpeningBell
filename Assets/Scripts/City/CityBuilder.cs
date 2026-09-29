@@ -114,6 +114,8 @@ namespace OpeningBell.City
             HomeStores.Build(_c, Home);
             HomeSales.Build(_c, Home);
             FundWorld.Build(_c, Home);
+            ShopDeliveries.Build(_c, Home);
+            ProductPreviews.Build(_c);
             RegisterPlaces();
 
             // Places (doors, benches) are registered by the builders above; the street pass adds benches too,

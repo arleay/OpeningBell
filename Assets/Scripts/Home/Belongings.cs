@@ -55,6 +55,8 @@ namespace OpeningBell.Home
         /// <summary>A box: where its flaps were last closed ("yard", a home id, "" if elsewhere). Set down in a
         /// different home, [E] opens it rather than picking it up.</summary>
         public string ClosedAt = "";
+        /// <summary>The online order it came in (0: bought at the till): the order's truck or pickup handles it.</summary>
+        public int Order;
         /// <summary>Who paid: "" the player, "fund" the company (its card; sale proceeds go back to it).</summary>
         public string Owner = "";
 
@@ -89,6 +91,8 @@ namespace OpeningBell.Home
         public OwnedItem Get(int uid) => _items.Find(i => i.Uid == uid);
         public List<OwnedItem> In(ItemState state) => _items.FindAll(i => i.State == state);
         public int Count(ItemState state) => _items.FindAll(i => i.State == state).Count;
+        /// <summary>Bought at the till and waiting at the pickup counter (online orders set themselves out when ready).</summary>
+        public List<OwnedItem> AtCounter() => _items.FindAll(i => i.State == ItemState.AtPickup && i.Order == 0);
 
         public OwnedItem Add(string itemId, int variant, ItemState state)
         {

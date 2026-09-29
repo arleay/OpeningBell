@@ -216,6 +216,8 @@ namespace OpeningBell.City
             Add(new PennyBridgeApp(this));
             Add(new NewsApp(this));
             Add(new GarageApp(this));
+            Add(new ShopApp(this, OpeningBell.Home.HomeStore.Furniture));
+            Add(new ShopApp(this, OpeningBell.Home.HomeStore.Tech));
 
             BuildStatusBar();
 
@@ -593,7 +595,7 @@ namespace OpeningBell.City
             grid.style.width = Phone.ScreenWidth - 24f;
             grid.style.marginTop = 22f;
             grid.style.flexWrap = Wrap.Wrap;
-            foreach (PhoneAppId app in new[] { PhoneAppId.PennyBridge, PhoneAppId.News, PhoneAppId.Maps, PhoneAppId.Garage })
+            foreach (PhoneAppId app in new[] { PhoneAppId.PennyBridge, PhoneAppId.News, PhoneAppId.Maps, PhoneAppId.Garage, PhoneAppId.Timberline, PhoneAppId.CircuitStop })
                 AppButton(grid, app, true);
 
             // The dock: a frosted shelf at the bottom.

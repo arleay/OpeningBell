@@ -28,6 +28,12 @@ namespace OpeningBell.City
 
         public static float Grade => StreetMap.Plan.StreetGrade(Landmarks.HarborviewLot.center);
 
+        // Where delivery crews walk (world): the forecourt outside the lobby doors, the lift's doors in the lobby, and in
+        // front of the lift on the penthouse floor, where a move-in is set down.
+        public static Vector3 LobbyDoorOutside => V(X, Grade, 94.6f);
+        public static Vector3 LobbyLiftFront => V(X, Grade, Z + LiftZ - 1.2f - 1.2f);
+        public static Vector3 PenthouseLiftFront => V(X, Grade + PenthouseFloor, Z + LiftZ - 1.2f - 1.4f);
+
         // The residents' garage, one level under the lot (plan x/z; heights from the lobby floor).
         public const float GarageFloor = -3.6f;
         private const float GX0 = 228.5f, GX1 = 275.5f, GZ0 = 106f, GZ1 = 136f, Soffit = -0.05f;

@@ -350,6 +350,32 @@ namespace OpeningBell.City
             _w.Say("The cart's gone back down to the lobby.");
         }
 
+        /// <summary>
+        /// A delivery crew takes the cart for a move-in (the service paid for it, so no fee; [F] twice sends it back as
+        /// usual). False when it's already out or in use.
+        /// </summary>
+        internal bool Borrow()
+        {
+            if (_pushing || State.Out) return false;
+            State.TakeOut();
+            return true;
+        }
+
+        /// <summary>The crew pushing it: where it is now (and kept in the save).</summary>
+        internal void MoveTo(Vector3 at, float yaw)
+        {
+            transform.SetPositionAndRotation(at, Quaternion.Euler(0f, yaw, 0f));
+            SavePose();
+        }
+
+        /// <summary>Where the <paramref name="n"/>-th thing a crew loads sits (cart frame): two across in each bay, then stacked.</summary>
+        internal static Vector3 Slot(int n)
+        {
+            int place = n % 4, layer = n / 4;
+            float bay = place < 2 ? (FrameStart + 0.708f) / 2f : (0.708f + FrameEnd) / 2f;
+            return new Vector3(place % 2 == 0 ? -0.2f : 0.2f, Deck + 0.3f * layer, bay);
+        }
+
         private void SavePose()
         {
             _nextSave = Time.time + 1f;
