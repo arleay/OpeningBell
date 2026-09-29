@@ -125,6 +125,9 @@ namespace OpeningBell.Gameplay
         /// <summary>0 sober … 1 very drunk: slower, drifting steps and a swaying view (CASINO_SPEC §46).</summary>
         public float Impairment { get; set; }
 
+        /// <summary>Something slows you (pushing a loaded cart): 1 is your own pace.</summary>
+        public float SpeedFactor { get; set; } = 1f;
+
         /// <summary>Both hands on something you're carrying: no punching, no riding off.</summary>
         public bool HandsFull { get; set; }
         /// <summary>The left button belongs to what's aimed at (a moving box), not the fists.</summary>
@@ -181,7 +184,7 @@ namespace OpeningBell.Gameplay
             }
 
             Vector2 move = Vector2.ClampMagnitude(input.Move.ReadValue<Vector2>(), 1f);
-            float speed = (input.Sprint.IsPressed() ? sprintSpeed : walkSpeed) * (1f - 0.35f * Impairment);
+            float speed = (input.Sprint.IsPressed() ? sprintSpeed : walkSpeed) * (1f - 0.35f * Impairment) * SpeedFactor;
             Vector3 wanted = (transform.right * move.x + transform.forward * move.y) * speed;
             // Drunk: the feet wander a little to the side of where you're heading.
             if (Impairment > 0f && move.sqrMagnitude > 0.01f)

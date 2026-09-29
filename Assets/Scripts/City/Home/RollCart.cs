@@ -213,6 +213,7 @@ namespace OpeningBell.City
         {
             _pushing = false;
             _player.HandsFull = false;
+            _player.SpeedFactor = 1f;
             foreach (Collider col in _solids) Physics.IgnoreCollision(_body, col, false);
             _w.City.Hud?.SetStatus(null);
             SavePose();
@@ -251,6 +252,8 @@ namespace OpeningBell.City
             // [E] with nothing else in view lets go too (the push end is often below the view while you walk).
             if (_interactor != null && _interactor.Current == null && _player.Input.Interact.WasPressedThisFrame()) { LetGo(); return; }
             _w.City.Hud?.SetStatus("Pushing the moving cart   [E] let go   [F] send it back to the lobby");
+            // A roll cage isn't pushed at a jog: slower, and slower still the more that's on it.
+            _player.SpeedFactor = Mathf.Max(0.5f, 0.72f - 0.03f * Cargo);
             if (Time.time >= _nextSave) SavePose();
         }
 
