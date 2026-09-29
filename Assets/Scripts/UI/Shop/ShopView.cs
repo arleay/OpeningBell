@@ -60,12 +60,14 @@ namespace OpeningBell.UI
             var bar = Box(Root);
             bar.style.backgroundColor = brand;
             Pad(bar, compact ? 14f : 22f, compact ? 10f : 14f);
-            var top = Row(bar);
+            // The phone stacks the links under the name: side by side they run off its narrow screen.
+            var top = compact ? Box(bar) : Row(bar);
             var titles = Box(top);
             Text(titles, name.ToUpperInvariant(), compact ? 17f : 22f, Color.white, true);
             if (!compact) Text(titles, tagline, 12f, new Color(1f, 1f, 1f, 0.8f));
-            var links = Row(top);
+            var links = Row(top, Justify.FlexStart);
             links.style.alignItems = Align.Center;
+            if (compact) links.style.marginTop = 4f;
             Link(links, "Shop", () => Go(Page.Catalog));
             _cartLink = Link(links, "Cart", () => Go(Page.Cart));
             Link(links, "Orders", () => Go(Page.Orders));
@@ -75,6 +77,7 @@ namespace OpeningBell.UI
 
             _body = new ScrollView(ScrollViewMode.Vertical);
             _body.style.flexGrow = 1;
+            _body.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
             Root.Add(_body);
             Build();
         }
@@ -147,21 +150,31 @@ namespace OpeningBell.UI
             {
                 if (_department.Length > 0 && item.Department != _department) continue;
                 HomeItem it = item;
-                var card = Box(grid);
-                card.style.width = _compact ? 162f : 208f;
-                card.style.marginRight = card.style.marginBottom = _compact ? 8f : 12f;
+                // Phone: one full-width row per product, the picture beside the details. Wider: a grid of cards.
+                var card = _compact ? Row(grid, Justify.FlexStart) : Box(grid);
+                card.style.width = _compact ? Length.Percent(100) : 208f;
+                card.style.marginRight = _compact ? 0f : 12f;
+                card.style.marginBottom = _compact ? 8f : 12f;
                 card.style.backgroundColor = Card;
                 Round(card, 10f);
                 Border(card, Line);
                 card.style.overflow = Overflow.Hidden;
-                Preview(card, it, 0, _compact ? 110f : 140f).RegisterCallback<ClickEvent>(_ => Open(it));
+                VisualElement pic = Preview(card, it, 0, _compact ? 96f : 140f);
+                pic.RegisterCallback<ClickEvent>(_ => Open(it));
+                if (_compact) pic.style.width = 96f;
                 var info = Box(card);
+                info.style.flexGrow = 1;
+                info.style.flexShrink = 1;
+                info.style.minWidth = 0f;
                 Pad(info, 10f, 8f);
-                Text(info, it.Name, 14f, Ink, true).RegisterCallback<ClickEvent>(_ => Open(it));
-                Text(info, $"{it.Department} · {it.Tier}{(it.Brand != null ? " · " + it.Brand : "")}", 11f, Muted);
+                var title = Text(info, it.Name, 14f, Ink, true);
+                title.style.whiteSpace = WhiteSpace.Normal;
+                title.RegisterCallback<ClickEvent>(_ => Open(it));
+                Text(info, $"{it.Department} · {it.Tier}{(it.Brand != null ? " · " + it.Brand : "")}", 11f, Muted).style.whiteSpace = WhiteSpace.Normal;
                 Text(info, Money(it.Price), 16f, Ink, true).style.marginTop = 4f;
                 var buttons = Row(info, Justify.FlexStart);
                 buttons.style.marginTop = 6f;
+                buttons.style.flexWrap = Wrap.Wrap;
                 Button(buttons, "Add to cart", false, () => { Shop.Add(_store, it.Id, 0); Say($"Added {it.Name} to your cart.", false); });
                 Button(buttons, "Buy now", true, () => BuyNow(it, 0, 1));
             }
@@ -483,6 +496,9 @@ namespace OpeningBell.UI
         private static Label Text(VisualElement parent, string text, float size, Color color, bool bold = false)
         {
             var l = new Label(text);
+            // Wrap rather than run off a narrow screen; rows keep their own widths.
+            l.style.whiteSpace = WhiteSpace.Normal;
+            l.style.flexShrink = 1;
             l.style.fontSize = size;
             l.style.color = color;
             l.style.unityFontStyleAndWeight = bold ? FontStyle.Bold : FontStyle.Normal;
