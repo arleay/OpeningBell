@@ -274,6 +274,8 @@ namespace OpeningBell.Fund
             Workstation w = null;
             foreach (Workstation s in Stations) if (s.Desk == desk) w = s;
             if (w == null) return "That desk isn't in the office.";
+            // The owner's own desk (the world marks it, see FundWorld.Access): never handed to staff.
+            if (w.Problems.Exists(p => p.StartsWith("The principal's desk", StringComparison.Ordinal))) return "That's the principal's desk: yours.";
             foreach (Employee other in _employees)
                 if (other != e && !other.Former && other.Desk == desk) return $"Already assigned to {other.Name}.";
             e.Desk = desk;

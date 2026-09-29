@@ -53,6 +53,8 @@ namespace OpeningBell.City
         {
             OwnedItem chair = _home.Belongings.Get(w.Chair), desk = _home.Belongings.Get(w.Desk);
             if (chair == null || desk == null) return null;
+            // The principal's office is the owner's: its desk is never a staff workstation.
+            if (HarborviewOffice.InPrincipalOffice(new Vector3(desk.X, desk.Y, desk.Z))) return "The principal's desk: yours, not for staff.";
             ItemView chairView = _home.View(chair.Uid), deskView = _home.View(desk.Uid);
             if (chairView == null || deskView == null) return null; // not in the world yet: judged once it is
             Physics.SyncTransforms();

@@ -27,6 +27,14 @@ namespace OpeningBell.City
         /// <summary>The office floor's frame (plan-aligned, origin at the tower's centre at floor level).</summary>
         public static Transform Frame { get; private set; }
 
+        /// <summary>Inside the principal's (the owner's) private office, north-east behind the glass (world point)?</summary>
+        public static bool InPrincipalOffice(Vector3 world)
+        {
+            if (Frame == null) return false;
+            Vector3 p = Frame.InverseTransformPoint(world);
+            return p.x > 7f && p.x < HW && p.z > 3.5f && p.z < HD && p.y > -1f && p.y < 4f;
+        }
+
         /// <summary>A plan point (x, z) on the office floor in world space.</summary>
         public static Vector3 World(float x, float z) => Frame != null ? Frame.TransformPoint(new Vector3(x, 0f, z)) : V(HarborviewTower.X + x, HarborviewTower.Grade + Floor, HarborviewTower.Z + z);
 
