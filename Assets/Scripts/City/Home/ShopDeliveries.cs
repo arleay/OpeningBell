@@ -36,6 +36,9 @@ namespace OpeningBell.City
             d._c = c;
             d._w = w;
             c.Game.ShopDestinations = d.Destinations;
+            c.Game.OrderTracking = d.Tracking;
+            c.Game.TrackOrder = d.Track;
+            Instance = d;
             return d;
         }
 
@@ -77,20 +80,25 @@ namespace OpeningBell.City
                 {
                     case ShopOrderStatus.Preparing:
                         // Packed and loaded, then the drive over: out the door for the last part of the wait.
-                        if (now >= due.AddMinutes(-DriveMinutes(o))) shop.SetStatus(o, ShopOrderStatus.OnTheWay);
+                        if (now >= due.AddMinutes(-DriveMinutes(o)))
+                        {
+                            shop.SetStatus(o, ShopOrderStatus.OnTheWay);
+                            Notify(o, $"Order #{o.Id} is out for delivery to {o.DestinationName}, arriving around {due:h:mm tt}. Tap to track it.");
+                        }
                         break;
                     case ShopOrderStatus.OnTheWay:
-                        if (now >= due) Begin(o);
-                        break;
                     case ShopOrderStatus.Unloading:
+                        // The truck leaves the stores when the order goes out and drives the streets to your kerb.
                         if (!_runs.ContainsKey(o.Id)) Begin(o);
                         else if (now > due.AddMinutes(GiveUpMinutes)) _runs[o.Id].Finish();
+                        if (o.State == ShopOrderStatus.OnTheWay && now >= due.AddMinutes(-5) && _notified.Add(o.Id * 10 + 1))
+                            Notify(o, $"Your delivery is about {Math.Max(1, (int)Math.Round((due - now).TotalMinutes))} minutes away.");
                         break;
                 }
             }
         }
 
-        private static int DriveMinutes(ShopOrder o) => (int)Math.Min(20, (o.Due - o.Placed) / TimeSpan.TicksPerMinute / 2);
+        internal static int DriveMinutes(ShopOrder o) => (int)Math.Min(20, (o.Due - o.Placed) / TimeSpan.TicksPerMinute / 2);
 
         /// <summary>A pickup order is ready: out in the bays behind the stores.</summary>
         private void SetOut(ShopOrder o)
@@ -100,11 +108,11 @@ namespace OpeningBell.City
             foreach (OwnedItem i in goods) i.Order = 0;
             _c.Game.Shop.SetStatus(o, ShopOrderStatus.Ready);
             _w.Say($"Order #{o.Id} is ready: it's out in the pickup bays behind the stores, off Grove St.");
+            Notify(o, $"Order #{o.Id} is ready for pickup in the bays behind the stores, off Grove St.");
         }
 
         private void Begin(ShopOrder o)
         {
-            _c.Game.Shop.SetStatus(o, ShopOrderStatus.Unloading);
             var go = new GameObject("Delivery #" + o.Id);
             go.transform.SetParent(transform, false);
             var run = go.AddComponent<DeliveryRun>();
@@ -116,8 +124,56 @@ namespace OpeningBell.City
         {
             _runs.Remove(o.Id);
             _c.Game.Shop.SetStatus(o, ShopOrderStatus.Delivered);
-            _w.Say(o.MoveIn ? $"Order #{o.Id} is in: the movers left it {(IsPenthouse(o) ? "by the lift on your floor" : "inside the front door")}."
-                : $"Order #{o.Id} was delivered to your door at {o.DestinationName}.");
+            string text = o.MoveIn ? $"Order #{o.Id} is in: the movers left it {(IsPenthouse(o) ? "by the lift on your floor" : "inside the front door")}."
+                : $"Order #{o.Id} was delivered to your door at {o.DestinationName}.";
+            _w.Say(text);
+            Notify(o, text);
+        }
+
+        // ------------------------------------------------------------------ tracking and notifications
+
+        private readonly HashSet<int> _notified = new HashSet<int>();
+        private Phone _phone;
+
+        /// <summary>The live deliveries: running now, for the map and <see cref="HomeShop"/>'s tracking.</summary>
+        public static ShopDeliveries Instance { get; private set; }
+
+        /// <summary>Trucks on the road or at a kerb, by order, for the phone's map.</summary>
+        public IEnumerable<(int Order, Vector3 At)> Trucks()
+        {
+            foreach (var pair in _runs)
+                if (pair.Value != null && pair.Value.TruckAt(out Vector3 at)) yield return (pair.Key, at);
+        }
+
+        /// <summary>A line on where an order's truck is: distance and roughly when it arrives.</summary>
+        private string Tracking(int id)
+        {
+            ShopOrder o = _c.Game.Shop.Find(id);
+            if (o == null || !_runs.TryGetValue(id, out DeliveryRun run) || run == null || !run.TruckAt(out Vector3 at)) return null;
+            if (o.State != ShopOrderStatus.OnTheWay) return null;
+            float km = Vector2.Distance(new Vector2(at.x, at.z), new Vector2(_entranceOf(o).x, _entranceOf(o).z)) / 1000f;
+            int minutes = Math.Max(0, (int)Math.Round((new DateTime(o.Due) - _c.Game.Clock.Now).TotalMinutes));
+            return $"Truck {km:0.0} km away · about {minutes} min";
+        }
+
+        private Vector3 _entranceOf(ShopOrder o) => Entrance(_w.Find(o.Destination) ?? _w.MainHome);
+
+        /// <summary>A banner on the phone from the store's app; tapping it opens the map on the truck.</summary>
+        private void Notify(ShopOrder o, string text)
+        {
+            if (_phone == null) _phone = FindAnyObjectByType<Phone>();
+            if (_phone == null) return;
+            int id = o.Id;
+            _phone.Notify(o.StoreKind == HomeStore.Tech ? PhoneAppId.CircuitStop : PhoneAppId.Timberline,
+                o.StoreKind == HomeStore.Tech ? "Circuit Stop" : "Timberline Home", text, () => Track(id));
+        }
+
+        /// <summary>Opens the phone's map on an order's truck.</summary>
+        private void Track(int id)
+        {
+            if (_phone == null) _phone = FindAnyObjectByType<Phone>();
+            if (_phone == null) return;
+            _phone.TrackOnMap(() => _runs.TryGetValue(id, out DeliveryRun r) && r != null && r.TruckAt(out Vector3 at) ? at : (Vector3?)null);
         }
 
         /// <summary>Up Harborview's lift: the penthouse or the office on 26.</summary>
@@ -192,16 +248,18 @@ namespace OpeningBell.City
         /// The kerb nearest the entrance: the closest road lane, pulled in toward the entrance's side. Returns where the
         /// truck stops and the way it's heading. False without roads.
         /// </summary>
-        internal bool Kerb(Vector3 entrance, out Vector3 stop, out Vector3 heading)
+        internal bool Kerb(Vector3 entrance, out Vector3 stop, out Vector3 heading) => Kerb(entrance, out stop, out heading, out _, out _);
+
+        internal bool Kerb(Vector3 entrance, out Vector3 stop, out Vector3 heading, out RoadNetwork.Lane lane, out float at)
         {
             stop = entrance;
             heading = Vector3.forward;
+            lane = null;
+            at = 0f;
             RoadNetwork roads = _c.Roads;
             if (roads == null) return false;
             var p = new Vector2(entrance.x, entrance.z);
             float best = float.MaxValue;
-            RoadNetwork.Lane lane = null;
-            float at = 0f;
             foreach (RoadNetwork.Lane l in roads.Lanes)
             {
                 if (l.IsStem || l.Length < 12f) continue;
@@ -223,6 +281,61 @@ namespace OpeningBell.City
             heading = new Vector3(lane.Dir.x, 0f, lane.Dir.y);
             return true;
         }
+
+        /// <summary>Where the store trucks pull out: the stores' driveway onto Grove St.</summary>
+        private static readonly Vector2 Depot = new Vector2(-288f, 70f);
+
+        /// <summary>
+        /// The truck's way from the stores to the kerb: along road lanes and through junction turns (a breadth-first
+        /// search over the lane graph, so the fewest lanes), ending at <paramref name="stop"/>. Null if there's no way.
+        /// </summary>
+        internal List<Vector3> Route(RoadNetwork.Lane goal, float goalAt, Vector3 stop)
+        {
+            RoadNetwork roads = _c.Roads;
+            if (roads == null || goal == null) return null;
+            RoadNetwork.Lane start = null;
+            float startAt = 0f, best = float.MaxValue;
+            foreach (RoadNetwork.Lane l in roads.Lanes)
+            {
+                if (l.IsStem || l.Length < 8f) continue;
+                float s = Mathf.Clamp(Vector2.Dot(Depot - l.Start, l.Dir), 0f, l.Length);
+                float d = (l.At(s) - Depot).sqrMagnitude;
+                if (d < best) { best = d; start = l; startAt = s; }
+            }
+            if (start == null) return null;
+            var via = new Dictionary<RoadNetwork.Lane, RoadNetwork.Movement> { [start] = null };
+            var queue = new Queue<RoadNetwork.Lane>();
+            queue.Enqueue(start);
+            bool found = start == goal && startAt <= goalAt;
+            while (!found && queue.Count > 0)
+            {
+                RoadNetwork.Lane l = queue.Dequeue();
+                foreach (RoadNetwork.Movement m in l.Exits)
+                {
+                    if (m.Out == null || via.ContainsKey(m.Out)) continue;
+                    via[m.Out] = m;
+                    if (m.Out == goal) { found = true; break; }
+                    queue.Enqueue(m.Out);
+                }
+            }
+            if (!found) return null;
+            var turns = new List<RoadNetwork.Movement>();
+            for (RoadNetwork.Lane l = goal; l != start; l = via[l].In) turns.Add(via[l]);
+            turns.Reverse();
+            var path = new List<Vector3>();
+            void Add(Vector2 p, float y) => path.Add(new Vector3(p.x, y, p.y));
+            Add(start.At(startAt), start.HeightAt(startAt));
+            RoadNetwork.Lane on = start;
+            foreach (RoadNetwork.Movement m in turns)
+            {
+                Add(on.End, on.EndY);
+                for (int k = 1; k < 6; k++) Add(m.At(m.Length * k / 6f), m.HeightAt(m.Length * k / 6f));
+                on = m.Out;
+                Add(on.Start, on.StartY);
+            }
+            Add(goal.At(goalAt), goal.HeightAt(goalAt));
+            path.Add(stop);
+            return path;
 
         /// <summary>
         /// The goods arrive: at the door (kerbside), or moved in (furniture packed in an open moving box, tech on the
@@ -367,7 +480,7 @@ namespace OpeningBell.City
     /// </summary>
     internal sealed class DeliveryRun : MonoBehaviour
     {
-        private enum Phase { DriveIn, Parked, CarryIn, Inside, InnerWalk, Return, Leave, Done }
+        private enum Phase { EnRoute, DriveIn, Parked, CarryIn, Inside, InnerWalk, Return, Leave, Done }
 
         private sealed class Walker
         {
@@ -391,6 +504,10 @@ namespace OpeningBell.City
         private RollCart _cart;
         private float _wait;
         private bool _placed;
+        /// <summary>The streets from the stores to the kerb, with the distance run at each point.</summary>
+        private List<Vector3> _route;
+        private float[] _run;
+        private long _depart;
 
         public void Configure(ShopDeliveries d, ShopOrder o)
         {
@@ -398,14 +515,33 @@ namespace OpeningBell.City
             _o = o;
             _home = d.World.Find(o.Destination) ?? d.World.MainHome;
             _entrance = d.Entrance(_home);
-            if (!d.Kerb(_entrance, out _stop, out _heading))
+            RoadNetwork.Lane lane = null;
+            float at = 0f;
+            if (!d.Kerb(_entrance, out _stop, out _heading, out lane, out at))
             {
                 _stop = _entrance + Vector3.back * 6f;
                 _heading = Vector3.right;
             }
             _truck = d.Truck(o, transform);
             Quaternion facing = Quaternion.LookRotation(_heading);
-            if (d.Seen(_stop, 90f))
+            DateTime now = d.City.Game.Clock.Now;
+            _route = o.State == ShopOrderStatus.OnTheWay && now.Ticks < o.Due ? d.Route(lane, at, _stop) : null;
+            if (_route != null && _route.Count >= 2)
+            {
+                // Timed by the clock, so it pulls up at the estimated time whatever the game's speed.
+                _depart = o.Due - ShopDeliveries.DriveMinutes(o) * TimeSpan.TicksPerMinute;
+                _run = new float[_route.Count];
+                for (int i = 1; i < _route.Count; i++) _run[i] = _run[i - 1] + Vector3.Distance(_route[i - 1], _route[i]);
+                _phase = Phase.EnRoute;
+                Drive();
+            }
+            else if (o.State == ShopOrderStatus.OnTheWay && now.Ticks < o.Due)
+            {
+                // No way through the streets: out of sight until it's due.
+                _truck.SetActive(false);
+                _phase = Phase.EnRoute;
+            }
+            else if (d.Seen(_stop, 90f))
             {
                 _truck.transform.SetPositionAndRotation(_stop - _heading * Approach, facing);
                 _phase = Phase.DriveIn;
@@ -416,6 +552,40 @@ namespace OpeningBell.City
                 _phase = Phase.Parked;
                 _wait = 1f;
             }
+            if (_phase != Phase.EnRoute) d.City.Game.Shop.SetStatus(o, ShopOrderStatus.Unloading);
+        }
+
+        /// <summary>Where the truck is (on the road or at the kerb), for the map. False before it's anywhere to be seen.</summary>
+        public bool TruckAt(out Vector3 at)
+        {
+            at = _truck != null ? _truck.transform.position : Vector3.zero;
+            return _truck != null && _truck.activeSelf && _phase != Phase.Done;
+        }
+
+        /// <summary>On the way: the point along the route the clock says, facing along it. Arrived: parked.</summary>
+        private void Drive()
+        {
+            long now = _d.City.Game.Clock.Now.Ticks;
+            if (now >= _o.Due || _route == null)
+            {
+                _truck.SetActive(true);
+                _truck.transform.SetPositionAndRotation(_stop, Quaternion.LookRotation(_heading));
+                _d.City.Game.Shop.SetStatus(_o, ShopOrderStatus.Unloading);
+                _phase = Phase.Parked;
+                _wait = 1.5f;
+                return;
+            }
+            float t = Mathf.Clamp01((float)((now - _depart) / (double)Math.Max(1L, _o.Due - _depart)));
+            float want = t * _run[_run.Length - 1];
+            int i = 1;
+            while (i < _run.Length - 1 && _run[i] < want) i++;
+            float span = Mathf.Max(0.001f, _run[i] - _run[i - 1]);
+            Vector3 p = Vector3.Lerp(_route[i - 1], _route[i], Mathf.Clamp01((want - _run[i - 1]) / span));
+            Vector3 dir = _route[i] - _route[i - 1];
+            dir.y = 0f;
+            Quaternion facing = dir.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(dir) : _truck.transform.rotation;
+            // Turns are eased so the truck doesn't snap round at each corner.
+            _truck.transform.SetPositionAndRotation(p, Quaternion.Slerp(_truck.transform.rotation, facing, 0.2f));
         }
 
         /// <summary>Time ran on without us (a sleep): the goods are there, the truck and crew gone.</summary>
@@ -432,6 +602,9 @@ namespace OpeningBell.City
             float dt = Time.deltaTime;
             switch (_phase)
             {
+                case Phase.EnRoute:
+                    Drive();
+                    break;
                 case Phase.DriveIn:
                 {
                     // Slows as it nears the kerb.

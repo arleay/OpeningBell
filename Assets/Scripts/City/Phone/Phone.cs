@@ -373,6 +373,13 @@ namespace OpeningBell.City
         }
 
         /// <summary>A banner in the corner (above the phone when it's out). Tapping it, or Tab, opens it. Urgent ones are red.</summary>
+        /// <summary>Opens the map following something that moves (a delivery truck), until you pan or it's gone.</summary>
+        public void TrackOnMap(Func<Vector3?> target)
+        {
+            Open(PhoneAppId.Maps);
+            ((MapsApp)_apps[PhoneAppId.Maps]).Track(target);
+        }
+
         public void Notify(PhoneAppId app, string title, string text, Action open = null, bool urgent = false)
         {
             if (_banners == null) return;

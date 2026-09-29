@@ -88,6 +88,10 @@ namespace OpeningBell
         public global::OpeningBell.Home.HomeShop Shop { get; } = new global::OpeningBell.Home.HomeShop();
         /// <summary>Homes an online order can be delivered to (id, name), filled in by the city; empty without it.</summary>
         public Func<IReadOnlyList<(string Id, string Name)>> ShopDestinations { get; set; }
+        /// <summary>Where an order's delivery truck is, in words ("Truck 1.2 km away · about 4 min"), or null.</summary>
+        public Func<int, string> OrderTracking { get; set; }
+        /// <summary>Opens the phone's map on an order's truck (null without the city's phone).</summary>
+        public Action<int> TrackOrder { get; set; }
         /// <summary>
         /// A picture of a product (item id, colour), rendered by the city on request and handed to the callback
         /// (possibly a frame or two later); never called back without the city.

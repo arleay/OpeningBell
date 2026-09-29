@@ -160,7 +160,7 @@ namespace OpeningBell.Home
         /// up comes with a moving box, like at the till.
         /// </summary>
         public (ShopOrder Order, string Error) Place(HomeStore store, IReadOnlyList<CartLine> lines, Fulfilment how, string destination,
-            string destinationName, bool moveIn, DateTime now, Belongings belongings, Func<decimal, string, string> pay)
+            string destinationName, bool moveIn, DateTime now, Belongings belongings, Func<decimal, string, string> pay, string owner = "")
         {
             if (lines == null || lines.Count == 0) return (null, "Your cart is empty.");
             if (how == Fulfilment.Delivery && string.IsNullOrEmpty(destination)) return (null, "Choose where it's going.");
@@ -186,6 +186,7 @@ namespace OpeningBell.Home
                 {
                     OwnedItem owned = belongings.Add(item.Id, l.Variant, how == Fulfilment.Pickup ? ItemState.AtPickup : ItemState.Delivering);
                     owned.Order = order.Id;
+                    owned.Owner = owner ?? "";
                     owned.DeliverAt = order.Due;
                     owned.Property = order.Destination;
                     order.Items.Add(owned.Uid);

@@ -40,8 +40,12 @@ namespace OpeningBell.UI
         private Fulfilment _how = Fulfilment.Delivery;
         private string _destination = "";
         private bool _moveIn;
+        /// <summary>Paying with the fund's company card (the goods are the company's).</summary>
+        private bool _company;
         private ShopOrder _placed;
         private string _signature = "";
+        /// <summary>Values kept fresh between rebuilds (the trucks' tracking lines).</summary>
+        private readonly List<Action> _live = new List<Action>();
 
         public VisualElement Root { get; }
 
@@ -89,6 +93,7 @@ namespace OpeningBell.UI
         public void Refresh()
         {
             _cartLink.text = $"Cart ({Shop.CartCount(_store)})";
+            foreach (Action a in _live) a();
             string sig = _page + "|" + Shop.Version;
             if (sig != _signature) Build();
         }
@@ -107,6 +112,7 @@ namespace OpeningBell.UI
             _cartLink.text = $"Cart ({Shop.CartCount(_store)})";
             VisualElement c = _body.contentContainer;
             c.Clear();
+            _live.Clear();
             var page = Box(c);
             Pad(page, _compact ? 12f : 22f, _compact ? 10f : 16f);
             switch (_page)
@@ -378,7 +384,19 @@ namespace OpeningBell.UI
                 ? $"Ready for pickup around {q.Due.ToString("h:mm tt", C)} (about {minutes} min)."
                 : $"Estimated delivery {q.Due.ToString("h:mm tt", C)} (about {minutes} min).", 14f, Good, true);
             eta.style.marginTop = 6f;
-            Text(page, $"Paid from your bank account ({Money(_game.Economy.Bank.Balance)} available).", 12f, Muted);
+            // Pay with: your bank, or the fund's company card once there's a fund (its goods are the company's).
+            var fund = _game.Fund;
+            bool company = fund != null && fund.Exists;
+            if (!company) _company = false;
+            if (company)
+            {
+                Section(page, "Pay with");
+                var pay = Row(page, Justify.FlexStart);
+                pay.style.flexWrap = Wrap.Wrap;
+                Chip(pay, $"Your bank · {Money(_game.Economy.Bank.Balance)}", !_company, () => { _company = false; Build(); });
+                Chip(pay, $"{fund.Name} card · {Money(fund.Ledger.Cash)}", _company, () => { _company = true; Build(); });
+            }
+            else Text(page, $"Paid from your bank account ({Money(_game.Economy.Bank.Balance)} available).", 12f, Muted);
             Button(page, $"Place order · {Money(q.Total)}", true, Place, big: true).style.alignSelf = Align.FlexStart;
         }
 
@@ -389,7 +407,8 @@ namespace OpeningBell.UI
             foreach (var h in homes) if (h.Id == _destination) name = h.Name;
             var lines = new List<CartLine>(Lines);
             var (order, error) = Shop.Place(_store, lines, _how, _destination, name, _moveIn, Now, _game.Belongings,
-                (amount, what) => _game.Economy.Spend(amount, what, Now));
+                (amount, what) => _company ? _game.Fund.BuyEquipment(amount, what) : _game.Economy.Spend(amount, what, Now),
+                owner: _company ? "fund" : "");
             if (error != null) { Say(error, true); return; }
             if (_buyNow == null) Shop.ClearCart(_store);
             _buyNow = null;
@@ -441,6 +460,16 @@ namespace OpeningBell.UI
                 var state = Text(card, StatusText(o), 13f, o.State == ShopOrderStatus.Delivered || o.State == ShopOrderStatus.Ready ? Good : _brand, true);
                 state.style.marginTop = 4f;
                 state.style.whiteSpace = WhiteSpace.Normal;
+                if (o.How == Fulfilment.Delivery && (o.State == ShopOrderStatus.OnTheWay || o.State == ShopOrderStatus.Unloading))
+                {
+                    // Where the truck is now, and a way to watch it on the map.
+                    int id = o.Id;
+                    var where = Text(card, "", 12f, Muted);
+                    where.style.marginTop = 2f;
+                    _live.Add(() => where.text = _game.OrderTracking?.Invoke(id) ?? "");
+                    _live[_live.Count - 1]();
+                    if (_game.TrackOrder != null) Button(card, "Track on map", true, () => _game.TrackOrder(id)).style.alignSelf = Align.FlexStart;
+                }
             }
             if (!any) Text(page, "No orders yet.", 14f, Muted);
         }

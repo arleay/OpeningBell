@@ -499,6 +499,9 @@ namespace OpeningBell.City
             new List<(MapIcon, string, Vector3, VisualElement)>();
         private int _zoom = 1;
         private Vector2 _centre; // world x/z at the middle of the view
+        /// <summary>Following a delivery truck (from its notification or the store's Track button), or null.</summary>
+        private Func<Vector3?> _tracking;
+        private readonly Dictionary<int, VisualElement> _trucks = new Dictionary<int, VisualElement>();
         private bool _follow = true, _dragging;
         private Vector2 _dragFrom;
         private int _selectedIndex = -1;
@@ -583,6 +586,7 @@ namespace OpeningBell.City
                 Vector2 d = (Vector2)e.position - _dragFrom;
                 _dragFrom = e.position;
                 _follow = false;
+                _tracking = null; // panning lets go of a tracked truck
                 _centre += new Vector2(-d.x, d.y) / Zoom; // screen y runs south
                 Layout();
             });
@@ -648,6 +652,7 @@ namespace OpeningBell.City
             if (centre)
             {
                 _follow = false;
+                _tracking = null;
                 _centre = new Vector2(_marks[index].At.x, _marks[index].At.z);
             }
             Refresh();
@@ -774,7 +779,10 @@ namespace OpeningBell.City
             Texture2D tex = Phone.Map.Texture;
             if (tex == null) return;
             Vector3 me = Me;
-            if (_follow) _centre = new Vector2(me.x, me.z);
+            Vector3? tracked = _tracking?.Invoke();
+            if (_tracking != null && tracked == null) { _tracking = null; _follow = true; }
+            if (tracked != null) _centre = new Vector2(tracked.Value.x, tracked.Value.z);
+            else if (_follow) _centre = new Vector2(me.x, me.z);
             float k = Zoom / MapTexture.PixelsPerMetre; // UI px per texture px
             _map.style.width = tex.width * k;
             _map.style.height = tex.height * k;
@@ -792,9 +800,49 @@ namespace OpeningBell.City
                 Vector2 p = MapTexture.ToPixel(new Vector3(area.center.x, 0f, area.center.y)) * k;
                 PhoneKit.Absolute(label, p.x - 90f, p.y - 9f);
             }
+            Trucks(k);
             Vector2 you = MapTexture.ToPixel(me) * k;
             PhoneKit.Absolute(_you, you.x - 10f, you.y - 10f);
             _you.style.rotate = new Rotate(Phone.Player.transform.eulerAngles.y);
+        }
+
+        /// <summary>Follows a moving target: the view stays on it until you pan the map or it's gone.</summary>
+        internal void Track(Func<Vector3?> target)
+        {
+            _tracking = target;
+            _follow = false;
+            _zoom = 1;
+        }
+
+        /// <summary>Store delivery trucks on the road: an orange van marker each, where they are now.</summary>
+        private void Trucks(float k)
+        {
+            var live = new HashSet<int>();
+            if (ShopDeliveries.Instance != null)
+                foreach (var (order, at) in ShopDeliveries.Instance.Trucks())
+                {
+                    live.Add(order);
+                    if (!_trucks.TryGetValue(order, out VisualElement marker))
+                    {
+                        marker = PhoneKit.Box(_map, "truck-" + order);
+                        marker.pickingMode = PickingMode.Ignore;
+                        marker.style.width = 24f;
+                        marker.style.height = 16f;
+                        marker.style.backgroundColor = new Color(1f, 0.55f, 0.1f);
+                        PhoneKit.Radius(marker, 4f);
+                        PhoneKit.Border(marker, 2f, Color.white);
+                        _trucks[order] = marker;
+                    }
+                    Vector2 p = MapTexture.ToPixel(at) * k;
+                    PhoneKit.Absolute(marker, p.x - 12f, p.y - 8f);
+                    marker.BringToFront();
+                }
+            foreach (int gone in new List<int>(_trucks.Keys))
+                if (!live.Contains(gone))
+                {
+                    _trucks[gone].RemoveFromHierarchy();
+                    _trucks.Remove(gone);
+                }
         }
 
         private static string Distance(Vector3 at, Vector3 me)
