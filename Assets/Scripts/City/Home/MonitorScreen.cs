@@ -169,36 +169,39 @@ namespace OpeningBell.City
             SecurityRuntimeState sec = null;
             foreach (SecurityRuntimeState s in market.Securities) if (s.Ticker == symbol) sec = s;
             if (sec == null) { Apply(); _text.text = Shown = symbol + "\nno data"; return; }
-            CandleSeries series = sec.Candles.Get(Timeframe.Minute1);
-            int n = Mathf.Min(48, series.Count), first = series.Count - n;
-            // Centred on the current price: the scale is set by how far the last twenty minutes strayed from it (at least
-            // a quarter percent), so an old move far away (yesterday's close, a gap) doesn't squash today's action into a
-            // line. Whatever falls outside is clipped at the edges.
-            decimal last = sec.Last, reach = last * 0.0025m;
-            for (int k = Mathf.Max(first, series.Count - 20); k < series.Count; k++)
-                reach = System.Math.Max(reach, System.Math.Max(series[k].High - last, last - series[k].Low));
-            reach *= 1.15m;
-            decimal lo = last - reach, hi = last + reach;
-            const int top = 128, bottom = 8;
+            // Like the terminal's 15-minute chart: the last sixty bars scaled to their own high and low (with room above
+            // and below), the newest bar in from the right edge with space after it, the current price as a line.
+            CandleSeries series = sec.Candles.Get(Timeframe.Minute15);
+            const int Bars = 60, Room = 8; // bars shown, and empty bar slots after the newest
+            int n = Mathf.Min(Bars, series.Count), first = series.Count - n;
+            decimal last = sec.Last, lo = last, hi = last;
+            for (int k = first; k < series.Count; k++) { lo = System.Math.Min(lo, series[k].Low); hi = System.Math.Max(hi, series[k].High); }
+            decimal pad = System.Math.Max((hi - lo) * 0.08m, last * 0.001m);
+            lo -= pad;
+            hi += pad;
+            const int top = 132, bottom = 6;
             if (n > 0 && hi > lo)
             {
-                float step = (Width - 8f) / 48f;
+                float step = (Width - 4f) / (Bars + Room);
                 int Y(decimal p) => Mathf.Clamp(bottom + Mathf.RoundToInt((float)((p - lo) / (hi - lo)) * (top - bottom)), bottom, top);
+                // A few quiet grid lines, as on the terminal.
+                for (int g = 1; g < 4; g++) Fill(0, bottom + g * (top - bottom) / 4, Width, bottom + g * (top - bottom) / 4 + 1, new Color32(26, 31, 42, 255));
                 for (int k = 0; k < n; k++)
                 {
                     Candle c = series[first + k];
-                    if (c.Low > hi || c.High < lo) continue; // wholly off the chart (an old move): not drawn
                     bool up = c.Close >= c.Open;
                     var col = up ? new Color32(60, 200, 120, 255) : new Color32(230, 80, 70, 255);
-                    int x = 4 + Mathf.RoundToInt(k * step);
-                    int w = Mathf.Max(1, Mathf.RoundToInt(step * 0.6f));
+                    // Right-aligned: the newest bar sits Room slots in from the edge however many bars there are.
+                    int x = 2 + Mathf.RoundToInt((Bars - n + k) * step);
+                    int w = Mathf.Max(1, Mathf.RoundToInt(step * 0.65f));
                     Fill(x + w / 2, Y(c.Low), x + w / 2 + 1, Y(c.High) + 1, col);
                     int a = Y(c.Open), b = Y(c.Close);
                     Fill(x, Mathf.Min(a, b), x + w, Mathf.Max(a, b) + 1, col);
                 }
-                // The one line on the chart: the current price, through the middle.
+                // The current price: a line across and a tag at the right edge.
                 int now = Y(last);
-                Fill(0, now, Width, now + 1, new Color32(240, 200, 80, 255));
+                Fill(0, now, Width, now + 1, new Color32(200, 205, 215, 255));
+                Fill(Width - 14, now - 3, Width, now + 4, new Color32(230, 80, 70, 255));
             }
             Apply();
             _text.text = Shown = $"{symbol}  {sec.Last.ToString("0.00", C)}  {Signed(sec.ChangePercent)}%" + SessionTag(market);
